@@ -37,6 +37,28 @@ function bogotaWeekdayForOffsetHours(
   return WEEKDAY_NAMES[bogotaNow.getUTCDay()];
 }
 
+// `today`/`tomorrow` are opened fully in `setWorkingHours`, but each day is still an
+// independent calendar day: a slot can't straddle midnight. `soonStartAt` offsets are all
+// computed from this single shared anchor (rather than each calling `Date.now()`
+// independently) so their relative spacing — and thus their non-overlap — is preserved
+// even when the anchor itself needs to be moved away from the Bogota day boundary.
+const MAX_SOON_OFFSET_MINUTES = 3 * 60 + 30; // largest hoursFromNow used below + service duration
+const soonAnchor = (() => {
+  const now = Date.now();
+  const bogotaMinutesFromMidnight = ((now - 5 * 60 * 60 * 1000) / 60_000) % 1440;
+  if (bogotaMinutesFromMidnight + MAX_SOON_OFFSET_MINUTES <= 1440) {
+    return now;
+  }
+  // Not enough room before the Bogota day boundary — jump the anchor to 01:00 Bogota
+  // the next day, which is always safely far from that boundary.
+  const minutesUntilNext1am = 1440 - bogotaMinutesFromMidnight + 60;
+  return now + minutesUntilNext1am * 60_000;
+})();
+
+function soonStartAt(hoursFromNow: number): string {
+  return new Date(soonAnchor + hoursFromNow * 60 * 60 * 1000).toISOString();
+}
+
 describe('Bookings (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaService;
@@ -108,14 +130,14 @@ describe('Bookings (e2e)', () => {
     const todayWeekday = bogotaWeekdayForOffsetHours(0);
     const tomorrowWeekday = bogotaWeekdayForOffsetHours(24);
     const days = [
-      { dayOfWeek: todayWeekday, startMinute: 0, endMinute: 1439 },
+      { dayOfWeek: todayWeekday, startMinute: 0, endMinute: 1440 },
       { dayOfWeek: farFutureDay.weekday, startMinute: 480, endMinute: 1080 },
     ];
     if (tomorrowWeekday !== todayWeekday) {
       days.push({
         dayOfWeek: tomorrowWeekday,
         startMinute: 0,
-        endMinute: 1439,
+        endMinute: 1440,
       });
     }
     for (const extra of extraDays) {
@@ -244,7 +266,7 @@ describe('Bookings (e2e)', () => {
   });
 
   it('rejects cancelling a booking that is too close to its start time', async () => {
-    const startAt = new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString();
+    const startAt = soonStartAt(2);
 
     const create = await request(app.getHttpServer())
       .post(`/public/professionals/${slug}/bookings`)
@@ -312,7 +334,7 @@ describe('Bookings (e2e)', () => {
     });
 
     it('lets the professional cancel a booking regardless of the cancellation policy', async () => {
-      const startAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      const startAt = soonStartAt(1);
       const create = await request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
@@ -334,7 +356,7 @@ describe('Bookings (e2e)', () => {
     });
 
     it("rejects cancelling another professional's booking", async () => {
-      const startAt = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString();
+      const startAt = soonStartAt(3);
       const create = await request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
