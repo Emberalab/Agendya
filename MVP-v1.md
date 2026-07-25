@@ -5,10 +5,10 @@ phase: mvp-v1
 category: web-app
 tech-stack: TBD
 created: 2026-06-10
-tags: [personal, mvp, booking, barbershop, validation]
+tags: [personal, mvp, booking, beauty-services, validation]
 ---
 
-# 💈 MVP V1 – Plataforma de Gestión de Citas para Barberos Independientes
+# 💇 MVP V1 – Plataforma de Gestión de Citas para Profesionales de Belleza Independientes
 
 > Primera versión enfocada en validación del producto con funcionalidad esencial
 
@@ -16,7 +16,7 @@ tags: [personal, mvp, booking, barbershop, validation]
 
 ## 🎯 Problema que Queremos Resolver
 
-Los barberos independientes suelen gestionar sus citas mediante:
+Los profesionales de belleza independientes (barberos, peluqueros, manicuristas, esteticistas, maquilladores, entre otros) suelen gestionar sus citas mediante:
 - ☎️ Llamadas telefónicas
 - 💬 Mensajes de WhatsApp
 - 📱 Instagram o redes sociales
@@ -34,12 +34,12 @@ Los barberos independientes suelen gestionar sus citas mediante:
 ## 🎯 Objetivo del MVP
 
 **Validar que**:
-1. Los barberos independientes están dispuestos a usar una herramienta digital para administrar sus citas
+1. Los profesionales de belleza independientes están dispuestos a usar una herramienta digital para administrar sus citas
 2. Los clientes prefieren reservar directamente desde un enlace vs coordinar manualmente por mensajes
 
 ---
 
-## 💈 Qué Podrá Hacer el Barbero
+## 💇 Qué Podrá Hacer el Profesional
 
 ### 1. Registro y Acceso
 
@@ -58,10 +58,10 @@ Los barberos independientes suelen gestionar sus citas mediante:
 
 **Ejemplo de enlace**:
 ```
-ronda.com/jose-barber
+ronda.com/maria-belleza
 ```
 
-Cada barbero tendrá su propio enlace único para compartir con sus clientes.
+Cada profesional tendrá su propio enlace único para compartir con sus clientes.
 
 ---
 
@@ -71,12 +71,16 @@ Cada barbero tendrá su propio enlace único para compartir con sus clientes.
 - ✅ Nombre del servicio
 - ✅ Duración estimada
 
-**Ejemplos de servicios**:
+**Ejemplos de servicios** (varían según el tipo de profesional):
 | Servicio | Duración |
 |----------|----------|
 | Corte de cabello | 30 minutos |
 | Arreglo de barba | 20 minutos |
-| Corte + barba | 50 minutos |
+| Manicure | 45 minutos |
+| Peinado | 40 minutos |
+| Tratamiento facial | 60 minutos |
+
+El profesional define libremente sus propios servicios y duraciones — la plataforma no impone un catálogo fijo, ya que cada rubro (barbería, peluquería, manicura, estética, etc.) tiene servicios distintos.
 
 ---
 
@@ -116,7 +120,7 @@ Cada barbero tendrá su propio enlace único para compartir con sus clientes.
 
 **Política de cancelación**:
 
-El barbero podrá definir **cuántas horas antes** un cliente puede cancelar una cita.
+El profesional podrá definir **cuántas horas antes** un cliente puede cancelar una cita.
 
 **Opciones**:
 - ⏰ 2 horas antes
@@ -135,7 +139,7 @@ El sistema impedirá cancelaciones fuera del tiempo permitido.
 **Sin necesidad de crear cuenta** (experiencia simple)
 
 **Proceso de reserva**:
-1. Cliente ingresa al enlace del barbero (ej: `ronda.com/jose-barber`)
+1. Cliente ingresa al enlace del profesional (ej: `ronda.com/maria-belleza`)
 2. Proporciona información básica:
    - ✅ Nombre
    - ✅ Número de celular
@@ -148,7 +152,7 @@ El sistema impedirá cancelaciones fuera del tiempo permitido.
 
 ---
 
-### 2. Consultar Información del Barbero
+### 2. Consultar Información del Profesional
 
 **Información visible**:
 - 👤 Nombre del profesional
@@ -166,7 +170,7 @@ El sistema impedirá cancelaciones fuera del tiempo permitido.
 - ❌ No podrá cancelar si ya pasó el límite de tiempo configurado
 
 **Ejemplo**:
-- Política del barbero: 6 horas antes
+- Política del profesional: 6 horas antes
 - Cita programada: Mañana 10:00 AM
 - Cliente puede cancelar hasta: Mañana 4:00 AM
 
@@ -177,7 +181,7 @@ El sistema impedirá cancelaciones fuera del tiempo permitido.
 ### 1. Gestión Automática de Disponibilidad
 
 **El sistema impedirá**:
-- ❌ Reservas duplicadas (mismo horario, mismo barbero)
+- ❌ Reservas duplicadas (mismo horario, mismo profesional)
 - ❌ Horarios ya ocupados
 - ❌ Reservas durante descansos configurados
 - ❌ Reservas en fechas bloqueadas (vacaciones, días libres)
@@ -191,12 +195,12 @@ El sistema impedirá cancelaciones fuera del tiempo permitido.
 
 **Cuando una cita sea creada**:
 - ✅ Cliente recibe confirmación con detalles:
-  - Nombre del barbero
+  - Nombre del profesional
   - Servicio reservado
   - Fecha y hora
   - Ubicación (si aplica)
   - Enlace para cancelar
-- ✅ Barbero recibe notificación de nueva reserva
+- ✅ Profesional recibe notificación de nueva reserva
 
 **Canales de notificación** (por definir):
 - Email
@@ -216,7 +220,7 @@ El sistema impedirá cancelaciones fuera del tiempo permitido.
 **Información incluida**:
 - Fecha y hora
 - Servicio
-- Nombre del barbero
+- Nombre del profesional
 - Opción para cancelar (si está dentro del tiempo permitido)
 
 ---
@@ -236,12 +240,12 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 ---
 
 ### ❌ Marketplace
-- Sin búsqueda de barberos
+- Sin búsqueda de profesionales
 - Sin rankings
 - Sin recomendaciones
 - Sin perfiles públicos en directorio
 
-**Acceso**: Los clientes accederán **únicamente mediante el enlace compartido por el barbero** (ej: Instagram bio, WhatsApp status, tarjeta de presentación).
+**Acceso**: Los clientes accederán **únicamente mediante el enlace compartido por el profesional** (ej: Instagram bio, WhatsApp status, tarjeta de presentación).
 
 ---
 
@@ -275,11 +279,11 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 
 ### ❌ Gestión de Empleados
 - Un profesional administra **únicamente su propia agenda**
-- Sin múltiples barberos por negocio
+- Sin múltiples profesionales por negocio
 - Sin gestión de equipo
 - Sin roles y permisos
 
-**Razón**: MVP enfocado en barberos **independientes** (solopreneurs).
+**Razón**: MVP enfocado en profesionales de belleza **independientes** (solopreneurs).
 
 ---
 
@@ -295,33 +299,33 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 
 ## 📋 User Stories (MVP V1)
 
-### Como Barbero
+### Como Profesional
 
-**US-001**: Como barbero, quiero crear mi cuenta profesional para empezar a usar la plataforma.
+**US-001**: Como profesional, quiero crear mi cuenta profesional para empezar a usar la plataforma.
 
-**US-002**: Como barbero, quiero configurar mis servicios (nombre y duración) para que los clientes los vean al reservar.
+**US-002**: Como profesional, quiero configurar mis servicios (nombre y duración) para que los clientes los vean al reservar.
 
-**US-003**: Como barbero, quiero configurar mis horarios de trabajo para que solo se puedan reservar citas en esos horarios.
+**US-003**: Como profesional, quiero configurar mis horarios de trabajo para que solo se puedan reservar citas en esos horarios.
 
-**US-004**: Como barbero, quiero bloquear días específicos para que no se puedan hacer reservas cuando estoy de vacaciones.
+**US-004**: Como profesional, quiero bloquear días específicos para que no se puedan hacer reservas cuando estoy de vacaciones.
 
-**US-005**: Como barbero, quiero ver mi agenda diaria para saber qué citas tengo hoy.
+**US-005**: Como profesional, quiero ver mi agenda diaria para saber qué citas tengo hoy.
 
-**US-006**: Como barbero, quiero ver mi agenda semanal para planificar mejor mi tiempo.
+**US-006**: Como profesional, quiero ver mi agenda semanal para planificar mejor mi tiempo.
 
-**US-007**: Como barbero, quiero tener un enlace único para compartir con mis clientes.
+**US-007**: Como profesional, quiero tener un enlace único para compartir con mis clientes.
 
-**US-008**: Como barbero, quiero cancelar una cita cuando sea necesario.
+**US-008**: Como profesional, quiero cancelar una cita cuando sea necesario.
 
-**US-009**: Como barbero, quiero recibir notificaciones cuando un cliente haga una reserva.
+**US-009**: Como profesional, quiero recibir notificaciones cuando un cliente haga una reserva.
 
-**US-010**: Como barbero, quiero configurar el tiempo mínimo de cancelación para evitar pérdidas.
+**US-010**: Como profesional, quiero configurar el tiempo mínimo de cancelación para evitar pérdidas.
 
 ---
 
 ### Como Cliente
 
-**US-011**: Como cliente, quiero ver los servicios disponibles de un barbero para decidir cuál necesito.
+**US-011**: Como cliente, quiero ver los servicios disponibles de un profesional para decidir cuál necesito.
 
 **US-012**: Como cliente, quiero ver los horarios disponibles en un calendario para elegir el que me convenga.
 
@@ -333,18 +337,18 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 
 **US-016**: Como cliente, quiero poder cancelar mi cita si surge un inconveniente.
 
-**US-017**: Como cliente, quiero ver la información del barbero (nombre, descripción) para conocer más sobre su servicio.
+**US-017**: Como cliente, quiero ver la información del profesional (nombre, descripción) para conocer más sobre su servicio.
 
 ---
 
 ## 🎨 Wireframes Pendientes
 
-- [ ] Pantalla de registro de barbero
-- [ ] Dashboard del barbero
+- [ ] Pantalla de registro de profesional
+- [ ] Dashboard del profesional
 - [ ] Configuración de servicios
 - [ ] Configuración de horarios
 - [ ] Vista de agenda (diaria/semanal)
-- [ ] Página pública de reservas del barbero
+- [ ] Página pública de reservas del profesional
 - [ ] Flujo de reserva del cliente
 - [ ] Confirmación de cita
 - [ ] Pantalla de cancelación
@@ -385,6 +389,8 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 - O Railway
 - O Render
 
+> Nota: el stack definitivo y aprobado para el proyecto vive en [[Stack-Tecnologico]] (React + TypeScript + NestJS + Prisma + PostgreSQL). Esta sección queda como registro histórico de las opciones evaluadas.
+
 ---
 
 ## 📊 Métricas de Validación del MVP
@@ -392,15 +398,15 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 **Objetivo**: Validar Product-Market Fit
 
 **Métricas clave**:
-- 📈 Número de barberos que completan el registro
-- 📈 Número de servicios configurados por barbero
+- 📈 Número de profesionales que completan el registro
+- 📈 Número de servicios configurados por profesional
 - 📈 Número de reservas realizadas por clientes
 - 📈 Tasa de cancelación de citas
-- 📈 Feedback cualitativo de barberos (entrevistas)
+- 📈 Feedback cualitativo de profesionales (entrevistas)
 - 📈 Feedback cualitativo de clientes (si es posible)
 
 **Meta del MVP**:
-- Conseguir 5-10 barberos usando la plataforma activamente
+- Conseguir 5-10 profesionales usando la plataforma activamente
 - Lograr 50+ reservas completadas
 - Obtener feedback valioso para iteraciones futuras
 
@@ -416,14 +422,14 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 
 **Fase 2: Desarrollo del Core** (3-4 semanas)
 - [ ] Setup del proyecto
-- [ ] Sistema de autenticación (barbero)
+- [ ] Sistema de autenticación (profesional)
 - [ ] CRUD de servicios
 - [ ] Configuración de horarios
 - [ ] Sistema de calendario
 - [ ] Lógica de disponibilidad
 
 **Fase 3: Reservas y Confirmaciones** (2 semanas)
-- [ ] Página pública de barbero
+- [ ] Página pública de profesional
 - [ ] Flujo de reserva (sin auth)
 - [ ] Confirmaciones automáticas
 - [ ] Sistema de cancelaciones
@@ -442,7 +448,7 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 ## 🚀 Próximos Pasos Inmediatos
 
 ### Decisiones Técnicas
-- [ ] Elegir stack tecnológico definitivo
+- [x] Elegir stack tecnológico definitivo → Ver [[Stack-Tecnologico]]
 - [ ] Definir arquitectura de base de datos
 - [ ] Elegir proveedor de notificaciones
 
@@ -468,16 +474,16 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 
 ### Mobile First
 - La mayoría de clientes reservarán desde celular
-- El barbero también revisará su agenda desde el móvil
+- El profesional también revisará su agenda desde el móvil
 - Diseño responsive es crítico
 
 ### Onboarding Rápido
-- El barbero debe poder configurar todo en **menos de 10 minutos**
+- El profesional debe poder configurar todo en **menos de 10 minutos**
 - El cliente debe poder reservar en **menos de 2 minutos**
 
 ### Validación Antes de Escalar
 - No agregar features hasta validar que el core funciona
-- Hablar con usuarios reales (barberos) antes, durante y después del desarrollo
+- Hablar con usuarios reales (profesionales de belleza) antes, durante y después del desarrollo
 - Iterar basado en feedback real, no en suposiciones
 
 ---
@@ -500,5 +506,5 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 ---
 
 **Estado**: 🟡 Planificación
-**Última actualización**: 2026-06-10
+**Última actualización**: 2026-07-24
 **Volver**: [[Plataforma-Reservas-Servicios]] | [[Proyecto Personal]]

@@ -1,0 +1,115 @@
+// Prisma schema — Ronda Fase 1 (MVP: Agenda Básica)
+// Ver /Users/jorgeherrera/.claude/plans/dreamy-mixing-lark.md sección 1 para el razonamiento de diseño.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Weekday {
+  SUNDAY
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+model Professional {
+  id                      String   @id @default(uuid())
+  email                   String   @unique
+  passwordHash            String
+  businessName            String
+  slug                    String   @unique
+  photoUrl                String?
+  description             String?
+  timezone                String   @default("America/Bogota")
+  cancellationPolicyHours Int      @default(24)
+  isActive                Boolean  @default(true)
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  services           Service[]
+  workingHours       WorkingHour[]
+  scheduleExceptions ScheduleException[]
+  bookings           Booking[]
+
+  @@index([slug])
+}
+
+model Service {
+  id              String   @id @default(uuid())
+  professionalId  String
+  professional    Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  name            String
+  durationMinutes Int
+  isActive        Boolean  @default(true)
+  sortOrder       Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@index([professionalId, isActive])
+}
+
+model WorkingHour {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  dayOfWeek      Weekday
+  startMinute    Int
+  endMinute      Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([professionalId, dayOfWeek])
+}
+
+model ScheduleException {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  date           DateTime     @db.Date
+  reason         String?
+  createdAt      DateTime     @default(now())
+
+  @@unique([professionalId, date])
+}
+
+model Booking {
+  id                      String        @id @default(uuid())
+  professionalId          String
+  professional            Professional  @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  serviceId               String?
+  service                 Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  serviceNameSnapshot      String
+  durationMinutesSnapshot  Int
+  customerName             String
+  customerEmail            String
+  customerPhone            String
+  startAt                  DateTime
+  endAt                    DateTime
+  status                   BookingStatus @default(CONFIRMED)
+  cancellationToken        String        @unique @default(uuid())
+  cancelledAt              DateTime?
+  cancelledBy              String?
+  reminder24hSentAt        DateTime?
+  reminder2hSentAt         DateTime?
+  createdAt                DateTime      @default(now())
+  updatedAt                DateTime      @updatedAt
+
+  @@index([professionalId, startAt])
+  @@index([status, startAt])
+}

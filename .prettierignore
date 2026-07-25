@@ -1,0 +1,11 @@
+node_modules
+dist
+build
+coverage
+package-lock.json
+
+# apps/api manages its own Prettier config and format script
+apps/api
+
+# Planning docs are hand-authored prose; not subject to code formatting
+*.md

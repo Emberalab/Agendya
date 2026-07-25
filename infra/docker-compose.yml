@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ronda-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ronda
+      POSTGRES_PASSWORD: ronda_dev_password
+      POSTGRES_DB: ronda_dev
+    ports:
+      - '5433:5432'
+    volumes:
+      - ronda_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  ronda_postgres_data:
