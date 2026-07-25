@@ -28,6 +28,12 @@ export class RemindersScheduler {
     hoursBefore: 24 | 2,
     sentAtField: ReminderField,
   ): Promise<void> {
+    // Guards against the scheduler firing mid-suite and racing serializable
+    // booking transactions with concurrent reads/writes on the same rows.
+    if (process.env.DISABLE_SCHEDULED_JOBS === 'true') {
+      return;
+    }
+
     const windowStart = new Date(Date.now() + hoursBefore * 60 * 60 * 1000);
     const windowEnd = new Date(windowStart.getTime() + 15 * 60 * 1000);
 

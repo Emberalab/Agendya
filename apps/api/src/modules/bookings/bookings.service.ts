@@ -119,46 +119,52 @@ export class BookingsService {
     startAt: Date,
     endAt: Date,
   ): Promise<Booking> {
-    try {
-      return await this.prisma.$transaction(
-        async (tx) => {
-          const overlapping = await tx.booking.findFirst({
-            where: {
-              professionalId,
-              status: 'CONFIRMED',
-              startAt: { lt: endAt },
-              endAt: { gt: startAt },
-            },
-          });
-          if (overlapping) {
-            throw new ConflictException('Ese horario ya no está disponible.');
-          }
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const overlapping = await tx.booking.findFirst({
+              where: {
+                professionalId,
+                status: 'CONFIRMED',
+                startAt: { lt: endAt },
+                endAt: { gt: startAt },
+              },
+            });
+            if (overlapping) {
+              throw new ConflictException('Ese horario ya no está disponible.');
+            }
 
-          return tx.booking.create({
-            data: {
-              professionalId,
-              serviceId: service.id,
-              serviceNameSnapshot: service.name,
-              durationMinutesSnapshot: service.durationMinutes,
-              customerName: input.customerName,
-              customerEmail: input.customerEmail,
-              customerPhone: input.customerPhone,
-              startAt,
-              endAt,
-            },
-          });
-        },
-        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-      );
-    } catch (error) {
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === 'P2034'
-      ) {
-        throw new ConflictException('Ese horario ya no está disponible.');
+            return tx.booking.create({
+              data: {
+                professionalId,
+                serviceId: service.id,
+                serviceNameSnapshot: service.name,
+                durationMinutesSnapshot: service.durationMinutes,
+                customerName: input.customerName,
+                customerEmail: input.customerEmail,
+                customerPhone: input.customerPhone,
+                startAt,
+                endAt,
+              },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        const isSerializationFailure =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2034';
+        if (!isSerializationFailure) {
+          throw error;
+        }
+        if (attempt === maxAttempts) {
+          throw new ConflictException('Ese horario ya no está disponible.');
+        }
       }
-      throw error;
     }
+    throw new ConflictException('Ese horario ya no está disponible.');
   }
 
   async getPublicBookingByToken(token: string): Promise<PublicBooking> {
