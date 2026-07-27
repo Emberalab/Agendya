@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import type { AuthUser } from '@ronda/types';
+import type { AuthUser } from '@agendya/types';
 
 interface AuthState {
   accessToken: string | null;

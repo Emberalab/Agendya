@@ -1,6 +1,6 @@
 import { Body, Controller, Param, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { createBookingSchema, type CreateBookingInput } from '@ronda/types';
+import { createBookingSchema, type CreateBookingInput } from '@agendya/types';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BookingsService } from './bookings.service';
 

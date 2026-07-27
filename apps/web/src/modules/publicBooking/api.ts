@@ -2,7 +2,7 @@ import type {
   CreateBookingInput,
   PublicBooking,
   PublicProfessional,
-} from '@ronda/types';
+} from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 
 export async function getPublicProfessional(
@@ -16,13 +16,13 @@ export async function getPublicProfessional(
 
 export async function getAvailability(
   slug: string,
-  serviceId: string,
+  serviceIds: string[],
   date: string,
 ): Promise<string[]> {
   const { data } = await apiClient.get<{ slots: string[] }>(
     `/public/professionals/${slug}/availability`,
     {
-      params: { serviceId, date },
+      params: { serviceIds: serviceIds.join(','), date },
     },
   );
   return data.slots;
@@ -51,6 +51,17 @@ export async function cancelBookingByToken(
 ): Promise<PublicBooking> {
   const { data } = await apiClient.post<PublicBooking>(
     `/public/bookings/${token}/cancel`,
+  );
+  return data;
+}
+
+export async function rescheduleBookingByToken(
+  token: string,
+  newStartAt: string,
+): Promise<PublicBooking> {
+  const { data } = await apiClient.post<PublicBooking>(
+    `/public/bookings/${token}/reschedule`,
+    { newStartAt },
   );
   return data;
 }

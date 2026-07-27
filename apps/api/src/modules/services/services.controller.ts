@@ -14,7 +14,7 @@ import {
   updateServiceSchema,
   type CreateServiceInput,
   type UpdateServiceInput,
-} from '@ronda/types';
+} from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';

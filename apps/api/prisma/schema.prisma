@@ -29,10 +29,13 @@ enum BookingStatus {
 model Professional {
   id                      String   @id @default(uuid())
   email                   String   @unique
-  passwordHash            String
+  passwordHash            String?
+  googleId                String?  @unique
   businessName            String
   slug                    String   @unique
   photoUrl                String?
+  logoUrl                 String?
+  brandColor              String?  @default("#FFFFFF")
   description             String?
   timezone                String   @default("America/Bogota")
   cancellationPolicyHours Int      @default(24)
@@ -46,6 +49,7 @@ model Professional {
   bookings           Booking[]
 
   @@index([slug])
+  @@index([googleId])
 }
 
 model Service {

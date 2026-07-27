@@ -8,7 +8,7 @@ import type {
   ProfessionalProfile,
   PublicProfessional,
   UpdateProfileInput,
-} from '@ronda/types';
+} from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
@@ -22,6 +22,8 @@ export class ProfessionalsService {
       businessName: professional.businessName,
       slug: professional.slug,
       photoUrl: professional.photoUrl,
+      logoUrl: professional.logoUrl,
+      brandColor: professional.brandColor,
       description: professional.description,
       timezone: professional.timezone,
       cancellationPolicyHours: professional.cancellationPolicyHours,
@@ -52,6 +54,10 @@ export class ProfessionalsService {
           ? { description: input.description }
           : {}),
         ...(input.photoUrl !== undefined ? { photoUrl: input.photoUrl } : {}),
+        ...(input.logoUrl !== undefined ? { logoUrl: input.logoUrl } : {}),
+        ...(input.brandColor !== undefined
+          ? { brandColor: input.brandColor }
+          : {}),
         ...(input.timezone !== undefined ? { timezone: input.timezone } : {}),
         ...(input.cancellationPolicyHours !== undefined
           ? { cancellationPolicyHours: input.cancellationPolicyHours }
@@ -93,6 +99,8 @@ export class ProfessionalsService {
       businessName: professional.businessName,
       slug: professional.slug,
       photoUrl: professional.photoUrl,
+      logoUrl: professional.logoUrl,
+      brandColor: professional.brandColor,
       description: professional.description,
       services: professional.services.map((service) => ({
         id: service.id,

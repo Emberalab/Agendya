@@ -11,6 +11,7 @@ import { BookingsModule } from './modules/bookings/bookings.module';
 import { ProfessionalsModule } from './modules/professionals/professionals.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { ServicesModule } from './modules/services/services.module';
+import { UploadModule } from './infra/upload/upload.module';
 import configuration from './config/configuration';
 
 @Module({
@@ -24,6 +25,7 @@ import configuration from './config/configuration';
     ServicesModule,
     SchedulesModule,
     BookingsModule,
+    UploadModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

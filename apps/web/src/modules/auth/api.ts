@@ -1,4 +1,4 @@
-import type { AuthResponse, LoginInput, RegisterInput } from '@ronda/types';
+import type { AuthResponse, LoginInput, RegisterInput } from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 
 export async function login(input: LoginInput): Promise<AuthResponse> {

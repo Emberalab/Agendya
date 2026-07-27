@@ -1,3 +1,5 @@
+import { Button } from '../../../shared/components/Button';
+
 interface SlotGridProps {
   slots: string[];
   isLoading: boolean;
@@ -13,36 +15,38 @@ export function SlotGrid({
 }: SlotGridProps) {
   if (isLoading) {
     return (
-      <p className="text-sm text-gray-500">Buscando horarios disponibles…</p>
+      <div className="py-4 text-center">
+        <p className="text-sm text-gray-500">Buscando horarios disponibles…</p>
+      </div>
     );
   }
 
   if (slots.length === 0) {
     return (
-      <p className="text-sm text-gray-500">
-        No hay horarios disponibles ese día. Prueba otra fecha.
-      </p>
+      <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
+        <p className="text-sm text-gray-600">
+          No hay horarios disponibles ese día. Prueba otra fecha.
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
       {slots.map((slot) => (
-        <button
+        <Button
           key={slot}
           type="button"
+          variant={selectedSlot === slot ? 'primary' : 'outline'}
+          size="sm"
           onClick={() => onSelect(slot)}
-          className={`rounded border px-2 py-2 text-sm ${
-            selectedSlot === slot
-              ? 'border-black bg-gray-50 font-medium'
-              : 'border-gray-300'
-          }`}
+          className="h-auto py-3"
         >
           {new Date(slot).toLocaleTimeString(undefined, {
             hour: 'numeric',
             minute: '2-digit',
           })}
-        </button>
+        </Button>
       ))}
     </div>
   );

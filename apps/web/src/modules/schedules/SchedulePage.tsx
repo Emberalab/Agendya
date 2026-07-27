@@ -1,3 +1,4 @@
+import { Card, CardContent } from '../../shared/components/Card';
 import { BlockedDatesManager } from './BlockedDatesManager';
 import { useWorkingHours } from './hooks/useWorkingHours';
 import { WorkingHoursEditor } from './WorkingHoursEditor';
@@ -6,19 +7,26 @@ export function SchedulePage() {
   const { data: workingHours, isLoading } = useWorkingHours();
 
   return (
-    <div className="max-w-lg">
-      <h1 className="mb-1 text-2xl font-semibold">Tu horario</h1>
-      <p className="mb-6 text-sm text-gray-500">
-        Define cuándo trabajas y bloquea fechas puntuales.
-      </p>
+    <div className="max-w-2xl">
+      <div className="mb-6">
+        <h1 className="mb-2 text-3xl font-bold text-gray-900">Tu horario</h1>
+        <p className="text-gray-600">
+          Define cuándo trabajas y bloquea fechas puntuales.
+        </p>
+      </div>
 
       {isLoading || !workingHours ? (
-        <p>Cargando horario…</p>
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-gray-500">Cargando horario…</p>
+          </CardContent>
+        </Card>
       ) : (
-        <WorkingHoursEditor workingHours={workingHours} />
+        <div className="space-y-6">
+          <WorkingHoursEditor workingHours={workingHours} />
+          <BlockedDatesManager />
+        </div>
       )}
-
-      <BlockedDatesManager />
     </div>
   );
 }

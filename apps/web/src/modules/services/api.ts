@@ -2,7 +2,7 @@ import type {
   CreateServiceInput,
   Service,
   UpdateServiceInput,
-} from '@ronda/types';
+} from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 
 export async function listServices(): Promise<Service[]> {

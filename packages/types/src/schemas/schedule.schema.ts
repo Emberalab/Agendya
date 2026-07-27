@@ -70,7 +70,7 @@ export const scheduleExceptionSchema = z.object({
 export type ScheduleException = z.infer<typeof scheduleExceptionSchema>;
 
 export const availabilityQuerySchema = z.object({
-  serviceId: z.string().uuid(),
+  serviceIds: z.string().min(1), // Comma-separated UUIDs
   date: dateOnlySchema,
 });
 

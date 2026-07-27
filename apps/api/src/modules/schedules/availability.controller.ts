@@ -6,7 +6,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { availabilityQuerySchema, type AvailabilityQuery } from '@ronda/types';
+import { availabilityQuerySchema, type AvailabilityQuery } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AvailabilityService } from './availability.service';
@@ -32,9 +32,12 @@ export class AvailabilityController {
       throw new NotFoundException('Profesional no encontrado.');
     }
 
+    // Parse comma-separated serviceIds
+    const serviceIds = query.serviceIds.split(',').map(id => id.trim());
+
     const slots = await this.availabilityService.getAvailableSlots(
       professional.id,
-      query.serviceId,
+      serviceIds,
       query.date,
     );
     return { slots };

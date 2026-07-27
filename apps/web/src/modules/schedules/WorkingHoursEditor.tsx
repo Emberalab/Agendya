@@ -3,8 +3,10 @@ import {
   type SetWorkingHoursInput,
   type Weekday,
   type WorkingHour,
-} from '@ronda/types';
+} from '@agendya/types';
 import { useEffect, useState, type FormEvent } from 'react';
+import { Button } from '../../shared/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/components/Card';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useSetWorkingHours } from './hooks/useSetWorkingHours';
 import { minutesToTimeString, timeStringToMinutes } from './time.util';
@@ -69,58 +71,76 @@ export function WorkingHoursEditor({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-8">
-      <h2 className="mb-3 text-lg font-semibold">Horario semanal</h2>
-      <div className="flex flex-col gap-2">
-        {rows.map((row, index) => (
-          <div key={row.dayOfWeek} className="flex items-center gap-3">
-            <label className="flex w-32 items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={row.enabled}
-                onChange={(event) =>
-                  updateRow(index, { enabled: event.target.checked })
-                }
-              />
-              {WEEKDAY_LABELS[row.dayOfWeek]}
-            </label>
-            <input
-              type="time"
-              value={row.startTime}
-              disabled={!row.enabled}
-              onChange={(event) =>
-                updateRow(index, { startTime: event.target.value })
-              }
-              className="rounded border border-gray-300 px-2 py-1 text-sm disabled:opacity-50"
-            />
-            <span className="text-sm text-gray-500">a</span>
-            <input
-              type="time"
-              value={row.endTime}
-              disabled={!row.enabled}
-              onChange={(event) =>
-                updateRow(index, { endTime: event.target.value })
-              }
-              className="rounded border border-gray-300 px-2 py-1 text-sm disabled:opacity-50"
-            />
+    <Card>
+      <CardHeader>
+        <CardTitle>Horario semanal</CardTitle>
+        <CardDescription>
+          Define tus días y horas de trabajo para que los clientes puedan reservar
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
+            {rows.map((row, index) => (
+              <div key={row.dayOfWeek} className="flex items-center gap-3">
+                <label className="flex w-36 items-center gap-2 text-sm font-medium text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={row.enabled}
+                    onChange={(event) =>
+                      updateRow(index, { enabled: event.target.checked })
+                    }
+                    className="h-4 w-4 rounded border-gray-300 text-black focus:ring-black"
+                  />
+                  {WEEKDAY_LABELS[row.dayOfWeek]}
+                </label>
+                <input
+                  type="time"
+                  value={row.startTime}
+                  disabled={!row.enabled}
+                  onChange={(event) =>
+                    updateRow(index, { startTime: event.target.value })
+                  }
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 disabled:bg-gray-50 disabled:opacity-50"
+                />
+                <span className="text-sm text-gray-500">a</span>
+                <input
+                  type="time"
+                  value={row.endTime}
+                  disabled={!row.enabled}
+                  onChange={(event) =>
+                    updateRow(index, { endTime: event.target.value })
+                  }
+                  className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-1 disabled:bg-gray-50 disabled:opacity-50"
+                />
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
-      {setWorkingHours.isError && (
-        <p className="mt-2 text-sm text-red-600">
-          {getApiErrorMessage(setWorkingHours.error)}
-        </p>
-      )}
-      {setWorkingHours.isSuccess && (
-        <p className="mt-2 text-sm text-green-600">Horario guardado.</p>
-      )}
-      <button
-        type="submit"
-        disabled={setWorkingHours.isPending}
-        className="mt-4 rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-      >
-        {setWorkingHours.isPending ? 'Guardando…' : 'Guardar horario'}
-      </button>
-    </form>
+
+          {setWorkingHours.isError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+              <p className="text-sm text-red-600">
+                {getApiErrorMessage(setWorkingHours.error)}
+              </p>
+            </div>
+          )}
+          {setWorkingHours.isSuccess && (
+            <div className="rounded-lg border border-green-200 bg-green-50 p-3">
+              <p className="text-sm text-green-600">✓ Horario guardado correctamente</p>
+            </div>
+          )}
+
+          <div>
+            <Button
+              type="submit"
+              variant="primary"
+              disabled={setWorkingHours.isPending}
+            >
+              {setWorkingHours.isPending ? 'Guardando…' : 'Guardar horario'}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 }

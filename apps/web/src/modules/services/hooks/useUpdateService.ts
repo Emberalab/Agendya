@@ -1,4 +1,4 @@
-import type { UpdateServiceInput } from '@ronda/types';
+import type { UpdateServiceInput } from '@agendya/types';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { updateService } from '../api';
 import { SERVICES_QUERY_KEY } from './useServices';

@@ -9,7 +9,7 @@ import type {
   ScheduleException,
   SetWorkingHoursInput,
   WorkingHour,
-} from '@ronda/types';
+} from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { dateOnlyUtc, formatDateOnly } from '../../common/utils/timezone.util';
 
