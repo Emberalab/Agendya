@@ -2,7 +2,7 @@ import type {
   CheckSlugResponse,
   ProfessionalProfile,
   UpdateProfileInput,
-} from '@ronda/types';
+} from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 
 export async function getMyProfile(): Promise<ProfessionalProfile> {
@@ -31,4 +31,16 @@ export async function checkSlugAvailability(
     },
   );
   return data;
+}
+
+export async function uploadImage(file: File): Promise<string> {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const { data } = await apiClient.post<{ url: string }>('/upload/image', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+  return data.url;
 }

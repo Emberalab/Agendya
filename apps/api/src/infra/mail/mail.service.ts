@@ -25,11 +25,26 @@ interface BookingReminderParams extends BookingEmailParams {
   hoursBefore: 24 | 2;
 }
 
+interface BookingRescheduledParams extends Omit<BookingEmailParams, 'startAt'> {
+  oldStartAt: Date;
+  newStartAt: Date;
+}
+
+interface BookingRescheduledToProfessionalParams {
+  to: string;
+  professionalName: string;
+  customerName: string;
+  serviceName: string;
+  oldStartAt: Date;
+  newStartAt: Date;
+  timezone: string;
+}
+
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
   private readonly resend: Resend | null;
-  private readonly fromAddress = 'Ronda <reservas@ronda.app>';
+  private readonly fromAddress = 'Agendya <reservas@agendya.app>';
 
   constructor(private readonly configService: ConfigService) {
     const apiKey = this.configService.get<string>('resendApiKey');
@@ -62,6 +77,30 @@ export class MailService {
       to: params.to,
       subject: `Recordatorio: tu cita con ${params.businessName}`,
       html: `<p>Hola ${params.customerName},</p><p>Te recordamos tu cita para <strong>${params.serviceName}</strong> con ${params.businessName} el ${formattedDate} (en aproximadamente ${params.hoursBefore} horas).</p>`,
+    });
+  }
+
+  async sendBookingRescheduled(
+    params: BookingRescheduledParams,
+  ): Promise<void> {
+    const oldFormattedDate = this.formatDate(params.oldStartAt, params.timezone);
+    const newFormattedDate = this.formatDate(params.newStartAt, params.timezone);
+    await this.send({
+      to: params.to,
+      subject: `Cita modificada con ${params.businessName}`,
+      html: `<p>Hola ${params.customerName},</p><p>Tu cita para <strong>${params.serviceName}</strong> con ${params.businessName} fue modificada.</p><p><strong>Fecha anterior:</strong> ${oldFormattedDate}</p><p><strong>Nueva fecha:</strong> ${newFormattedDate}</p>`,
+    });
+  }
+
+  async sendBookingRescheduledToProfessional(
+    params: BookingRescheduledToProfessionalParams,
+  ): Promise<void> {
+    const oldFormattedDate = this.formatDate(params.oldStartAt, params.timezone);
+    const newFormattedDate = this.formatDate(params.newStartAt, params.timezone);
+    await this.send({
+      to: params.to,
+      subject: `Modificación de reserva - ${params.customerName}`,
+      html: `<p>Hola ${params.professionalName},</p><p>El cliente <strong>${params.customerName}</strong> modificó su cita para <strong>${params.serviceName}</strong>.</p><p><strong>Fecha anterior:</strong> ${oldFormattedDate}</p><p><strong>Nueva fecha:</strong> ${newFormattedDate}</p>`,
     });
   }
 

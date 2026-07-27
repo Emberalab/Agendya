@@ -1,11 +1,12 @@
 import { z } from 'zod';
 
-export const CANCELLATION_POLICY_HOURS_OPTIONS = [2, 6, 12, 24] as const;
+export const CANCELLATION_POLICY_HOURS_OPTIONS = [2, 3, 4, 6, 24] as const;
 
 export const cancellationPolicyHoursSchema = z.union([
   z.literal(2),
+  z.literal(3),
+  z.literal(4),
   z.literal(6),
-  z.literal(12),
   z.literal(24),
 ]);
 
@@ -20,11 +21,15 @@ export const slugSchema = z
     'El enlace solo puede contener letras minúsculas, números y guiones.',
   );
 
+export const BRAND_COLOR_OPTIONS = ['#F5F5F5', '#E8F4F8', '#FFF8E1'] as const;
+
 export const updateProfileSchema = z.object({
   businessName: z.string().trim().min(2).max(100).optional(),
   slug: slugSchema.optional(),
   description: z.string().trim().max(500).nullable().optional(),
   photoUrl: z.string().url().nullable().optional(),
+  logoUrl: z.string().url().nullable().optional(),
+  brandColor: z.enum(BRAND_COLOR_OPTIONS).optional(),
   timezone: z.string().min(1).optional(),
   cancellationPolicyHours: cancellationPolicyHoursSchema.optional(),
 });
@@ -37,6 +42,8 @@ export const professionalProfileSchema = z.object({
   businessName: z.string(),
   slug: z.string(),
   photoUrl: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  brandColor: z.string().nullable(),
   description: z.string().nullable(),
   timezone: z.string(),
   cancellationPolicyHours: z.number(),
@@ -70,6 +77,8 @@ export const publicProfessionalSchema = z.object({
   businessName: z.string(),
   slug: z.string(),
   photoUrl: z.string().nullable(),
+  logoUrl: z.string().nullable(),
+  brandColor: z.string().nullable(),
   description: z.string().nullable(),
   services: z.array(publicServiceSchema),
 });

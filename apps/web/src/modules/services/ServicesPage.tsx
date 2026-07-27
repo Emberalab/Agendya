@@ -1,6 +1,9 @@
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createServiceSchema, type CreateServiceInput } from '@ronda/types';
+import { createServiceSchema, type CreateServiceInput } from '@agendya/types';
 import { useForm } from 'react-hook-form';
+import { Button } from '../../shared/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/components/Card';
+import { Input } from '../../shared/components/Input';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useCreateService } from './hooks/useCreateService';
 import { useServices } from './hooks/useServices';
@@ -24,67 +27,89 @@ export function ServicesPage() {
   });
 
   return (
-    <div className="max-w-lg">
-      <h1 className="mb-1 text-2xl font-semibold">Tus servicios</h1>
-      <p className="mb-6 text-sm text-gray-500">
-        Define los servicios que ofreces y cuánto tiempo toma cada uno.
-      </p>
-
-      <form
-        onSubmit={onSubmit}
-        className="mb-6 flex flex-wrap items-start gap-2"
-        noValidate
-      >
-        <div>
-          <input
-            type="text"
-            placeholder="Nombre del servicio"
-            className="rounded border border-gray-300 px-3 py-2"
-            {...register('name')}
-          />
-          {errors.name && (
-            <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
-          )}
-        </div>
-        <div>
-          <input
-            type="number"
-            placeholder="Duración (min)"
-            className="w-36 rounded border border-gray-300 px-3 py-2"
-            {...register('durationMinutes', { valueAsNumber: true })}
-          />
-          {errors.durationMinutes && (
-            <p className="mt-1 text-sm text-red-600">
-              {errors.durationMinutes.message}
-            </p>
-          )}
-        </div>
-        <button
-          type="submit"
-          disabled={createService.isPending}
-          className="rounded bg-black px-4 py-2 text-white disabled:opacity-50"
-        >
-          {createService.isPending ? 'Agregando…' : 'Agregar servicio'}
-        </button>
-      </form>
-      {createService.isError && (
-        <p className="mb-4 text-sm text-red-600">
-          {getApiErrorMessage(createService.error)}
+    <div className="max-w-4xl">
+      <div className="mb-8">
+        <h1 className="mb-2 text-3xl font-bold text-gray-900">Tus servicios</h1>
+        <p className="text-gray-600">
+          Define los servicios que ofreces y cuánto tiempo toma cada uno.
         </p>
+      </div>
+
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Agregar nuevo servicio</CardTitle>
+          <CardDescription>
+            Crea un servicio con su nombre y duración.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            onSubmit={onSubmit}
+            className="flex flex-col gap-4"
+            noValidate
+          >
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Input
+                type="text"
+                placeholder="Ej: Corte de cabello"
+                label="Nombre del servicio"
+                error={errors.name?.message}
+                {...register('name')}
+              />
+              <Input
+                type="number"
+                placeholder="Ej: 30"
+                label="Duración (minutos)"
+                error={errors.durationMinutes?.message}
+                {...register('durationMinutes', { valueAsNumber: true })}
+              />
+            </div>
+
+            {createService.isError && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
+                <p className="text-sm text-red-600">
+                  {getApiErrorMessage(createService.error)}
+                </p>
+              </div>
+            )}
+
+            <div>
+              <Button
+                type="submit"
+                disabled={createService.isPending}
+                className="w-full sm:w-auto"
+              >
+                {createService.isPending ? 'Agregando…' : 'Agregar servicio'}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      {isLoading && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <p className="text-gray-500">Cargando servicios…</p>
+          </CardContent>
+        </Card>
       )}
 
-      {isLoading && <p>Cargando servicios…</p>}
       {!isLoading && services?.length === 0 && (
-        <p className="text-sm text-gray-500">
-          Todavía no tienes servicios. Agrega el primero arriba.
-        </p>
+        <Card>
+          <CardContent className="py-12 text-center">
+            <p className="text-gray-500">
+              Todavía no tienes servicios. Agrega el primero arriba.
+            </p>
+          </CardContent>
+        </Card>
       )}
+
       {!isLoading && services && services.length > 0 && (
-        <ul>
+        <div className="space-y-3">
           {services.map((service) => (
             <ServiceRow key={service.id} service={service} />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

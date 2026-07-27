@@ -1,4 +1,4 @@
-import type { CreateBookingInput } from '@ronda/types';
+import type { CreateBookingInput } from '@agendya/types';
 import { useMutation } from '@tanstack/react-query';
 import { createPublicBooking } from '../api';
 

@@ -26,16 +26,21 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/jwt": "^11.0.2",
     "@nestjs/passport": "^11.0.5",
-    "@nestjs/platform-express": "^11.0.1",
+    "@nestjs/platform-express": "^11.1.28",
     "@nestjs/schedule": "^6.1.3",
     "@nestjs/throttler": "^6.5.0",
     "@prisma/adapter-pg": "^7.9.0",
     "@prisma/client": "^7.9.0",
-    "@ronda/types": "^0.0.0",
+    "@agendya/types": "^0.0.0",
+    "@types/multer": "^2.2.0",
+    "@types/passport-google-oauth20": "^2.0.17",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.10.0",
     "date-fns": "^4.4.0",
     "date-fns-tz": "^3.2.0",
+    "multer": "^2.2.0",
     "passport": "^0.7.0",
+    "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.22.0",
     "reflect-metadata": "^0.2.2",
@@ -84,7 +89,7 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "transformIgnorePatterns": [
-      "/node_modules/(?!@ronda/types)"
+      "/node_modules/(?!@agendya/types)"
     ],
     "collectCoverageFrom": [
       "**/*.(t|j)s"
