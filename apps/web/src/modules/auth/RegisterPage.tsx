@@ -175,7 +175,7 @@ export function RegisterPage() {
                       color: errors.password ? undefined : 'var(--color-text-muted)',
                     }}
                   >
-                    {errors.password ? errors.password.message : 'Mínimo 8 caracteres'}
+                    {errors.password ? errors.password.message : 'Debe contener 1 mayúscula, 1 número, mínimo 8 caracteres'}
                   </FormGroup.Hint>
                 </FormGroup>
               )}
