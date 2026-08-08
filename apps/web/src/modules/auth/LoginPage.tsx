@@ -154,6 +154,13 @@ export function LoginPage() {
                 checked={rememberMe}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberMe(e.target.checked)}
               />
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium"
+                style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+              >
+                ¿Olvidaste tu contraseña?
+              </Link>
             </div>
 
             {loginMutation.isError && (
