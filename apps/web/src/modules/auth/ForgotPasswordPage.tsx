@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button, FormGroup, Input } from '@moondesignsystem/react';
 import Group from '../../imports/Group11';
 
-type Step = 'request' | 'error';
+type Step = 'request' | 'sent' | 'error';
 
 const HERO_PHOTO =
   'https://images.unsplash.com/photo-1601342630314-8427c38bf5e6?w=1200&h=900&fit=crop&auto=format';
@@ -11,9 +11,16 @@ const HERO_PHOTO =
 export function ForgotPasswordPage() {
   const [step, setStep] = useState<Step>('request');
   const [email, setEmail] = useState('');
+  const [resending, setResending] = useState(false);
 
   const handleRequest = (e: React.FormEvent) => {
     e.preventDefault();
+    setStep('sent');
+  };
+
+  const handleResend = () => {
+    setResending(true);
+    setTimeout(() => setResending(false), 800);
   };
 
   return (
@@ -117,6 +124,75 @@ export function ForgotPasswordPage() {
               >
                 Demo: error del sistema →
               </button>
+            </div>
+          ) : step === 'sent' ? (
+            <div className="w-full max-w-sm mx-auto">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6"
+                style={{ backgroundColor: 'var(--color-surface-soft)', border: '1px solid var(--color-border)' }}
+              >
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <rect x="2" y="5" width="18" height="13" rx="2" stroke="#64748B" strokeWidth="1.5" />
+                  <path d="M2 8l9 6 9-6" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
+              </div>
+
+              <h1
+                className="text-2xl font-bold mb-1"
+                style={{ fontFamily: 'var(--font-display)', color: 'var(--color-text-primary)' }}
+              >
+                Revisa tu correo
+              </h1>
+              <p
+                className="text-sm mb-6"
+                style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+              >
+                Hemos enviado un enlace de recuperación a tu correo electrónico. El enlace expira en 30 minutos.
+              </p>
+
+              <div
+                className="flex flex-col items-center gap-2 py-5 rounded-xl mb-5"
+                style={{ backgroundColor: '#F0FDF4', border: '1px solid #BBF7D0' }}
+              >
+                <div
+                  className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ backgroundColor: '#10B981' }}
+                >
+                  <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+                    <path d="M4 9l3.5 3.5L14 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+                >
+                  Enlace enviado a tu correo
+                </span>
+              </div>
+
+              <Button variant="outline" size="md" isFullWidth onClick={handleResend} disabled={resending}>
+                Reenviar correo
+              </Button>
+
+              <p
+                className="text-xs text-center mt-4"
+                style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-body)' }}
+              >
+                ¿No recibiste el correo? Revisa tu carpeta de spam o correo no deseado.
+              </p>
+
+              <p
+                className="text-sm text-center mt-5"
+                style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+              >
+                <Link
+                  to="/login"
+                  className="font-semibold"
+                  style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+                >
+                  Volver al inicio de sesión
+                </Link>
+              </p>
             </div>
           ) : (
             <div className="w-full max-w-sm mx-auto">
