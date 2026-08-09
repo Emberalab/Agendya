@@ -1,6 +1,5 @@
 import type { AgendaBooking } from '@agendya/types';
-import { Badge } from '../../shared/components/Badge';
-import { Card, CardContent } from '../../shared/components/Card';
+import { STATUS_CFG } from './statusBadge';
 
 interface CalendarGridViewProps {
   bookings: AgendaBooking[];
@@ -42,51 +41,99 @@ export function CalendarGridView({
         const isToday = dateStr === new Date().toISOString().slice(0, 10);
 
         return (
-          <Card
+          <div
             key={dateStr}
-            className={`${isToday ? 'border-blue-400 bg-blue-50' : ''}`}
+            className="rounded-2xl p-4"
+            style={{
+              backgroundColor: isToday ? '#EEF2FF' : 'var(--color-surface)',
+              border: `1px solid ${isToday ? 'var(--color-brand-primary)' : 'var(--color-border)'}`,
+            }}
           >
-            <CardContent className="p-4">
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">
-                    {day.toLocaleDateString(undefined, { weekday: 'short' })}
-                  </p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {day.getDate()}
-                  </p>
-                </div>
-                <Badge variant="default" size="sm">
-                  {dayBookings.length}
-                </Badge>
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <p
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: '11px',
+                    fontWeight: 500,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.06em',
+                    color: 'var(--color-text-muted)',
+                  }}
+                >
+                  {day.toLocaleDateString(undefined, { weekday: 'short' })}
+                </p>
+                <p
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    fontSize: '18px',
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  {day.getDate()}
+                </p>
               </div>
+              <span
+                className="inline-flex items-center justify-center rounded-full"
+                style={{
+                  minWidth: '22px',
+                  height: '22px',
+                  padding: '0 6px',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  backgroundColor: dayBookings.length > 0 ? 'var(--color-brand-primary)' : 'var(--color-surface-soft)',
+                  color: dayBookings.length > 0 ? '#fff' : 'var(--color-text-muted)',
+                }}
+              >
+                {dayBookings.length}
+              </span>
+            </div>
 
-              {dayBookings.length === 0 ? (
-                <p className="text-center text-sm text-gray-400">Sin citas</p>
-              ) : (
-                <div className="space-y-2">
-                  {dayBookings.map((booking) => (
+            {dayBookings.length === 0 ? (
+              <p
+                className="text-center"
+                style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-text-muted)' }}
+              >
+                Sin citas
+              </p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {dayBookings.map((booking) => {
+                  const cfg = STATUS_CFG[booking.status];
+                  return (
                     <button
                       key={booking.id}
                       onClick={() => onBookingClick(booking)}
-                      className="w-full rounded-lg border border-gray-200 bg-white p-2 text-left transition-colors hover:bg-gray-50"
+                      className="w-full rounded-lg p-2 text-left"
+                      style={{
+                        backgroundColor: 'var(--color-surface)',
+                        border: '1px solid var(--color-border)',
+                        cursor: 'pointer',
+                      }}
                     >
-                      <p className="text-xs font-medium text-gray-900">
-                        {new Date(booking.startAt).toLocaleTimeString(undefined, {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                      <div className="flex items-center justify-between gap-2 mb-0.5">
+                        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+                          {new Date(booking.startAt).toLocaleTimeString(undefined, {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                        <span className="rounded-full shrink-0" style={{ width: '7px', height: '7px', backgroundColor: cfg.color }} />
+                      </div>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
+                        {booking.customerName}
                       </p>
-                      <p className="text-xs text-gray-600">{booking.customerName}</p>
-                      <p className="truncate text-xs text-gray-500">
+                      <p className="truncate" style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
                         {booking.serviceName}
                       </p>
                     </button>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         );
       })}
     </div>

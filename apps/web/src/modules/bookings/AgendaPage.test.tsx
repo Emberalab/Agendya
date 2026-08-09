@@ -41,7 +41,7 @@ describe('AgendaPage', () => {
     renderPage();
 
     expect(
-      await screen.findByText('No tienes citas en este rango de fechas.'),
+      await screen.findByText('No hay citas en este período'),
     ).toBeInTheDocument();
   });
 
@@ -55,10 +55,10 @@ describe('AgendaPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(await screen.findByText(/Corte de cabello/)).toBeInTheDocument();
-    expect(screen.getByText(/Ana/)).toBeInTheDocument();
+    expect((await screen.findAllByText(/Corte de cabello/)).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Ana/).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+    await user.click(screen.getAllByRole('button', { name: 'Cancelar' })[0]);
 
     await waitFor(() => {
       expect(api.cancelBooking).toHaveBeenCalledWith(

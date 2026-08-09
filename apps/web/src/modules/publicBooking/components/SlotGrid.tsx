@@ -1,4 +1,4 @@
-import { Button } from '../../../shared/components/Button';
+import { Button } from '@moondesignsystem/react';
 
 interface SlotGridProps {
   slots: string[];
@@ -16,15 +16,20 @@ export function SlotGrid({
   if (isLoading) {
     return (
       <div className="py-4 text-center">
-        <p className="text-sm text-gray-500">Buscando horarios disponibles…</p>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>
+          Buscando horarios disponibles…
+        </p>
       </div>
     );
   }
 
   if (slots.length === 0) {
     return (
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-        <p className="text-sm text-gray-600">
+      <div
+        className="rounded-lg p-6 text-center"
+        style={{ backgroundColor: 'var(--color-surface-soft)', border: '1px solid var(--color-border)' }}
+      >
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
           No hay horarios disponibles ese día. Prueba otra fecha.
         </p>
       </div>
@@ -37,10 +42,11 @@ export function SlotGrid({
         <Button
           key={slot}
           type="button"
-          variant={selectedSlot === slot ? 'primary' : 'outline'}
+          variant={selectedSlot === slot ? 'fill' : 'outline'}
+          context="brand"
           size="sm"
           onClick={() => onSelect(slot)}
-          className="h-auto py-3"
+          style={{ height: 'auto', paddingTop: '12px', paddingBottom: '12px' }}
         >
           {new Date(slot).toLocaleTimeString(undefined, {
             hour: 'numeric',
