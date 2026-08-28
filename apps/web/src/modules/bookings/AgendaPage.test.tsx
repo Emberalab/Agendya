@@ -20,6 +20,7 @@ function renderPage() {
 
 const BOOKING = {
   id: 'booking-1',
+  serviceId: 'service-1',
   serviceName: 'Corte de cabello',
   durationMinutes: 30,
   customerName: 'Ana',
@@ -28,6 +29,7 @@ const BOOKING = {
   startAt: '2026-08-03T14:00:00.000Z',
   endAt: '2026-08-03T14:30:00.000Z',
   status: 'CONFIRMED' as const,
+  cancellationPolicyHours: 24,
 };
 
 describe('AgendaPage', () => {

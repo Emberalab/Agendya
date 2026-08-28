@@ -24,7 +24,8 @@ function toFormValues(profile: ProfessionalProfile): UpdateProfileInput {
     description: profile.description ?? '',
     logoUrl: profile.logoUrl ?? '',
     brandColor: (profile.brandColor ?? '#F5F5F5') as typeof BRAND_COLOR_OPTIONS[number],
-    cancellationPolicyHours: profile.cancellationPolicyHours,
+    cancellationPolicyHours:
+      profile.cancellationPolicyHours as typeof CANCELLATION_POLICY_HOURS_OPTIONS[number],
   };
 }
 

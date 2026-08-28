@@ -91,6 +91,8 @@ describe('PublicBookingPage', () => {
     vi.mocked(api.createPublicBooking).mockResolvedValue({
       id: 'booking-1',
       businessName: 'María Belleza',
+      professionalSlug: 'maria-belleza',
+      serviceId: 'service-1',
       serviceName: 'Corte de cabello',
       durationMinutes: 30,
       customerName: 'Ana',
