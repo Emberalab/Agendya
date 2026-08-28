@@ -1,24 +1,32 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v2 as cloudinary } from 'cloudinary';
 
 @Injectable()
 export class UploadService {
-  constructor(private configService: ConfigService) {
-    const cloudinaryUrl = this.configService.get<string>('cloudinaryUrl');
+  private configured = false;
 
+  constructor(private configService: ConfigService) {}
+
+  private ensureConfigured(): void {
+    if (this.configured) {
+      return;
+    }
+
+    const cloudinaryUrl = this.configService.get<string>('cloudinaryUrl');
     if (!cloudinaryUrl) {
-      throw new Error(
+      throw new ServiceUnavailableException(
         'CLOUDINARY_URL no está configurada en las variables de entorno',
       );
     }
 
-    cloudinary.config({
-      url: cloudinaryUrl,
-    });
+    cloudinary.config({ url: cloudinaryUrl });
+    this.configured = true;
   }
 
   async uploadImage(file: Express.Multer.File): Promise<string> {
+    this.ensureConfigured();
+
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
