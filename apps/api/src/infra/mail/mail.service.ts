@@ -83,8 +83,14 @@ export class MailService {
   async sendBookingRescheduled(
     params: BookingRescheduledParams,
   ): Promise<void> {
-    const oldFormattedDate = this.formatDate(params.oldStartAt, params.timezone);
-    const newFormattedDate = this.formatDate(params.newStartAt, params.timezone);
+    const oldFormattedDate = this.formatDate(
+      params.oldStartAt,
+      params.timezone,
+    );
+    const newFormattedDate = this.formatDate(
+      params.newStartAt,
+      params.timezone,
+    );
     await this.send({
       to: params.to,
       subject: `Cita modificada con ${params.businessName}`,
@@ -95,8 +101,14 @@ export class MailService {
   async sendBookingRescheduledToProfessional(
     params: BookingRescheduledToProfessionalParams,
   ): Promise<void> {
-    const oldFormattedDate = this.formatDate(params.oldStartAt, params.timezone);
-    const newFormattedDate = this.formatDate(params.newStartAt, params.timezone);
+    const oldFormattedDate = this.formatDate(
+      params.oldStartAt,
+      params.timezone,
+    );
+    const newFormattedDate = this.formatDate(
+      params.newStartAt,
+      params.timezone,
+    );
     await this.send({
       to: params.to,
       subject: `Modificación de reserva - ${params.customerName}`,

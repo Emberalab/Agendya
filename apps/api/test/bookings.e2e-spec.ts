@@ -45,7 +45,8 @@ function bogotaWeekdayForOffsetHours(
 const MAX_SOON_OFFSET_MINUTES = 3 * 60 + 30; // largest hoursFromNow used below + service duration
 const soonAnchor = (() => {
   const now = Date.now();
-  const bogotaMinutesFromMidnight = ((now - 5 * 60 * 60 * 1000) / 60_000) % 1440;
+  const bogotaMinutesFromMidnight =
+    ((now - 5 * 60 * 60 * 1000) / 60_000) % 1440;
   if (bogotaMinutesFromMidnight + MAX_SOON_OFFSET_MINUTES <= 1440) {
     return now;
   }
