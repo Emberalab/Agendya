@@ -41,7 +41,7 @@ export class BookingsService {
     }
 
     // Parse comma-separated serviceIds
-    const serviceIds = input.serviceIds.split(',').map(id => id.trim());
+    const serviceIds = input.serviceIds.split(',').map((id) => id.trim());
 
     // Obtener todos los servicios seleccionados
     const services = await this.prisma.service.findMany({
@@ -63,16 +63,14 @@ export class BookingsService {
       (sum, s) => sum + s.durationMinutes,
       0,
     );
-    const serviceNames = services.map(s => s.name).join(' + ');
+    const serviceNames = services.map((s) => s.name).join(' + ');
     const primaryServiceId = services[0].id;
 
     const startAt = new Date(input.startAt);
     if (Number.isNaN(startAt.getTime()) || startAt.getTime() <= Date.now()) {
       throw new BadRequestException('Ese horario ya no está disponible.');
     }
-    const endAt = new Date(
-      startAt.getTime() + totalDurationMinutes * 60_000,
-    );
+    const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
 
     const { dateStr, minutesFromMidnight } = zonedDateParts(
       startAt,
@@ -268,7 +266,10 @@ export class BookingsService {
     }
 
     const newStartAt = new Date(input.newStartAt);
-    if (Number.isNaN(newStartAt.getTime()) || newStartAt.getTime() <= Date.now()) {
+    if (
+      Number.isNaN(newStartAt.getTime()) ||
+      newStartAt.getTime() <= Date.now()
+    ) {
       throw new BadRequestException('La nueva fecha debe ser en el futuro.');
     }
 
@@ -340,7 +341,9 @@ export class BookingsService {
       orderBy: { startAt: 'asc' },
     });
 
-    return bookings.map((booking) => this.toAgendaBooking(booking, professional));
+    return bookings.map((booking) =>
+      this.toAgendaBooking(booking, professional),
+    );
   }
 
   async cancelByProfessional(
@@ -418,7 +421,10 @@ export class BookingsService {
     }
 
     const newStartAt = new Date(input.newStartAt);
-    if (Number.isNaN(newStartAt.getTime()) || newStartAt.getTime() <= Date.now()) {
+    if (
+      Number.isNaN(newStartAt.getTime()) ||
+      newStartAt.getTime() <= Date.now()
+    ) {
       throw new BadRequestException('La nueva fecha debe ser en el futuro.');
     }
 
@@ -492,7 +498,10 @@ export class BookingsService {
     };
   }
 
-  private toAgendaBooking(booking: Booking, professional: Professional): AgendaBooking {
+  private toAgendaBooking(
+    booking: Booking,
+    professional: Professional,
+  ): AgendaBooking {
     return {
       id: booking.id,
       serviceId: booking.serviceId ?? '',
