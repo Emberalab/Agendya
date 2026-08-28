@@ -1,5 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AgendaPage } from '../modules/bookings/AgendaPage';
+import { ForgotPasswordPage } from '../modules/auth/ForgotPasswordPage';
+import { GoogleCallbackPage } from '../modules/auth/GoogleCallbackPage';
 import { LoginPage } from '../modules/auth/LoginPage';
 import { RegisterPage } from '../modules/auth/RegisterPage';
 import { DashboardLayout } from '../modules/dashboard/DashboardLayout';
@@ -18,7 +20,10 @@ export function AppRouter() {
         <Route element={<PublicRoute />}>
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         </Route>
+
+        <Route path="/auth/callback" element={<GoogleCallbackPage />} />
 
         <Route element={<PrivateRoute />}>
           <Route element={<DashboardLayout />}>

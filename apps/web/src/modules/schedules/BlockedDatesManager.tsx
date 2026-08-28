@@ -1,4 +1,7 @@
 import { useState, type FormEvent } from 'react';
+import { Button } from '../../shared/components/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/components/Card';
+import { Input } from '../../shared/components/Input';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useCreateException } from './hooks/useCreateException';
 import { useDeleteException } from './hooks/useDeleteException';
@@ -28,86 +31,85 @@ export function BlockedDatesManager() {
   };
 
   return (
-    <div>
-      <h2 className="mb-3 text-lg font-semibold">Fechas bloqueadas</h2>
-      <form
-        onSubmit={handleSubmit}
-        className="mb-4 flex flex-wrap items-end gap-2"
-      >
-        <div>
-          <label
-            htmlFor="exception-date"
-            className="mb-1 block text-sm font-medium"
-          >
-            Fecha
-          </label>
-          <input
+    <Card>
+      <CardHeader>
+        <CardTitle>Fechas bloqueadas</CardTitle>
+        <CardDescription>
+          Bloquea días específicos en los que no estarás disponible
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <form
+          onSubmit={handleSubmit}
+          className="mb-6 flex flex-wrap items-end gap-3"
+        >
+          <Input
             id="exception-date"
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            className="rounded border border-gray-300 px-3 py-2"
+            label="Fecha"
           />
-        </div>
-        <div>
-          <label
-            htmlFor="exception-reason"
-            className="mb-1 block text-sm font-medium"
-          >
-            Motivo (opcional)
-          </label>
-          <input
+          <Input
             id="exception-reason"
             type="text"
             value={reason}
             onChange={(event) => setReason(event.target.value)}
+            label="Motivo (opcional)"
             placeholder="Vacaciones, cita médica…"
-            className="rounded border border-gray-300 px-3 py-2"
           />
-        </div>
-        <button
-          type="submit"
-          disabled={!date || createException.isPending}
-          className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
-        >
-          {createException.isPending ? 'Agregando…' : 'Bloquear fecha'}
-        </button>
-      </form>
-      {createException.isError && (
-        <p className="mb-4 text-sm text-red-600">
-          {getApiErrorMessage(createException.error)}
-        </p>
-      )}
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={!date || createException.isPending}
+          >
+            {createException.isPending ? 'Agregando…' : 'Bloquear fecha'}
+          </Button>
+        </form>
 
-      {isLoading && <p>Cargando…</p>}
-      {!isLoading && exceptions?.length === 0 && (
-        <p className="text-sm text-gray-500">No tienes fechas bloqueadas.</p>
-      )}
-      {!isLoading && exceptions && exceptions.length > 0 && (
-        <ul>
-          {exceptions.map((exception) => (
-            <li
-              key={exception.id}
-              className="flex items-center justify-between border-b border-gray-200 py-2"
-            >
-              <div>
-                <p className="text-sm font-medium">{exception.date}</p>
-                {exception.reason && (
-                  <p className="text-xs text-gray-500">{exception.reason}</p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={() => deleteException.mutate(exception.id)}
-                disabled={deleteException.isPending}
-                className="rounded border border-red-300 px-2 py-1 text-xs text-red-600 disabled:opacity-50"
+        {createException.isError && (
+          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
+            <p className="text-sm text-red-600">
+              {getApiErrorMessage(createException.error)}
+            </p>
+          </div>
+        )}
+
+        {isLoading && (
+          <p className="py-4 text-center text-gray-500">Cargando…</p>
+        )}
+        {!isLoading && exceptions?.length === 0 && (
+          <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
+            <p className="text-sm text-gray-600">No tienes fechas bloqueadas.</p>
+          </div>
+        )}
+        {!isLoading && exceptions && exceptions.length > 0 && (
+          <div className="space-y-2">
+            {exceptions.map((exception) => (
+              <div
+                key={exception.id}
+                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 hover:shadow-sm"
               >
-                Eliminar
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{exception.date}</p>
+                  {exception.reason && (
+                    <p className="text-xs text-gray-600">{exception.reason}</p>
+                  )}
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={() => deleteException.mutate(exception.id)}
+                  disabled={deleteException.isPending}
+                >
+                  Eliminar
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }

@@ -4,7 +4,7 @@ import type {
   CreateServiceInput,
   Service,
   UpdateServiceInput,
-} from '@ronda/types';
+} from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()

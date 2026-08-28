@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Param,
@@ -7,7 +8,12 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Professional } from '@prisma/client';
-import { agendaQuerySchema, type AgendaQuery } from '@ronda/types';
+import {
+  agendaQuerySchema,
+  rescheduleBookingSchema,
+  type AgendaQuery,
+  type RescheduleBookingInput,
+} from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -29,5 +35,15 @@ export class BookingsController {
   @Patch(':id/cancel')
   cancel(@CurrentUser() user: Professional, @Param('id') id: string) {
     return this.bookingsService.cancelByProfessional(user.id, id);
+  }
+
+  @Patch(':id/reschedule')
+  reschedule(
+    @CurrentUser() user: Professional,
+    @Param('id') id: string,
+    @Body(new ZodValidationPipe(rescheduleBookingSchema))
+    dto: RescheduleBookingInput,
+  ) {
+    return this.bookingsService.rescheduleBooking(user.id, id, dto);
   }
 }

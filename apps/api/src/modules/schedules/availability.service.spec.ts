@@ -16,7 +16,7 @@ describe('AvailabilityService', () => {
   let service: AvailabilityService;
   let prisma: {
     professional: { findUnique: jest.Mock };
-    service: { findFirst: jest.Mock };
+    service: { findMany: jest.Mock };
     workingHour: { findUnique: jest.Mock };
     scheduleException: { findUnique: jest.Mock };
     booking: { findMany: jest.Mock };
@@ -26,7 +26,7 @@ describe('AvailabilityService', () => {
   beforeEach(async () => {
     prisma = {
       professional: { findUnique: jest.fn().mockResolvedValue(PROFESSIONAL) },
-      service: { findFirst: jest.fn().mockResolvedValue(SERVICE) },
+      service: { findMany: jest.fn().mockResolvedValue([SERVICE]) },
       workingHour: { findUnique: jest.fn() },
       scheduleException: { findUnique: jest.fn().mockResolvedValue(null) },
       booking: { findMany: jest.fn().mockResolvedValue([]) },
@@ -56,15 +56,15 @@ describe('AvailabilityService', () => {
     prisma.professional.findUnique.mockResolvedValue(null);
 
     await expect(
-      service.getAvailableSlots('missing', 'service-1', '2026-08-03'),
+      service.getAvailableSlots('missing', ['service-1'], '2026-08-03'),
     ).rejects.toThrow(NotFoundException);
   });
 
   it('throws not found when the service does not belong to the professional or is inactive', async () => {
-    prisma.service.findFirst.mockResolvedValue(null);
+    prisma.service.findMany.mockResolvedValue([]);
 
     await expect(
-      service.getAvailableSlots('prof-1', 'missing-service', '2026-08-03'),
+      service.getAvailableSlots('prof-1', ['missing-service'], '2026-08-03'),
     ).rejects.toThrow(NotFoundException);
   });
 
@@ -73,7 +73,7 @@ describe('AvailabilityService', () => {
 
     const slots = await service.getAvailableSlots(
       'prof-1',
-      'service-1',
+      ['service-1'],
       '2026-08-03',
     );
 
@@ -89,7 +89,7 @@ describe('AvailabilityService', () => {
 
     const slots = await service.getAvailableSlots(
       'prof-1',
-      'service-1',
+      ['service-1'],
       '2026-08-03',
     );
 
@@ -104,7 +104,7 @@ describe('AvailabilityService', () => {
 
     const slots = await service.getAvailableSlots(
       'prof-1',
-      'service-1',
+      ['service-1'],
       '2026-08-03',
     );
 
@@ -139,7 +139,7 @@ describe('AvailabilityService', () => {
 
     const slots = await service.getAvailableSlots(
       'prof-1',
-      'service-1',
+      ['service-1'],
       '2026-08-03',
     );
 
@@ -161,7 +161,7 @@ describe('AvailabilityService', () => {
 
     const slots = await service.getAvailableSlots(
       'prof-1',
-      'service-1',
+      ['service-1'],
       '2026-08-03',
     );
 

@@ -16,7 +16,7 @@ export class AvailabilityService {
 
   async getAvailableSlots(
     professionalId: string,
-    serviceId: string,
+    serviceIds: string[],
     dateStr: string,
   ): Promise<string[]> {
     const professional = await this.prisma.professional.findUnique({
@@ -26,12 +26,26 @@ export class AvailabilityService {
       throw new NotFoundException('Profesional no encontrado.');
     }
 
-    const service = await this.prisma.service.findFirst({
-      where: { id: serviceId, professionalId, isActive: true },
+    // Obtener todos los servicios seleccionados
+    const services = await this.prisma.service.findMany({
+      where: {
+        id: { in: serviceIds },
+        professionalId,
+        isActive: true,
+      },
     });
-    if (!service) {
-      throw new NotFoundException('Servicio no encontrado.');
+    if (services.length === 0) {
+      throw new NotFoundException('Servicios no encontrados.');
     }
+    if (services.length !== serviceIds.length) {
+      throw new NotFoundException('Algunos servicios no están disponibles.');
+    }
+
+    // Calcular duración total de todos los servicios
+    const totalDurationMinutes = services.reduce(
+      (sum, service) => sum + service.durationMinutes,
+      0,
+    );
 
     const workingHour = await this.prisma.workingHour.findUnique({
       where: {
@@ -77,7 +91,7 @@ export class AvailabilityService {
 
     for (
       let start = workingHour.startMinute;
-      start + service.durationMinutes <= workingHour.endMinute;
+      start + totalDurationMinutes <= workingHour.endMinute;
       start += gridMinutes
     ) {
       const slotStart = zonedInstant(dateStr, start, professional.timezone);
@@ -86,7 +100,7 @@ export class AvailabilityService {
         continue;
       }
 
-      const slotEndMs = slotStartMs + service.durationMinutes * 60_000;
+      const slotEndMs = slotStartMs + totalDurationMinutes * 60_000;
       const overlapsBusy = busyRanges.some(
         ([busyStart, busyEnd]) =>
           slotStartMs < busyEnd && slotEndMs > busyStart,

@@ -3,7 +3,7 @@ import { getAvailability } from '../api';
 
 export function useAvailability(
   slug: string,
-  serviceId: string | null,
+  serviceIds: string[],
   date: string,
 ) {
   return useQuery({
@@ -12,10 +12,10 @@ export function useAvailability(
       'professionals',
       slug,
       'availability',
-      serviceId,
+      serviceIds.join(','),
       date,
     ],
-    queryFn: () => getAvailability(slug, serviceId!, date),
-    enabled: Boolean(serviceId) && Boolean(date),
+    queryFn: () => getAvailability(slug, serviceIds, date),
+    enabled: serviceIds.length > 0 && Boolean(date),
   });
 }

@@ -5,19 +5,23 @@ import {
   HttpCode,
   HttpStatus,
   Post,
+  Req,
+  Res,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Professional } from '@prisma/client';
+import type { Request, Response } from 'express';
 import {
   loginSchema,
   registerSchema,
   type LoginInput,
   type RegisterInput,
-} from '@ronda/types';
+} from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthService } from './auth.service';
+import { AuthService, type GoogleUser } from './auth.service';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
 @Controller('auth')
@@ -46,5 +50,23 @@ export class AuthController {
       businessName: user.businessName,
       slug: user.slug,
     };
+  }
+
+  @Get('google')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuth() {
+    // Guard redirects to Google
+  }
+
+  @Get('google/callback')
+  @UseGuards(GoogleAuthGuard)
+  async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    const authResponse = await this.authService.googleLogin(
+      req.user as GoogleUser,
+    );
+
+    // Redirect to frontend with token
+    const redirectUrl = `${process.env.WEB_URL}/auth/callback?token=${authResponse.accessToken}`;
+    res.redirect(redirectUrl);
   }
 }

@@ -3,7 +3,7 @@ import type {
   ScheduleException,
   SetWorkingHoursInput,
   WorkingHour,
-} from '@ronda/types';
+} from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 
 export async function getWorkingHours(): Promise<WorkingHour[]> {

@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import type { AuthResponse, LoginInput, RegisterInput } from '@ronda/types';
+import type { AuthResponse, LoginInput, RegisterInput } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { ensureUniqueSlug, slugify } from '../../common/utils/slug.util';
 
@@ -16,6 +16,14 @@ interface ProfessionalIdentity {
   email: string;
   businessName: string;
   slug: string;
+}
+
+export interface GoogleUser {
+  googleId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  photoUrl?: string;
 }
 
 @Injectable()
@@ -59,12 +67,52 @@ export class AuthService {
       throw new UnauthorizedException('Credenciales inválidas.');
     }
 
+    if (!professional.passwordHash) {
+      throw new UnauthorizedException(
+        'Esta cuenta usa autenticación con Google.',
+      );
+    }
+
     const passwordMatches = await bcrypt.compare(
       input.password,
       professional.passwordHash,
     );
     if (!passwordMatches) {
       throw new UnauthorizedException('Credenciales inválidas.');
+    }
+
+    return this.buildAuthResponse(professional);
+  }
+
+  async googleLogin(googleUser: GoogleUser): Promise<AuthResponse> {
+    let professional = await this.prisma.professional.findUnique({
+      where: { googleId: googleUser.googleId },
+    });
+
+    if (!professional) {
+      professional = await this.prisma.professional.findUnique({
+        where: { email: googleUser.email },
+      });
+
+      if (professional) {
+        professional = await this.prisma.professional.update({
+          where: { id: professional.id },
+          data: { googleId: googleUser.googleId },
+        });
+      } else {
+        const businessName = `${googleUser.firstName} ${googleUser.lastName}`;
+        const slug = await ensureUniqueSlug(this.prisma, slugify(businessName));
+
+        professional = await this.prisma.professional.create({
+          data: {
+            email: googleUser.email,
+            googleId: googleUser.googleId,
+            businessName,
+            slug,
+            photoUrl: googleUser.photoUrl,
+          },
+        });
+      }
     }
 
     return this.buildAuthResponse(professional);
