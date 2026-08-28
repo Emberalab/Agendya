@@ -18,6 +18,15 @@ function renderPage() {
   );
 }
 
+// Far enough in the future that it clears the cancellation policy window,
+// so the "Cancelar" button stays enabled.
+const FUTURE_START = new Date(
+  Date.now() + 30 * 24 * 60 * 60 * 1000,
+).toISOString();
+const FUTURE_END = new Date(
+  Date.now() + 30 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000,
+).toISOString();
+
 const BOOKING = {
   id: 'booking-1',
   serviceId: 'service-1',
@@ -26,8 +35,8 @@ const BOOKING = {
   customerName: 'Ana',
   customerEmail: 'ana@example.com',
   customerPhone: '+57 300 1234567',
-  startAt: '2026-08-03T14:00:00.000Z',
-  endAt: '2026-08-03T14:30:00.000Z',
+  startAt: FUTURE_START,
+  endAt: FUTURE_END,
   status: 'CONFIRMED' as const,
   cancellationPolicyHours: 24,
 };
