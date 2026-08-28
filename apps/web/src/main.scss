@@ -46,72 +46,72 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Moon input — visible border using design system tokens */
 .moon-input.moon-input-outline {
-  box-shadow: inset 0 0 0 1px var(--color-border) !important;
+  box-shadow: inset 0 0 0 1px var(--color-border);
   border-radius: 8px;
-  font-family: var(--font-body) !important;
+  font-family: var(--font-body);
 }
 .moon-input.moon-input-outline:focus {
-  box-shadow: inset 0 0 0 2px var(--color-brand-primary) !important;
+  box-shadow: inset 0 0 0 2px var(--color-brand-primary);
   outline: none;
 }
 
 /* Moon checkbox label — use body font */
 .moon-checkbox-label,
 label:has(.moon-checkbox) span {
-  font-family: var(--font-body) !important;
+  font-family: var(--font-body);
   font-size: 14px;
   color: var(--color-text-primary);
 }
 
 /* Moon checkbox — brand accent color */
 .moon-checkbox {
-  appearance: auto !important;
-  -webkit-appearance: auto !important;
-  width: 16px !important;
-  height: 16px !important;
-  accent-color: var(--color-brand-primary) !important;
+  appearance: auto;
+  -webkit-appearance: auto;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-brand-primary);
   cursor: pointer;
 }
 
 /* Restore Moon button fill background that Tailwind preflight resets to transparent */
 .moon-button {
-  background-color: var(--color-brand-primary) !important;
-  color: #ffffff !important;
-  font-family: var(--font-body) !important;
-  font-weight: 600 !important;
+  background-color: var(--color-brand-primary);
+  color: #ffffff;
+  font-family: var(--font-body);
+  font-weight: 600;
   border-radius: 8px;
   transition: background-color 0.15s, box-shadow 0.15s;
 }
 .moon-button:hover:not(:disabled):not([aria-disabled="true"]) {
-  background-color: var(--color-brand-primary-hover) !important;
+  background-color: var(--color-brand-primary-hover);
 }
 .moon-button:focus-visible {
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3) !important;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
 }
 .moon-button:disabled,
 .moon-button[aria-disabled="true"] {
-  opacity: 0.55 !important;
-  cursor: not-allowed !important;
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 /* Outline variant — transparent bg, brand border */
 .moon-button.moon-button-outline {
-  background-color: transparent !important;
-  color: var(--color-text-primary) !important;
-  box-shadow: inset 0 0 0 1px var(--color-border) !important;
+  background-color: transparent;
+  color: var(--color-text-primary);
+  box-shadow: inset 0 0 0 1px var(--color-border);
 }
 .moon-button.moon-button-outline:hover:not(:disabled) {
-  background-color: var(--color-surface-soft) !important;
-  box-shadow: inset 0 0 0 1px var(--color-brand-primary) !important;
+  background-color: var(--color-surface-soft);
+  box-shadow: inset 0 0 0 1px var(--color-brand-primary);
 }
 
 /* Filter pill: Moon Select nested inside a custom border wrapper loses its own border */
 .filter-estado-pill .moon-select {
-  box-shadow: none !important;
-  border: none !important;
-  background: transparent !important;
-  font-family: var(--font-body) !important;
-  font-size: 13px !important;
-  padding: 0 !important;
+  box-shadow: none;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 13px;
+  padding: 0;
 }
 
 /* Skeleton pulse animation */
