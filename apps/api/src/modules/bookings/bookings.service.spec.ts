@@ -39,7 +39,7 @@ describe('BookingsService', () => {
   let prisma: {
     professional: { findFirst: jest.Mock; findUniqueOrThrow: jest.Mock };
     service: { findMany: jest.Mock };
-    workingHour: { findUnique: jest.Mock };
+    workingHour: { findMany: jest.Mock };
     scheduleException: { findUnique: jest.Mock };
     booking: {
       findUnique: jest.Mock;
@@ -68,9 +68,9 @@ describe('BookingsService', () => {
       },
       service: { findMany: jest.fn().mockResolvedValue([SERVICE]) },
       workingHour: {
-        findUnique: jest
+        findMany: jest
           .fn()
-          .mockResolvedValue({ startMinute: 480, endMinute: 1080 }),
+          .mockResolvedValue([{ startMinute: 480, endMinute: 1080 }]),
       },
       scheduleException: { findUnique: jest.fn().mockResolvedValue(null) },
       booking: {
@@ -137,7 +137,7 @@ describe('BookingsService', () => {
     });
 
     it('rejects a slot outside the working hours', async () => {
-      prisma.workingHour.findUnique.mockResolvedValue(null);
+      prisma.workingHour.findMany.mockResolvedValue([]);
 
       await expect(
         service.createPublicBooking('maria-belleza', CREATE_INPUT),

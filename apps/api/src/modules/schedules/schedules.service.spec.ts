@@ -57,7 +57,7 @@ describe('SchedulesService', () => {
 
       expect(prisma.workingHour.findMany).toHaveBeenCalledWith({
         where: { professionalId: 'prof-1' },
-        orderBy: { dayOfWeek: 'asc' },
+        orderBy: [{ dayOfWeek: 'asc' }, { startMinute: 'asc' }],
       });
       expect(result).toEqual([
         { id: 'wh-1', dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 1080 },
@@ -87,6 +87,34 @@ describe('SchedulesService', () => {
         ],
       });
       expect(prisma.$transaction).toHaveBeenCalled();
+    });
+
+    it('persists several blocks for the same weekday', async () => {
+      prisma.workingHour.findMany.mockResolvedValue([]);
+
+      await service.setWorkingHours('prof-1', {
+        days: [
+          { dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 780 },
+          { dayOfWeek: 'MONDAY', startMinute: 900, endMinute: 1080 },
+        ],
+      });
+
+      expect(prisma.workingHour.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            professionalId: 'prof-1',
+            dayOfWeek: 'MONDAY',
+            startMinute: 540,
+            endMinute: 780,
+          },
+          {
+            professionalId: 'prof-1',
+            dayOfWeek: 'MONDAY',
+            startMinute: 900,
+            endMinute: 1080,
+          },
+        ],
+      });
     });
   });
 

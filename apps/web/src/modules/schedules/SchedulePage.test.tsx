@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import * as api from './api';
 import { SchedulePage } from './SchedulePage';
@@ -13,7 +14,15 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <SchedulePage />
+      <MemoryRouter initialEntries={['/dashboard/schedule']}>
+        <Routes>
+          <Route path="/dashboard/schedule" element={<SchedulePage />} />
+          <Route
+            path="/dashboard/schedule/:day"
+            element={<div>DAY CONFIG</div>}
+          />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -21,7 +30,8 @@ function renderPage() {
 describe('SchedulePage', () => {
   beforeEach(() => {
     vi.mocked(api.getWorkingHours).mockResolvedValue([
-      { id: 'wh-1', dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 1080 },
+      { id: 'wh-1', dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 780 },
+      { id: 'wh-2', dayOfWeek: 'MONDAY', startMinute: 900, endMinute: 1080 },
     ]);
     vi.mocked(api.listExceptions).mockResolvedValue([
       { id: 'exc-1', date: '2026-12-25', reason: 'Navidad' },
@@ -32,16 +42,41 @@ describe('SchedulePage', () => {
     vi.resetAllMocks();
   });
 
-  it('renders the configured working day and blocked dates', async () => {
+  // The page renders both a desktop table and a mobile card stack (Tailwind
+  // `hidden`/`lg:hidden` keeps both in the DOM under jsdom), so day-level
+  // controls appear twice — assertions target the first match.
+
+  it('renders each working block for the configured day and the blocked dates', async () => {
     renderPage();
 
-    const mondayLabel = await screen.findByText('Lunes');
-    const mondayCheckbox = mondayLabel
-      .closest('label')
-      ?.querySelector('input[type="checkbox"]');
-    expect(mondayCheckbox).toBeChecked();
-    expect(await screen.findByText('2026-12-25')).toBeInTheDocument();
+    const [mondayToggle] = await screen.findAllByRole('switch', {
+      name: 'Estado de Lunes',
+    });
+    expect(mondayToggle).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getAllByText('09:00 – 13:00').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('15:00 – 18:00').length).toBeGreaterThan(0);
+
+    const [sundayToggle] = screen.getAllByRole('switch', {
+      name: 'Estado de Domingo',
+    });
+    expect(sundayToggle).toHaveAttribute('aria-checked', 'false');
+
+    expect(
+      await screen.findByText('25 de diciembre de 2026'),
+    ).toBeInTheDocument();
     expect(screen.getByText('Navidad')).toBeInTheDocument();
+  });
+
+  it('navigates to the per-day editor from the row action', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    const [configureMonday] = await screen.findAllByRole('button', {
+      name: 'Configurar Lunes',
+    });
+    await user.click(configureMonday);
+
+    expect(await screen.findByText('DAY CONFIG')).toBeInTheDocument();
   });
 
   it('creates a new blocked date on submit', async () => {
@@ -53,7 +88,7 @@ describe('SchedulePage', () => {
 
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText('Lunes');
+    await screen.findAllByRole('switch', { name: 'Estado de Lunes' });
 
     const dateInput = document.getElementById(
       'exception-date',
