@@ -27,7 +27,7 @@ const SERVICE = {
 };
 
 const CREATE_INPUT = {
-  serviceId: 'service-1',
+  serviceIds: 'service-1',
   startAt: '2026-08-03T14:00:00.000Z',
   customerName: 'Ana',
   customerEmail: 'ana@example.com',
@@ -38,7 +38,7 @@ describe('BookingsService', () => {
   let service: BookingsService;
   let prisma: {
     professional: { findFirst: jest.Mock; findUniqueOrThrow: jest.Mock };
-    service: { findFirst: jest.Mock };
+    service: { findMany: jest.Mock };
     workingHour: { findUnique: jest.Mock };
     scheduleException: { findUnique: jest.Mock };
     booking: {
@@ -66,7 +66,7 @@ describe('BookingsService', () => {
         findFirst: jest.fn().mockResolvedValue(PROFESSIONAL),
         findUniqueOrThrow: jest.fn().mockResolvedValue(PROFESSIONAL),
       },
-      service: { findFirst: jest.fn().mockResolvedValue(SERVICE) },
+      service: { findMany: jest.fn().mockResolvedValue([SERVICE]) },
       workingHour: {
         findUnique: jest
           .fn()
@@ -120,7 +120,7 @@ describe('BookingsService', () => {
     });
 
     it('throws not found when the service does not belong to the professional or is inactive', async () => {
-      prisma.service.findFirst.mockResolvedValue(null);
+      prisma.service.findMany.mockResolvedValue([]);
 
       await expect(
         service.createPublicBooking('maria-belleza', CREATE_INPUT),
@@ -203,6 +203,8 @@ describe('BookingsService', () => {
       expect(result).toEqual({
         id: 'booking-1',
         businessName: 'María Belleza',
+        professionalSlug: 'maria-belleza',
+        serviceId: 'service-1',
         serviceName: 'Corte de cabello',
         durationMinutes: 30,
         customerName: 'Ana',

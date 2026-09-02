@@ -41,7 +41,7 @@ describe('ServicesPage', () => {
     renderPage();
 
     expect(await screen.findByText('Corte de cabello')).toBeInTheDocument();
-    expect(screen.getByText('30 min')).toBeInTheDocument();
+    expect(screen.getByText('30 minutos')).toBeInTheDocument();
   });
 
   it('creates a new service on submit', async () => {
@@ -60,10 +60,10 @@ describe('ServicesPage', () => {
     await screen.findByText('Corte de cabello');
 
     await user.type(
-      screen.getByPlaceholderText('Nombre del servicio'),
+      screen.getByPlaceholderText('Ej: Corte de cabello'),
       'Manicure',
     );
-    await user.type(screen.getByPlaceholderText('Duración (min)'), '45');
+    await user.type(screen.getByPlaceholderText('Ej: 30'), '45');
     await user.click(screen.getByRole('button', { name: 'Agregar servicio' }));
 
     await waitFor(() => {

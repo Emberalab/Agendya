@@ -11,6 +11,8 @@ vi.mock('./api');
 const BASE_BOOKING = {
   id: 'booking-1',
   businessName: 'María Belleza',
+  professionalSlug: 'maria-belleza',
+  serviceId: 'service-1',
   serviceName: 'Corte de cabello',
   durationMinutes: 30,
   customerName: 'Ana',

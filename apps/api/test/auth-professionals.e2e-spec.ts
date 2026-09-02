@@ -106,7 +106,7 @@ describe('Auth + Professionals (e2e)', () => {
       .set('Authorization', `Bearer ${accessToken}`)
       .send({
         description: 'Especialista en color y peinados.',
-        cancellationPolicyHours: 12,
+        cancellationPolicyHours: 6,
       })
       .expect(200);
 
@@ -115,14 +115,14 @@ describe('Auth + Professionals (e2e)', () => {
       cancellationPolicyHours: number;
     };
     expect(body.description).toBe('Especialista en color y peinados.');
-    expect(body.cancellationPolicyHours).toBe(12);
+    expect(body.cancellationPolicyHours).toBe(6);
   });
 
   it('rejects a profile update with an invalid cancellation policy', async () => {
     await request(app.getHttpServer())
       .patch('/professionals/me')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ cancellationPolicyHours: 3 })
+      .send({ cancellationPolicyHours: 5 })
       .expect(400);
   });
 

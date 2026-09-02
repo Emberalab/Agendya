@@ -18,6 +18,15 @@ function renderPage() {
   );
 }
 
+// Far enough in the future that it clears the cancellation policy window,
+// so the "Cancelar" button stays enabled.
+const FUTURE_START = new Date(
+  Date.now() + 30 * 24 * 60 * 60 * 1000,
+).toISOString();
+const FUTURE_END = new Date(
+  Date.now() + 30 * 24 * 60 * 60 * 1000 + 30 * 60 * 1000,
+).toISOString();
+
 const BOOKING = {
   id: 'booking-1',
   serviceId: '11111111-1111-1111-1111-111111111111',

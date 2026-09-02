@@ -20,7 +20,7 @@ import {
 } from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
-import { AuthService } from './auth.service';
+import { AuthService, type GoogleUser } from './auth.service';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 
@@ -61,7 +61,9 @@ export class AuthController {
   @Get('google/callback')
   @UseGuards(GoogleAuthGuard)
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
-    const authResponse = await this.authService.googleLogin(req.user as any);
+    const authResponse = await this.authService.googleLogin(
+      req.user as GoogleUser,
+    );
 
     // Redirect to frontend with token
     const redirectUrl = `${process.env.WEB_URL}/auth/callback?token=${authResponse.accessToken}`;

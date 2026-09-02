@@ -18,6 +18,14 @@ interface ProfessionalIdentity {
   slug: string;
 }
 
+export interface GoogleUser {
+  googleId: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  photoUrl?: string;
+}
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -76,13 +84,7 @@ export class AuthService {
     return this.buildAuthResponse(professional);
   }
 
-  async googleLogin(googleUser: {
-    googleId: string;
-    email: string;
-    firstName: string;
-    lastName: string;
-    photoUrl?: string;
-  }): Promise<AuthResponse> {
+  async googleLogin(googleUser: GoogleUser): Promise<AuthResponse> {
     let professional = await this.prisma.professional.findUnique({
       where: { googleId: googleUser.googleId },
     });
@@ -99,10 +101,7 @@ export class AuthService {
         });
       } else {
         const businessName = `${googleUser.firstName} ${googleUser.lastName}`;
-        const slug = await ensureUniqueSlug(
-          this.prisma,
-          slugify(businessName),
-        );
+        const slug = await ensureUniqueSlug(this.prisma, slugify(businessName));
 
         professional = await this.prisma.professional.create({
           data: {
