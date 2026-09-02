@@ -20,6 +20,7 @@ enum Weekday {
 }
 
 enum BookingStatus {
+  PENDING
   CONFIRMED
   CANCELLED
   COMPLETED

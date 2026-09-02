@@ -390,6 +390,34 @@ export class BookingsService {
     return this.toAgendaBooking(updated, professional);
   }
 
+  async completeByProfessional(
+    professionalId: string,
+    bookingId: string,
+  ): Promise<AgendaBooking> {
+    const booking = await this.prisma.booking.findFirst({
+      where: { id: bookingId, professionalId },
+    });
+    if (!booking) {
+      throw new NotFoundException('Reserva no encontrada.');
+    }
+    if (booking.status !== 'CONFIRMED') {
+      throw new ConflictException(
+        'Solo puedes completar una reserva confirmada.',
+      );
+    }
+
+    const professional = await this.prisma.professional.findUniqueOrThrow({
+      where: { id: professionalId },
+    });
+
+    const updated = await this.prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: 'COMPLETED' },
+    });
+
+    return this.toAgendaBooking(updated, professional);
+  }
+
   async rescheduleBooking(
     professionalId: string,
     bookingId: string,
@@ -505,6 +533,9 @@ export class BookingsService {
       endAt: booking.endAt.toISOString(),
       status: booking.status,
       cancellationPolicyHours: professional.cancellationPolicyHours,
+      createdAt: booking.createdAt.toISOString(),
+      cancelledAt: booking.cancelledAt?.toISOString() ?? null,
+      cancelledBy: booking.cancelledBy ?? null,
     };
   }
 }

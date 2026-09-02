@@ -37,6 +37,11 @@ export class BookingsController {
     return this.bookingsService.cancelByProfessional(user.id, id);
   }
 
+  @Patch(':id/complete')
+  complete(@CurrentUser() user: Professional, @Param('id') id: string) {
+    return this.bookingsService.completeByProfessional(user.id, id);
+  }
+
   @Patch(':id/reschedule')
   reschedule(
     @CurrentUser() user: Professional,

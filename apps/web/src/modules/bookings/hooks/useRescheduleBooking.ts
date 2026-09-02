@@ -9,7 +9,7 @@ export function useRescheduleBooking() {
     mutationFn: ({ id, input }: { id: string; input: RescheduleBookingInput }) =>
       rescheduleBooking(id, input),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['agenda'] });
+      void queryClient.invalidateQueries({ queryKey: ['bookings', 'agenda'] });
     },
   });
 }

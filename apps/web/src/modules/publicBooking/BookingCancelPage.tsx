@@ -12,6 +12,7 @@ import { useAvailability } from './hooks/useAvailability';
 import { SlotGrid } from './components/SlotGrid';
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
+  PENDING: 'Pendiente',
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',

@@ -1,14 +1,17 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import type { AgendaBooking, BookingStatus } from '@agendya/types';
 import { addDays, endOfMonth, endOfWeek, format, isToday, isTomorrow, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Button, FormGroup, Input, Select } from '@moondesignsystem/react';
+import { FormGroup, Input, Select } from '@moondesignsystem/react';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { AppointmentDrawer } from './AppointmentDrawer';
 import { CalendarGridView } from './CalendarGridView';
+import { ContextMenu } from './ContextMenu';
 import { RescheduleModal } from './RescheduleModal';
 import { StatusBadge } from './statusBadge';
 import { useAgenda } from './hooks/useAgenda';
 import { useCancelBooking } from './hooks/useCancelBooking';
+import { useCompleteBooking } from './hooks/useCompleteBooking';
 import { useRescheduleBooking } from './hooks/useRescheduleBooking';
 
 type ViewMode = 'list' | 'calendar';
@@ -17,27 +20,44 @@ type StatusFilter = 'all' | BookingStatus;
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'Todas' },
   { value: 'CONFIRMED', label: 'Confirmadas' },
+  { value: 'PENDING', label: 'Pendientes' },
   { value: 'CANCELLED', label: 'Canceladas' },
   { value: 'COMPLETED', label: 'Completadas' },
   { value: 'NO_SHOW', label: 'No asistieron' },
+];
+
+const MOBILE_STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
+  { value: 'all', label: 'Todas' },
+  { value: 'CONFIRMED', label: 'Confirmadas' },
+  { value: 'PENDING', label: 'Pendientes' },
+  { value: 'CANCELLED', label: 'Canceladas' },
 ];
 
 function toDateOnly(date: Date): string {
   return format(date, 'yyyy-MM-dd');
 }
 
+function canModifyBooking(booking: AgendaBooking): boolean {
+  if (booking.status !== 'CONFIRMED') return false;
+  const hoursUntil = (new Date(booking.startAt).getTime() - Date.now()) / 3_600_000;
+  return hoursUntil >= booking.cancellationPolicyHours;
+}
+
+function contactCustomer(phone: string) {
+  window.location.href = `tel:${phone.replace(/\s+/g, '')}`;
+}
+
 function StatCard({ label, value, sub, icon }: { label: string; value: number; sub: string; icon: React.ReactNode }) {
   return (
-    <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-      <div className="flex items-center justify-between mb-2">
+    <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+      <div className="flex items-start justify-between mb-3">
         <p
           style={{
-            fontFamily: 'var(--font-body)',
-            fontWeight: 600,
-            fontSize: '11px',
-            color: 'var(--color-text-secondary)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '10px',
+            color: 'var(--color-text-muted)',
             textTransform: 'uppercase',
-            letterSpacing: '0.04em',
+            letterSpacing: '0.06em',
           }}
         >
           {label}
@@ -48,57 +68,57 @@ function StatCard({ label, value, sub, icon }: { label: string; value: number; s
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
-          fontSize: '32px',
+          fontSize: '30px',
           color: 'var(--color-text-primary)',
-          lineHeight: '32px',
+          lineHeight: 1,
           marginBottom: '4px',
         }}
       >
         {value}
       </p>
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-text-secondary)' }}>{sub}</p>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-text-muted)' }}>{sub}</p>
     </div>
   );
 }
 
-function KpiChip({
+function MobileStatPill({
   label,
   value,
-  active,
+  filled,
   onClick,
 }: {
   label: string;
   value: number;
-  active: boolean;
+  filled: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-2 shrink-0 rounded-full px-4 py-2"
+      className="flex items-center gap-2 px-3 py-2 rounded-full shrink-0"
       style={{
-        fontFamily: 'var(--font-body)',
-        fontSize: '14px',
-        fontWeight: 600,
-        border: `1px solid ${active ? 'var(--color-brand-primary)' : 'var(--color-border)'}`,
-        backgroundColor: active ? 'var(--color-brand-primary)' : 'var(--color-surface)',
-        color: active ? '#fff' : 'var(--color-text-primary)',
+        backgroundColor: filled ? 'var(--color-brand-primary)' : 'var(--color-surface-soft)',
+        border: `1px solid ${filled ? 'transparent' : 'var(--color-border)'}`,
         cursor: 'pointer',
-        whiteSpace: 'nowrap',
       }}
     >
-      {label}
       <span
-        className="inline-flex items-center justify-center rounded-full"
         style={{
-          minWidth: '20px',
-          height: '20px',
-          padding: '0 6px',
           fontFamily: 'var(--font-body)',
-          fontSize: '12px',
+          fontSize: '13px',
+          fontWeight: 500,
+          color: filled ? '#fff' : 'var(--color-text-secondary)',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontFamily: 'var(--font-display)',
           fontWeight: 700,
-          backgroundColor: active ? 'rgba(255,255,255,0.25)' : 'var(--color-surface-soft)',
-          color: active ? '#fff' : 'var(--color-text-primary)',
+          fontSize: '13px',
+          color: filled ? '#fff' : 'var(--color-text-primary)',
         }}
       >
         {value}
@@ -111,14 +131,13 @@ function StatusChip({ label, active, onClick }: { label: string; active: boolean
   return (
     <button
       onClick={onClick}
-      className="shrink-0 rounded-full px-4 py-2"
+      className="shrink-0 rounded-full px-3 py-1.5 text-sm"
       style={{
         fontFamily: 'var(--font-body)',
-        fontSize: '14px',
-        fontWeight: 600,
-        border: `1.5px solid ${active ? 'var(--color-brand-primary)' : 'var(--color-border)'}`,
-        backgroundColor: active ? '#EEF2FF' : 'var(--color-surface)',
-        color: active ? 'var(--color-brand-primary)' : 'var(--color-text-primary)',
+        fontWeight: active ? 600 : 400,
+        border: `1px solid ${active ? 'rgba(79,70,229,0.2)' : 'var(--color-border)'}`,
+        backgroundColor: active ? 'rgba(79,70,229,0.08)' : 'transparent',
+        color: active ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
       }}
@@ -128,29 +147,86 @@ function StatusChip({ label, active, onClick }: { label: string; active: boolean
   );
 }
 
-function AppointmentRow({
+function RowActions({
   booking,
-  onModify,
+  onViewDetail,
+  onReschedule,
   onCancel,
-  cancelPending,
 }: {
   booking: AgendaBooking;
-  onModify: (booking: AgendaBooking) => void;
+  onViewDetail: (b: AgendaBooking) => void;
+  onReschedule: (b: AgendaBooking) => void;
   onCancel: (id: string) => void;
-  cancelPending: boolean;
 }) {
-  const bookingDate = new Date(booking.startAt);
-  const hoursUntilBooking = (bookingDate.getTime() - Date.now()) / (1000 * 60 * 60);
-  const canModify = !(hoursUntilBooking < booking.cancellationPolicyHours);
-  const reason = canModify
-    ? undefined
-    : `Debes modificar con al menos ${booking.cancellationPolicyHours} horas de anticipación`;
-
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   return (
-    <div className="flex flex-wrap items-center gap-4 px-5 py-3.5" style={{ minHeight: '60px' }}>
+    <div className="flex items-center gap-2 shrink-0">
+      <button
+        onClick={() => onViewDetail(booking)}
+        style={{
+          fontFamily: 'var(--font-body)',
+          fontSize: '13px',
+          fontWeight: 600,
+          color: 'var(--color-brand-primary)',
+          background: 'none',
+          border: 'none',
+          cursor: 'pointer',
+          padding: '4px 0',
+        }}
+      >
+        Ver detalle
+      </button>
+      <button
+        ref={triggerRef}
+        onClick={() => setMenuOpen((o) => !o)}
+        className="flex items-center justify-center w-7 h-7 rounded-lg"
+        style={{
+          color: 'var(--color-text-muted)',
+          background: menuOpen ? 'var(--color-surface-soft)' : 'none',
+          border: 'none',
+          cursor: 'pointer',
+        }}
+        aria-label="Acciones"
+      >
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="3" r="1" fill="currentColor" />
+          <circle cx="8" cy="8" r="1" fill="currentColor" />
+          <circle cx="8" cy="13" r="1" fill="currentColor" />
+        </svg>
+      </button>
+      {menuOpen && (
+        <ContextMenu
+          anchorRef={triggerRef}
+          onClose={() => setMenuOpen(false)}
+          onViewDetail={() => onViewDetail(booking)}
+          onReschedule={() => onReschedule(booking)}
+          onContact={() => contactCustomer(booking.customerPhone)}
+          onCancel={() => onCancel(booking.id)}
+          canModify={canModifyBooking(booking)}
+        />
+      )}
+    </div>
+  );
+}
+
+function AppointmentRow({
+  booking,
+  onViewDetail,
+  onReschedule,
+  onCancel,
+}: {
+  booking: AgendaBooking;
+  onViewDetail: (b: AgendaBooking) => void;
+  onReschedule: (b: AgendaBooking) => void;
+  onCancel: (id: string) => void;
+}) {
+  const start = new Date(booking.startAt);
+  return (
+    <div className="flex items-center gap-4 px-5 py-3.5" style={{ minHeight: '60px' }}>
       <div className="shrink-0 w-28">
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
-          {format(bookingDate, 'HH:mm')}–{format(new Date(booking.endAt), 'HH:mm')}
+          {format(start, 'HH:mm')}–{format(new Date(booking.endAt), 'HH:mm')}
         </p>
         <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
           {booking.durationMinutes} min
@@ -176,131 +252,72 @@ function AppointmentRow({
         <StatusBadge status={booking.status} />
       </div>
 
-      {booking.status === 'CONFIRMED' && (
-        <div className="flex flex-col items-end gap-1 shrink-0">
-          {reason && (
-            <p className="text-xs italic" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-muted)' }}>
-              {reason}
-            </p>
-          )}
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => onModify(booking)}
-              disabled={!canModify}
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: canModify ? 'var(--color-brand-primary)' : 'var(--color-text-muted)',
-                background: 'none',
-                border: 'none',
-                cursor: canModify ? 'pointer' : 'not-allowed',
-                padding: 0,
-              }}
-            >
-              Modificar
-            </button>
-            <button
-              onClick={() => onCancel(booking.id)}
-              disabled={!canModify || cancelPending}
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '13px',
-                fontWeight: 600,
-                color: canModify ? '#EF4444' : 'var(--color-text-muted)',
-                background: 'none',
-                border: 'none',
-                cursor: canModify ? 'pointer' : 'not-allowed',
-                padding: 0,
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <RowActions booking={booking} onViewDetail={onViewDetail} onReschedule={onReschedule} onCancel={onCancel} />
     </div>
   );
 }
 
 function AppointmentCardMobile({
   booking,
-  onModify,
+  onViewDetail,
+  onReschedule,
   onCancel,
-  cancelPending,
 }: {
   booking: AgendaBooking;
-  onModify: (booking: AgendaBooking) => void;
+  onViewDetail: (b: AgendaBooking) => void;
+  onReschedule: (b: AgendaBooking) => void;
   onCancel: (id: string) => void;
-  cancelPending: boolean;
 }) {
-  const bookingDate = new Date(booking.startAt);
-  const hoursUntilBooking = (bookingDate.getTime() - Date.now()) / (1000 * 60 * 60);
-  const canModify = !(hoursUntilBooking < booking.cancellationPolicyHours);
-  const reason = canModify
-    ? undefined
-    : `Debes modificar con al menos ${booking.cancellationPolicyHours} horas de anticipación`;
-
+  const [menuOpen, setMenuOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const start = new Date(booking.startAt);
   return (
     <div className="rounded-2xl p-4" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>
-          {format(bookingDate, 'HH:mm')}–{format(new Date(booking.endAt), 'HH:mm')} ({booking.durationMinutes} min)
+      <div className="flex items-start justify-between gap-2 mb-2">
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
+          {format(start, 'HH:mm')}–{format(new Date(booking.endAt), 'HH:mm')} ({booking.durationMinutes} min)
         </p>
         <StatusBadge status={booking.status} />
       </div>
 
-      <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '18px', color: 'var(--color-text-primary)', marginBottom: '4px' }}>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)', marginBottom: '2px' }}>
         {booking.serviceName}
       </p>
-
-      <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+      <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-text-secondary)', marginBottom: '10px' }}>
         {booking.customerName} · {booking.customerPhone}
       </p>
 
-      {booking.status === 'CONFIRMED' && (
-        <div className="mt-3 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
-          {reason && (
-            <p className="mb-1.5" style={{ fontFamily: 'var(--font-body)', fontSize: '12px', fontStyle: 'italic', color: 'var(--color-text-muted)' }}>
-              {reason}
-            </p>
-          )}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => onModify(booking)}
-              disabled={!canModify}
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: canModify ? 'var(--color-brand-primary)' : 'var(--color-text-muted)',
-                background: 'none',
-                border: 'none',
-                cursor: canModify ? 'pointer' : 'not-allowed',
-                padding: 0,
-              }}
-            >
-              Modificar
-            </button>
-            <button
-              onClick={() => onCancel(booking.id)}
-              disabled={!canModify || cancelPending}
-              style={{
-                fontFamily: 'var(--font-body)',
-                fontSize: '14px',
-                fontWeight: 600,
-                color: canModify ? '#EF4444' : 'var(--color-text-muted)',
-                background: 'none',
-                border: 'none',
-                cursor: canModify ? 'pointer' : 'not-allowed',
-                padding: 0,
-              }}
-            >
-              Cancelar
-            </button>
-          </div>
-        </div>
-      )}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => onViewDetail(booking)}
+          style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-brand-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          Ver detalle
+        </button>
+        <button
+          ref={triggerRef}
+          onClick={() => setMenuOpen((o) => !o)}
+          style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+          aria-label="Acciones"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <circle cx="3" cy="8" r="1" fill="currentColor" />
+            <circle cx="8" cy="8" r="1" fill="currentColor" />
+            <circle cx="13" cy="8" r="1" fill="currentColor" />
+          </svg>
+        </button>
+        {menuOpen && (
+          <ContextMenu
+            anchorRef={triggerRef}
+            onClose={() => setMenuOpen(false)}
+            onViewDetail={() => onViewDetail(booking)}
+            onReschedule={() => onReschedule(booking)}
+            onContact={() => contactCustomer(booking.customerPhone)}
+            onCancel={() => onCancel(booking.id)}
+            canModify={canModifyBooking(booking)}
+          />
+        )}
+      </div>
     </div>
   );
 }
@@ -314,10 +331,12 @@ export function AgendaPage() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
-  const [selectedBooking, setSelectedBooking] = useState<AgendaBooking | null>(null);
+  const [selectedForReschedule, setSelectedForReschedule] = useState<AgendaBooking | null>(null);
+  const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
 
   const { data: bookings, isLoading } = useAgenda(from, to);
   const cancelBooking = useCancelBooking();
+  const completeBooking = useCompleteBooking();
   const rescheduleBooking = useRescheduleBooking();
 
   const now = new Date();
@@ -329,14 +348,32 @@ export function AgendaPage() {
   const { data: todayBookings } = useAgenda(today, today);
   const { data: weekBookings } = useAgenda(toDateOnly(weekStart), toDateOnly(weekEnd));
   const { data: monthBookings } = useAgenda(toDateOnly(monthStart), toDateOnly(monthEnd));
+  const pendingThisMonth = monthBookings?.filter((b) => b.status === 'PENDING').length ?? 0;
   const completedThisMonth = monthBookings?.filter((b) => b.status === 'COMPLETED').length ?? 0;
 
+  const weekStartStr = toDateOnly(weekStart);
+  const weekEndStr = toDateOnly(weekEnd);
+
+  const isHoyActive = from === today && to === today;
+  const isWeekActive = from === weekStartStr && to === weekEndStr;
+  const isPendingActive = statusFilter === 'PENDING';
+  const isCompletedActive = statusFilter === 'COMPLETED';
+
   const handleReschedule = (newStartAt: string) => {
-    if (!selectedBooking) return;
+    if (!selectedForReschedule) return;
     rescheduleBooking.mutate(
-      { id: selectedBooking.id, input: { newStartAt } },
-      { onSuccess: () => setSelectedBooking(null) },
+      { id: selectedForReschedule.id, input: { newStartAt } },
+      { onSuccess: () => setSelectedForReschedule(null) },
     );
+  };
+
+  const handleComplete = (id: string) => {
+    completeBooking.mutate(id, { onSuccess: () => setSelectedForDetail(null) });
+  };
+
+  const openReschedule = (booking: AgendaBooking) => {
+    setSelectedForDetail(null);
+    setSelectedForReschedule(booking);
   };
 
   const handleClearFilters = () => {
@@ -344,31 +381,6 @@ export function AgendaPage() {
     setStatusFilter('all');
     setFrom(today);
     setTo(inAWeek);
-  };
-
-  const weekStartStr = toDateOnly(weekStart);
-  const weekEndStr = toDateOnly(weekEnd);
-  const monthStartStr = toDateOnly(monthStart);
-  const monthEndStr = toDateOnly(monthEnd);
-
-  const isHoyChipActive = from === today && to === today;
-  const isWeekChipActive = from === weekStartStr && to === weekEndStr;
-  const isCompletedChipActive = statusFilter === 'COMPLETED' && from === monthStartStr && to === monthEndStr;
-
-  const handleHoyChip = () => {
-    setFrom(today);
-    setTo(today);
-    setStatusFilter('all');
-  };
-  const handleWeekChip = () => {
-    setFrom(weekStartStr);
-    setTo(weekEndStr);
-    setStatusFilter('all');
-  };
-  const handleCompletedChip = () => {
-    setFrom(monthStartStr);
-    setTo(monthEndStr);
-    setStatusFilter('COMPLETED');
   };
 
   const filteredBookings = useMemo(() => {
@@ -402,38 +414,66 @@ export function AgendaPage() {
     });
   }, [filteredBookings]);
 
+  const mutationError = cancelBooking.error || completeBooking.error || rescheduleBooking.error;
+
   return (
     <div style={{ fontFamily: 'var(--font-body)' }}>
       <div className="mb-6">
         <h1
-          style={{
-            fontFamily: 'var(--font-display)',
-            fontWeight: 700,
-            fontSize: '26px',
-            color: 'var(--color-text-primary)',
-            marginBottom: '4px',
-          }}
+          className="text-[22px] lg:text-[26px]"
+          style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}
         >
           Tu agenda
         </h1>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-secondary)' }}>
+        <p className="text-[13px] lg:text-sm" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>
           Consulta y gestiona tus próximas citas.
         </p>
       </div>
 
-      <div className="chip-scroll flex lg:hidden gap-2 mb-6 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-        <KpiChip label="Hoy" value={todayBookings?.length ?? 0} active={isHoyChipActive} onClick={handleHoyChip} />
-        <KpiChip label="Semana" value={weekBookings?.length ?? 0} active={isWeekChipActive} onClick={handleWeekChip} />
-        <KpiChip label="Completadas" value={completedThisMonth} active={isCompletedChipActive} onClick={handleCompletedChip} />
+      {/* Mobile stat pills */}
+      <div className="chip-scroll flex lg:hidden gap-2 mb-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+        <MobileStatPill
+          label="Hoy"
+          value={todayBookings?.length ?? 0}
+          filled={isHoyActive}
+          onClick={() => {
+            setFrom(today);
+            setTo(today);
+            setStatusFilter('all');
+          }}
+        />
+        <MobileStatPill
+          label="Semana"
+          value={weekBookings?.length ?? 0}
+          filled={isWeekActive}
+          onClick={() => {
+            setFrom(weekStartStr);
+            setTo(weekEndStr);
+            setStatusFilter('all');
+          }}
+        />
+        <MobileStatPill
+          label="Pendientes"
+          value={pendingThisMonth}
+          filled={isPendingActive}
+          onClick={() => setStatusFilter(isPendingActive ? 'all' : 'PENDING')}
+        />
+        <MobileStatPill
+          label="Completadas"
+          value={completedThisMonth}
+          filled={isCompletedActive}
+          onClick={() => setStatusFilter(isCompletedActive ? 'all' : 'COMPLETED')}
+        />
       </div>
 
-      <div className="hidden lg:grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      {/* Desktop stats */}
+      <div className="hidden lg:grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="Citas hoy"
           value={todayBookings?.length ?? 0}
           sub={format(now, 'EEE, d MMM', { locale: es }).replace('.', '')}
           icon={
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-secondary)' }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
               <rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
               <path d="M5 1v3M11 1v3M1 7h14" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
             </svg>
@@ -444,8 +484,19 @@ export function AgendaPage() {
           value={weekBookings?.length ?? 0}
           sub="citas programadas"
           icon={
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-secondary)' }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
               <path d="M2 12l4-4 3 3 5-7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          }
+        />
+        <StatCard
+          label="Pendientes"
+          value={pendingThisMonth}
+          sub="requieren confirmación"
+          icon={
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
+              <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
+              <path d="M8 5v3.5l2 2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           }
         />
@@ -454,7 +505,7 @@ export function AgendaPage() {
           value={completedThisMonth}
           sub="este mes"
           icon={
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-secondary)' }}>
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
               <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.4" />
               <path d="M5 8l2.5 2.5L11 5.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
@@ -462,148 +513,197 @@ export function AgendaPage() {
         />
       </div>
 
-      <div className="rounded-2xl p-4 mb-1" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
-        <div className="flex items-end gap-3 flex-wrap">
-          <div className="flex-1 min-w-48">
-            <FormGroup>
-              <FormGroup.Label className="agendia-label">Buscar</FormGroup.Label>
-              <Input
-                type="search"
-                placeholder="Nombre, teléfono o servicio"
-                value={search}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
-                size="md"
-                variant="outline"
-                style={{ paddingLeft: '12px', paddingRight: '12px' }}
-              />
-            </FormGroup>
-          </div>
-
-          <div className="hidden lg:block shrink-0">
-            <FormGroup>
-              <FormGroup.Label className="agendia-label">Desde</FormGroup.Label>
-              <Input
-                type="date"
-                value={from}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFrom(e.target.value)}
-                size="md"
-                variant="outline"
-                style={{ paddingLeft: '12px', paddingRight: '12px' }}
-              />
-            </FormGroup>
-          </div>
-
-          <div className="hidden lg:block shrink-0">
-            <FormGroup>
-              <FormGroup.Label className="agendia-label">Hasta</FormGroup.Label>
-              <Input
-                type="date"
-                value={to}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTo(e.target.value)}
-                size="md"
-                variant="outline"
-                style={{ paddingLeft: '12px', paddingRight: '12px' }}
-              />
-            </FormGroup>
-          </div>
-
-          <div className="hidden lg:block shrink-0" style={{ minWidth: '160px' }}>
-            <FormGroup>
-              <FormGroup.Label className="agendia-label">Estado</FormGroup.Label>
-              <div style={{ position: 'relative' }}>
-                <svg
-                  width="16"
-                  height="16"
-                  viewBox="0 0 16 16"
-                  fill="none"
-                  style={{
-                    position: 'absolute',
-                    left: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: 'var(--color-text-muted)',
-                    pointerEvents: 'none',
-                    zIndex: 1,
-                  }}
-                >
-                  <path
-                    d="M6.76594 13.6843C6.70081 13.5789 6.66635 13.4574 6.66641 13.3335V9.33346C6.66626 9.00304 6.54342 8.68445 6.32171 8.43945L1.50458 3.11335C1.41819 3.01764 1.3614 2.89893 1.34111 2.77161C1.32082 2.64428 1.33788 2.51381 1.39023 2.39598C1.44259 2.27816 1.52799 2.17804 1.63609 2.10776C1.74419 2.03748 1.87035 2.00005 1.99929 2H14.0004C14.1293 2.0003 14.2553 2.03792 14.3631 2.1083C14.471 2.17868 14.5562 2.27882 14.6084 2.39659C14.6606 2.51436 14.6776 2.64473 14.6572 2.77194C14.6369 2.89914 14.5801 3.01772 14.4938 3.11335L9.67803 8.43945C9.45632 8.68445 9.33348 9.00304 9.33333 9.33346V14.0002C9.33338 14.1139 9.30438 14.2256 9.24907 14.3249C9.19376 14.4242 9.11398 14.5077 9.01732 14.5675C8.92065 14.6273 8.81031 14.6614 8.69676 14.6665C8.58322 14.6717 8.47024 14.6477 8.36857 14.5969L7.03511 13.9302C6.92428 13.8748 6.83107 13.7897 6.76594 13.6843Z"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-                <Select
-                  value={statusFilter}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as StatusFilter)}
-                  size="md"
-                  variant="outline"
-                  style={{ paddingLeft: '36px', paddingRight: '12px' }}
-                >
-                  {STATUS_OPTIONS.map((o) => (
-                    <Select.Option key={o.value} value={o.value}>
-                      {o.label}
-                    </Select.Option>
-                  ))}
-                </Select>
-              </div>
-            </FormGroup>
-          </div>
-
-          <button
-            onClick={handleClearFilters}
-            className="px-4 rounded-lg text-sm font-medium shrink-0"
-            style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--color-text-secondary)',
-              border: '1px solid var(--color-border)',
-              background: 'none',
-              cursor: 'pointer',
-              height: '40px',
-            }}
-          >
-            Limpiar
-          </button>
-
-          <div className="flex gap-2 shrink-0">
-            <Button
-              variant={viewMode === 'list' ? 'fill' : 'outline'}
-              context="brand"
-              size="md"
-              onClick={() => setViewMode('list')}
+      {/* View toggle */}
+      <div className="mb-4 lg:mb-5 flex">
+        <div
+          className="flex items-center"
+          style={{ padding: 4, borderRadius: 12, backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+        >
+          {(['list', 'calendar'] as const).map((id) => (
+            <button
+              key={id}
+              onClick={() => setViewMode(id)}
+              style={{
+                padding: '8px 16px',
+                borderRadius: 8,
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px',
+                fontWeight: 600,
+                backgroundColor: viewMode === id ? 'var(--color-brand-primary)' : 'transparent',
+                color: viewMode === id ? '#fff' : 'var(--color-text-secondary)',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}
             >
-              Lista
-            </Button>
-            <Button
-              variant={viewMode === 'calendar' ? 'fill' : 'outline'}
-              context="brand"
-              size="md"
-              onClick={() => setViewMode('calendar')}
-            >
-              Calendario
-            </Button>
-          </div>
-        </div>
-
-        <div className="chip-scroll flex lg:hidden gap-2 mt-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-          {STATUS_OPTIONS.map((o) => (
-            <StatusChip key={o.value} label={o.label} active={statusFilter === o.value} onClick={() => setStatusFilter(o.value)} />
+              {id === 'list' ? 'Lista' : 'Calendario'}
+            </button>
           ))}
-        </div>
-
-        <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
-          <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-text-secondary)' }}>
-            Mostrando <strong style={{ color: 'var(--color-text-primary)' }}>{filteredBookings.length} citas</strong> encontradas
-          </p>
         </div>
       </div>
 
-      {(cancelBooking.isError || rescheduleBooking.isError) && (
+      {/* Filter bar (list view only) */}
+      {viewMode === 'list' && (
+        <div className="rounded-2xl p-4 mb-1" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+          <div className="flex items-end gap-3 flex-wrap">
+            <div className="flex-1 min-w-48 hidden lg:block">
+              <FormGroup>
+                <FormGroup.Label className="agendia-label">Buscar</FormGroup.Label>
+                <Input
+                  type="search"
+                  placeholder="Nombre, teléfono o servicio"
+                  value={search}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
+                  size="md"
+                  variant="outline"
+                  style={{ paddingLeft: '12px', paddingRight: '12px' }}
+                />
+              </FormGroup>
+            </div>
+
+            {/* Mobile search */}
+            <div className="w-full lg:hidden">
+              <div
+                className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
+                style={{ border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
+              >
+                <span style={{ color: 'var(--color-brand-primary)', flexShrink: 0 }}>
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
+                    <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  </svg>
+                </span>
+                <input
+                  placeholder="Buscar cita..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  style={{
+                    border: 'none',
+                    outline: 'none',
+                    background: 'none',
+                    fontFamily: 'var(--font-body)',
+                    fontSize: '14px',
+                    color: 'var(--color-text-primary)',
+                    width: '100%',
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="hidden lg:block shrink-0">
+              <FormGroup>
+                <FormGroup.Label className="agendia-label">Desde</FormGroup.Label>
+                <Input
+                  type="date"
+                  value={from}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFrom(e.target.value)}
+                  size="md"
+                  variant="outline"
+                  style={{ paddingLeft: '12px', paddingRight: '12px' }}
+                />
+              </FormGroup>
+            </div>
+
+            <div className="hidden lg:block shrink-0">
+              <FormGroup>
+                <FormGroup.Label className="agendia-label">Hasta</FormGroup.Label>
+                <Input
+                  type="date"
+                  value={to}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTo(e.target.value)}
+                  size="md"
+                  variant="outline"
+                  style={{ paddingLeft: '12px', paddingRight: '12px' }}
+                />
+              </FormGroup>
+            </div>
+
+            {/* Estado inline pill */}
+            <div
+              className="filter-estado-pill hidden lg:flex items-center gap-2 px-3 rounded-lg shrink-0"
+              style={{ border: '1px solid var(--color-border)', height: '40px', alignSelf: 'flex-end' }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 14 14"
+                fill="none"
+                style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}
+              >
+                <path d="M1.5 3.5h11M3.5 7h7M5.5 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+              </svg>
+              <span
+                style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)', whiteSpace: 'nowrap', userSelect: 'none' }}
+              >
+                Estado
+              </span>
+              <Select
+                value={statusFilter}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as StatusFilter)}
+                size="sm"
+                variant="outline"
+                style={{
+                  border: 'none',
+                  boxShadow: 'none',
+                  padding: 0,
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '13px',
+                  color: 'var(--color-text-primary)',
+                  background: 'none',
+                  cursor: 'pointer',
+                  minWidth: '84px',
+                }}
+              >
+                {STATUS_OPTIONS.map((o) => (
+                  <Select.Option key={o.value} value={o.value}>
+                    {o.label}
+                  </Select.Option>
+                ))}
+              </Select>
+            </div>
+
+            <button
+              onClick={handleClearFilters}
+              className="hidden lg:block px-4 rounded-lg text-sm font-medium shrink-0"
+              style={{
+                fontFamily: 'var(--font-body)',
+                color: 'var(--color-text-secondary)',
+                border: '1px solid var(--color-border)',
+                background: 'none',
+                cursor: 'pointer',
+                height: '40px',
+                alignSelf: 'flex-end',
+              }}
+            >
+              Limpiar
+            </button>
+          </div>
+
+          {/* Mobile status chips */}
+          <div className="chip-scroll flex lg:hidden gap-2 mt-3 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
+            {MOBILE_STATUS_OPTIONS.map((o) => (
+              <StatusChip
+                key={o.value}
+                label={o.label}
+                active={statusFilter === o.value}
+                onClick={() => setStatusFilter(o.value)}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center gap-2 mt-4 pt-3" style={{ borderTop: '1px solid var(--color-border)' }}>
+            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: 'var(--color-brand-primary)' }} />
+            <p className="text-xs lg:text-[13px]" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>
+              Mostrando <strong style={{ color: 'var(--color-text-primary)' }}>{filteredBookings.length} citas</strong> encontradas
+            </p>
+          </div>
+        </div>
+      )}
+
+      {mutationError && (
         <div className="rounded-lg border border-red-200 bg-red-50 p-3 mt-4">
           <p className="text-sm text-red-600" style={{ fontFamily: 'var(--font-body)' }}>
-            {getApiErrorMessage(cancelBooking.error || rescheduleBooking.error)}
+            {getApiErrorMessage(mutationError)}
           </p>
         </div>
       )}
@@ -614,9 +714,7 @@ export function AgendaPage() {
             className="rounded-2xl flex items-center justify-center py-16"
             style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
           >
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>
-              Cargando agenda…
-            </p>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>Cargando agenda…</p>
           </div>
         )}
 
@@ -660,26 +758,30 @@ export function AgendaPage() {
                 >
                   {group.label}
                 </p>
+
                 <div className="flex lg:hidden flex-col gap-3">
                   {group.bookings.map((booking) => (
                     <AppointmentCardMobile
                       key={booking.id}
                       booking={booking}
-                      onModify={setSelectedBooking}
+                      onViewDetail={setSelectedForDetail}
+                      onReschedule={openReschedule}
                       onCancel={(id) => cancelBooking.mutate(id)}
-                      cancelPending={cancelBooking.isPending}
                     />
                   ))}
                 </div>
 
-                <div className="hidden lg:block rounded-2xl overflow-hidden" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+                <div
+                  className="hidden lg:block rounded-2xl overflow-hidden"
+                  style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}
+                >
                   {group.bookings.map((booking, i) => (
                     <div key={booking.id} style={{ borderTop: i > 0 ? '1px solid var(--color-border)' : 'none' }}>
                       <AppointmentRow
                         booking={booking}
-                        onModify={setSelectedBooking}
+                        onViewDetail={setSelectedForDetail}
+                        onReschedule={openReschedule}
                         onCancel={(id) => cancelBooking.mutate(id)}
-                        cancelPending={cancelBooking.isPending}
                       />
                     </div>
                   ))}
@@ -690,16 +792,28 @@ export function AgendaPage() {
         )}
 
         {!isLoading && viewMode === 'calendar' && (
-          <CalendarGridView bookings={filteredBookings} from={from} to={to} onBookingClick={setSelectedBooking} />
+          <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
         )}
       </div>
 
-      {selectedBooking && (
+      {selectedForDetail && (
+        <AppointmentDrawer
+          booking={selectedForDetail}
+          onClose={() => setSelectedForDetail(null)}
+          onReschedule={openReschedule}
+          onComplete={handleComplete}
+          completePending={completeBooking.isPending}
+          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+        />
+      )}
+
+      {selectedForReschedule && (
         <RescheduleModal
-          booking={selectedBooking}
-          onClose={() => setSelectedBooking(null)}
+          booking={selectedForReschedule}
+          onClose={() => setSelectedForReschedule(null)}
           onConfirm={handleReschedule}
           isLoading={rescheduleBooking.isPending}
+          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
         />
       )}
     </div>

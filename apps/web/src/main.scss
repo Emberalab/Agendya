@@ -109,6 +109,17 @@ label:has(.moon-checkbox) span {
   box-shadow: inset 0 0 0 1px var(--color-brand-primary) !important;
 }
 
+/* Filter pill: Moon Select nested inside a custom border wrapper loses its own border */
+.filter-estado-pill .moon-select,
+.filter-estado-pill select {
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+  font-family: var(--font-body) !important;
+  font-size: 13px !important;
+  padding: 0 !important;
+}
+
 /* Skeleton pulse animation */
 @keyframes pulse {
   0%, 100% { opacity: 1; }
