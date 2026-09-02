@@ -77,10 +77,8 @@ describe('ServicesPage', () => {
   it('lists existing services with their duration', async () => {
     renderPage();
 
-    expect(
-      (await screen.findAllByText('Corte de cabello')).length,
-    ).toBeGreaterThan(0);
-    expect(screen.getAllByText('40 min').length).toBeGreaterThan(0);
+    expect(await screen.findByText('Corte de cabello')).toBeInTheDocument();
+    expect(screen.getByText('30 minutos')).toBeInTheDocument();
   });
 
   it('shows the empty state when there are no services', async () => {

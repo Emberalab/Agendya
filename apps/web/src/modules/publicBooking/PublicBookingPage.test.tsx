@@ -79,7 +79,7 @@ describe('PublicBookingPage', () => {
     await waitFor(() => {
       expect(api.getAvailability).toHaveBeenCalledWith(
         'maria-belleza',
-        'service-1',
+        ['service-1'],
         '2026-08-03',
       );
     });
@@ -91,6 +91,8 @@ describe('PublicBookingPage', () => {
     vi.mocked(api.createPublicBooking).mockResolvedValue({
       id: 'booking-1',
       businessName: 'María Belleza',
+      professionalSlug: 'maria-belleza',
+      serviceId: 'service-1',
       serviceName: 'Corte de cabello',
       durationMinutes: 30,
       customerName: 'Ana',
@@ -130,7 +132,7 @@ describe('PublicBookingPage', () => {
     expect(api.createPublicBooking).toHaveBeenCalledWith(
       'maria-belleza',
       expect.objectContaining({
-        serviceId: 'service-1',
+        serviceIds: 'service-1',
         startAt: '2026-08-03T14:00:00.000Z',
       }),
     );

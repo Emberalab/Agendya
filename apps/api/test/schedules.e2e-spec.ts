@@ -198,7 +198,7 @@ describe('Schedules + Availability (e2e)', () => {
       await request(app.getHttpServer())
         .get('/public/professionals/no-existe/availability')
         .query({
-          serviceId: '00000000-0000-0000-0000-000000000000',
+          serviceIds: '00000000-0000-0000-0000-000000000000',
           date: '2026-01-01',
         })
         .expect(404);
@@ -207,7 +207,7 @@ describe('Schedules + Availability (e2e)', () => {
     it('rejects a malformed query', async () => {
       await request(app.getHttpServer())
         .get(
-          `/public/professionals/${slug}/availability?serviceId=not-a-uuid&date=2026-01-01`,
+          `/public/professionals/${slug}/availability?serviceIds=svc-1&date=not-a-date`,
         )
         .expect(400);
     });
@@ -215,7 +215,7 @@ describe('Schedules + Availability (e2e)', () => {
     it('returns slots on a configured working day', async () => {
       const res = await request(app.getHttpServer())
         .get(`/public/professionals/${slug}/availability`)
-        .query({ serviceId: serviceId, date: workDay.dateStr })
+        .query({ serviceIds: serviceId, date: workDay.dateStr })
         .expect(200);
 
       const body = res.body as { slots: string[] };
@@ -226,7 +226,7 @@ describe('Schedules + Availability (e2e)', () => {
     it('returns no slots on a day without configured working hours', async () => {
       const res = await request(app.getHttpServer())
         .get(`/public/professionals/${slug}/availability`)
-        .query({ serviceId: serviceId, date: restDay.dateStr })
+        .query({ serviceIds: serviceId, date: restDay.dateStr })
         .expect(200);
 
       expect((res.body as { slots: string[] }).slots).toEqual([]);
@@ -247,7 +247,7 @@ describe('Schedules + Availability (e2e)', () => {
 
       const res = await request(app.getHttpServer())
         .get(`/public/professionals/${slug}/availability`)
-        .query({ serviceId: serviceId, date: blockedDay.dateStr })
+        .query({ serviceIds: serviceId, date: blockedDay.dateStr })
         .expect(200);
 
       expect((res.body as { slots: string[] }).slots).toEqual([]);

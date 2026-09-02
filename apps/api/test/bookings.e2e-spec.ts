@@ -45,7 +45,8 @@ function bogotaWeekdayForOffsetHours(
 const MAX_SOON_OFFSET_MINUTES = 3 * 60 + 30; // largest hoursFromNow used below + service duration
 const soonAnchor = (() => {
   const now = Date.now();
-  const bogotaMinutesFromMidnight = ((now - 5 * 60 * 60 * 1000) / 60_000) % 1440;
+  const bogotaMinutesFromMidnight =
+    ((now - 5 * 60 * 60 * 1000) / 60_000) % 1440;
   if (bogotaMinutesFromMidnight + MAX_SOON_OFFSET_MINUTES <= 1440) {
     return now;
   }
@@ -169,7 +170,7 @@ describe('Bookings (e2e)', () => {
     await request(app.getHttpServer())
       .post(`/public/professionals/${slug}/bookings`)
       .send({
-        serviceId,
+        serviceIds: serviceId,
         startAt: `${unconfiguredDay.dateStr}T15:00:00.000Z`,
         customerName: 'Cliente Test',
         customerEmail: 'cliente@example.com',
@@ -182,7 +183,7 @@ describe('Bookings (e2e)', () => {
     await request(app.getHttpServer())
       .post('/public/professionals/no-existe/bookings')
       .send({
-        serviceId,
+        serviceIds: serviceId,
         startAt: `${farFutureDay.dateStr}T14:00:00.000Z`,
         customerName: 'Cliente Test',
         customerEmail: 'cliente@example.com',
@@ -199,7 +200,7 @@ describe('Bookings (e2e)', () => {
       const res = await request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
-          serviceId,
+          serviceIds: serviceId,
           startAt,
           customerName: 'Ana Cliente',
           customerEmail: 'ana.cliente@example.com',
@@ -225,7 +226,7 @@ describe('Bookings (e2e)', () => {
       await request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
-          serviceId,
+          serviceIds: serviceId,
           startAt,
           customerName: 'Otro Cliente',
           customerEmail: 'otro@example.com',
@@ -271,7 +272,7 @@ describe('Bookings (e2e)', () => {
     const create = await request(app.getHttpServer())
       .post(`/public/professionals/${slug}/bookings`)
       .send({
-        serviceId,
+        serviceIds: serviceId,
         startAt,
         customerName: 'Cliente Apurado',
         customerEmail: 'apurado@example.com',
@@ -298,7 +299,7 @@ describe('Bookings (e2e)', () => {
       request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
-          serviceId,
+          serviceIds: serviceId,
           startAt,
           customerName: 'Cliente Concurrente',
           customerEmail,
@@ -333,16 +334,36 @@ describe('Bookings (e2e)', () => {
         .expect(401);
     });
 
-    it('lets the professional cancel a booking regardless of the cancellation policy', async () => {
+    it('rejects a professional cancelling a booking inside the cancellation policy window', async () => {
       const startAt = soonStartAt(1);
       const create = await request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
-          serviceId,
+          serviceIds: serviceId,
           startAt,
           customerName: 'Cliente Del Profesional',
           customerEmail: 'delprofesional@example.com',
           customerPhone: '+57 300 9990000',
+        })
+        .expect(201);
+      const bookingId = (create.body as { id: string }).id;
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${bookingId}/cancel`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(403);
+    });
+
+    it('lets the professional cancel a booking outside the cancellation policy window', async () => {
+      const startAt = `${farFutureDay.dateStr}T16:00:00.000Z`;
+      const create = await request(app.getHttpServer())
+        .post(`/public/professionals/${slug}/bookings`)
+        .send({
+          serviceIds: serviceId,
+          startAt,
+          customerName: 'Cliente Lejano',
+          customerEmail: 'clientelejano@example.com',
+          customerPhone: '+57 300 9991111',
         })
         .expect(201);
       const bookingId = (create.body as { id: string }).id;
@@ -360,7 +381,7 @@ describe('Bookings (e2e)', () => {
       const create = await request(app.getHttpServer())
         .post(`/public/professionals/${slug}/bookings`)
         .send({
-          serviceId,
+          serviceIds: serviceId,
           startAt,
           customerName: 'Cliente Ajeno',
           customerEmail: 'ajeno@example.com',

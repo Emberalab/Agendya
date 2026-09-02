@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { rescheduleBookingSchema, type RescheduleBookingInput } from '@agendya/types';
+import {
+  rescheduleBookingSchema,
+  type RescheduleBookingInput,
+} from '@agendya/types';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { BookingsService } from './bookings.service';
 
@@ -24,7 +27,8 @@ export class BookingsTokenController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   reschedule(
     @Param('token') token: string,
-    @Body(new ZodValidationPipe(rescheduleBookingSchema)) dto: RescheduleBookingInput,
+    @Body(new ZodValidationPipe(rescheduleBookingSchema))
+    dto: RescheduleBookingInput,
   ) {
     return this.bookingsService.reschedulePublicBooking(token, dto);
   }

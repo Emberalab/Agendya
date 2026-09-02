@@ -31,7 +31,7 @@ export class AvailabilityService {
       where: {
         id: { in: serviceIds },
         professionalId,
-        isActive: true
+        isActive: true,
       },
     });
     if (services.length === 0) {
