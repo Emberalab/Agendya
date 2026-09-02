@@ -24,15 +24,26 @@ export class UploadService {
     this.configured = true;
   }
 
-  async uploadImage(file: Express.Multer.File): Promise<string> {
+  async uploadImage(
+    file: Express.Multer.File,
+    variant: 'logo' | 'cover' = 'logo',
+  ): Promise<string> {
     this.ensureConfigured();
+
+    const options =
+      variant === 'cover'
+        ? {
+            folder: 'ronda-covers',
+            transformation: [{ width: 1600, height: 600, crop: 'limit' }],
+          }
+        : {
+            folder: 'ronda-logos',
+            transformation: [{ width: 400, height: 400, crop: 'limit' }],
+          };
 
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          folder: 'ronda-logos',
-          transformation: [{ width: 200, height: 200, crop: 'limit' }],
-        },
+        options,
         (error, result) => {
           if (error) {
             return reject(new Error(error.message));
