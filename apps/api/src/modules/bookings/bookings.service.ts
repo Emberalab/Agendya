@@ -77,18 +77,17 @@ export class BookingsService {
       professional.timezone,
     );
 
-    const workingHour = await this.prisma.workingHour.findUnique({
+    const workingBlocks = await this.prisma.workingHour.findMany({
       where: {
-        professionalId_dayOfWeek: {
-          professionalId: professional.id,
-          dayOfWeek: weekdayFromDateString(dateStr),
-        },
+        professionalId: professional.id,
+        dayOfWeek: weekdayFromDateString(dateStr),
       },
     });
-    const fitsWorkingHours =
-      workingHour !== null &&
-      minutesFromMidnight >= workingHour.startMinute &&
-      minutesFromMidnight + totalDurationMinutes <= workingHour.endMinute;
+    const fitsWorkingHours = workingBlocks.some(
+      (block) =>
+        minutesFromMidnight >= block.startMinute &&
+        minutesFromMidnight + totalDurationMinutes <= block.endMinute,
+    );
     if (!fitsWorkingHours) {
       throw new ConflictException('Ese horario ya no está disponible.');
     }

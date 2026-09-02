@@ -17,7 +17,7 @@ describe('AvailabilityService', () => {
   let prisma: {
     professional: { findUnique: jest.Mock };
     service: { findMany: jest.Mock };
-    workingHour: { findUnique: jest.Mock };
+    workingHour: { findMany: jest.Mock };
     scheduleException: { findUnique: jest.Mock };
     booking: { findMany: jest.Mock };
   };
@@ -27,7 +27,7 @@ describe('AvailabilityService', () => {
     prisma = {
       professional: { findUnique: jest.fn().mockResolvedValue(PROFESSIONAL) },
       service: { findMany: jest.fn().mockResolvedValue([SERVICE]) },
-      workingHour: { findUnique: jest.fn() },
+      workingHour: { findMany: jest.fn().mockResolvedValue([]) },
       scheduleException: { findUnique: jest.fn().mockResolvedValue(null) },
       booking: { findMany: jest.fn().mockResolvedValue([]) },
     };
@@ -69,7 +69,7 @@ describe('AvailabilityService', () => {
   });
 
   it('returns no slots on a rest day (no working hour configured)', async () => {
-    prisma.workingHour.findUnique.mockResolvedValue(null);
+    prisma.workingHour.findMany.mockResolvedValue([]);
 
     const slots = await service.getAvailableSlots(
       'prof-1',
@@ -81,10 +81,9 @@ describe('AvailabilityService', () => {
   });
 
   it('returns no slots when the date is blocked by a schedule exception', async () => {
-    prisma.workingHour.findUnique.mockResolvedValue({
-      startMinute: 540,
-      endMinute: 720,
-    });
+    prisma.workingHour.findMany.mockResolvedValue([
+      { startMinute: 540, endMinute: 720 },
+    ]);
     prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
 
     const slots = await service.getAvailableSlots(
@@ -97,10 +96,9 @@ describe('AvailabilityService', () => {
   });
 
   it('generates slots on the configured grid within working hours', async () => {
-    prisma.workingHour.findUnique.mockResolvedValue({
-      startMinute: 540,
-      endMinute: 720,
-    });
+    prisma.workingHour.findMany.mockResolvedValue([
+      { startMinute: 540, endMinute: 720 },
+    ]);
 
     const slots = await service.getAvailableSlots(
       'prof-1',
@@ -124,11 +122,33 @@ describe('AvailabilityService', () => {
     ]);
   });
 
+  it('generates slots for every working block and skips the gap between them', async () => {
+    prisma.workingHour.findMany.mockResolvedValue([
+      { startMinute: 540, endMinute: 600 }, // 09:00–10:00
+      { startMinute: 720, endMinute: 780 }, // 12:00–13:00
+    ]);
+
+    const slots = await service.getAvailableSlots(
+      'prof-1',
+      ['service-1'],
+      '2026-08-03',
+    );
+
+    // First block (09:00–10:00 local == 14:00–15:00 UTC), 30 min service, 15 min grid.
+    expect(slots).toContain('2026-08-03T14:00:00.000Z');
+    expect(slots).toContain('2026-08-03T14:30:00.000Z');
+    // The 10:00–12:00 gap has no slots.
+    expect(slots).not.toContain('2026-08-03T15:00:00.000Z');
+    expect(slots).not.toContain('2026-08-03T16:00:00.000Z');
+    // Second block (12:00–13:00 local == 17:00–18:00 UTC).
+    expect(slots).toContain('2026-08-03T17:00:00.000Z');
+    expect(slots).toContain('2026-08-03T17:30:00.000Z');
+  });
+
   it('excludes slots that would overlap an existing confirmed booking', async () => {
-    prisma.workingHour.findUnique.mockResolvedValue({
-      startMinute: 540,
-      endMinute: 720,
-    });
+    prisma.workingHour.findMany.mockResolvedValue([
+      { startMinute: 540, endMinute: 720 },
+    ]);
     // Local 10:00–10:30 == 15:00–15:30 UTC in Bogota.
     prisma.booking.findMany.mockResolvedValue([
       {
@@ -151,10 +171,9 @@ describe('AvailabilityService', () => {
   });
 
   it('excludes slots that have already started relative to the current time', async () => {
-    prisma.workingHour.findUnique.mockResolvedValue({
-      startMinute: 540,
-      endMinute: 720,
-    });
+    prisma.workingHour.findMany.mockResolvedValue([
+      { startMinute: 540, endMinute: 720 },
+    ]);
     jest
       .spyOn(Date, 'now')
       .mockReturnValue(new Date('2026-08-03T14:20:00.000Z').getTime());

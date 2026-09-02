@@ -92,7 +92,7 @@ model WorkingHour {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
-  @@unique([professionalId, dayOfWeek])
+  @@index([professionalId, dayOfWeek])
 }
 
 model ScheduleException {

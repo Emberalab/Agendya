@@ -1,11 +1,49 @@
 import { useState, type FormEvent } from 'react';
-import { Button } from '../../shared/components/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../shared/components/Card';
-import { Input } from '../../shared/components/Input';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useCreateException } from './hooks/useCreateException';
 import { useDeleteException } from './hooks/useDeleteException';
 import { useExceptions } from './hooks/useExceptions';
+
+function formatDate(isoDate: string): string {
+  const parsed = new Date(`${isoDate}T00:00:00`);
+  if (Number.isNaN(parsed.getTime())) return isoDate;
+  return parsed.toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+}
+
+const fieldStyle = {
+  width: '100%',
+  height: '46px',
+  borderRadius: '8px',
+  border: '1px solid var(--color-border)',
+  padding: '0 12px',
+  backgroundColor: 'var(--color-surface)',
+  fontFamily: 'var(--font-body)',
+  fontSize: '15px',
+  color: 'var(--color-text-primary)',
+  outline: 'none',
+} as const;
+
+function Label({ htmlFor, children }: { htmlFor: string; children: string }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      style={{
+        display: 'block',
+        fontFamily: 'var(--font-body)',
+        fontSize: '13px',
+        fontWeight: 500,
+        color: 'var(--color-text-secondary)',
+        marginBottom: '6px',
+      }}
+    >
+      {children}
+    </label>
+  );
+}
 
 export function BlockedDatesManager() {
   const { data: exceptions, isLoading } = useExceptions();
@@ -30,86 +68,165 @@ export function BlockedDatesManager() {
     );
   };
 
+  const canSubmit = Boolean(date) && !createException.isPending;
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Fechas bloqueadas</CardTitle>
-        <CardDescription>
-          Bloquea días específicos en los que no estarás disponible
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form
-          onSubmit={handleSubmit}
-          className="mb-6 flex flex-wrap items-end gap-3"
-        >
-          <Input
+    <div
+      className="rounded-2xl p-6"
+      style={{
+        backgroundColor: 'var(--color-surface)',
+        border: '1px solid var(--color-border)',
+        fontFamily: 'var(--font-body)',
+      }}
+    >
+      <h2
+        style={{
+          fontFamily: 'var(--font-display)',
+          fontWeight: 700,
+          fontSize: '16px',
+          color: 'var(--color-text-primary)',
+        }}
+      >
+        Fechas bloqueadas
+      </h2>
+      <p
+        className="mb-5"
+        style={{
+          fontSize: '13px',
+          color: 'var(--color-text-secondary)',
+          marginTop: '2px',
+        }}
+      >
+        Bloquea días específicos en los que no estarás disponible.
+      </p>
+
+      <form
+        onSubmit={handleSubmit}
+        className="flex flex-col gap-4 sm:flex-row sm:items-end"
+      >
+        <div className="sm:w-56">
+          <Label htmlFor="exception-date">Fecha</Label>
+          <input
             id="exception-date"
             type="date"
             value={date}
             onChange={(event) => setDate(event.target.value)}
-            label="Fecha"
+            style={fieldStyle}
           />
-          <Input
+        </div>
+        <div className="flex-1">
+          <Label htmlFor="exception-reason">Motivo (opcional)</Label>
+          <input
             id="exception-reason"
             type="text"
             value={reason}
             onChange={(event) => setReason(event.target.value)}
-            label="Motivo (opcional)"
             placeholder="Vacaciones, cita médica…"
+            style={fieldStyle}
           />
-          <Button
-            type="submit"
-            variant="primary"
-            disabled={!date || createException.isPending}
-          >
-            {createException.isPending ? 'Agregando…' : 'Bloquear fecha'}
-          </Button>
-        </form>
+        </div>
+        <button
+          type="submit"
+          disabled={!canSubmit}
+          className="px-5 py-3 rounded-xl text-sm font-semibold sm:shrink-0"
+          style={{
+            height: '46px',
+            backgroundColor: canSubmit
+              ? 'var(--color-brand-primary)'
+              : 'var(--color-border)',
+            color: canSubmit ? '#fff' : 'var(--color-text-muted)',
+            border: 'none',
+            cursor: canSubmit ? 'pointer' : 'not-allowed',
+          }}
+        >
+          {createException.isPending ? 'Agregando…' : 'Bloquear fecha'}
+        </button>
+      </form>
 
-        {createException.isError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-600">
-              {getApiErrorMessage(createException.error)}
+      {createException.isError && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
+          <p className="text-sm text-red-600">
+            {getApiErrorMessage(createException.error)}
+          </p>
+        </div>
+      )}
+
+      <div className="mt-5">
+        {isLoading && (
+          <p
+            className="py-6 text-center"
+            style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}
+          >
+            Cargando…
+          </p>
+        )}
+
+        {!isLoading && exceptions?.length === 0 && (
+          <div
+            className="rounded-xl px-6 py-8 text-center"
+            style={{
+              backgroundColor: 'var(--color-surface-soft)',
+              border: '1px solid var(--color-border)',
+            }}
+          >
+            <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
+              No tienes fechas bloqueadas.
             </p>
           </div>
         )}
 
-        {isLoading && (
-          <p className="py-4 text-center text-gray-500">Cargando…</p>
-        )}
-        {!isLoading && exceptions?.length === 0 && (
-          <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-            <p className="text-sm text-gray-600">No tienes fechas bloqueadas.</p>
-          </div>
-        )}
         {!isLoading && exceptions && exceptions.length > 0 && (
-          <div className="space-y-2">
+          <div className="flex flex-col gap-2">
             {exceptions.map((exception) => (
               <div
                 key={exception.id}
-                className="flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 hover:shadow-sm"
+                className="flex items-center justify-between gap-3 rounded-xl px-4 py-3"
+                style={{ border: '1px solid var(--color-border)' }}
               >
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{exception.date}</p>
+                <div className="min-w-0">
+                  <p
+                    style={{
+                      fontSize: '14px',
+                      fontWeight: 600,
+                      color: 'var(--color-text-primary)',
+                    }}
+                  >
+                    {formatDate(exception.date)}
+                  </p>
                   {exception.reason && (
-                    <p className="text-xs text-gray-600">{exception.reason}</p>
+                    <p
+                      className="truncate"
+                      style={{
+                        fontSize: '12px',
+                        color: 'var(--color-text-muted)',
+                        marginTop: '2px',
+                      }}
+                    >
+                      {exception.reason}
+                    </p>
                   )}
                 </div>
-                <Button
+                <button
                   type="button"
-                  variant="danger"
-                  size="sm"
                   onClick={() => deleteException.mutate(exception.id)}
                   disabled={deleteException.isPending}
+                  className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold"
+                  style={{
+                    border: '1px solid #FECDD3',
+                    background: 'none',
+                    color: '#EF4444',
+                    cursor: deleteException.isPending
+                      ? 'not-allowed'
+                      : 'pointer',
+                  }}
                 >
                   Eliminar
-                </Button>
+                </button>
               </div>
             ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
