@@ -27,6 +27,7 @@ export class ProfessionalsService {
       description: professional.description,
       timezone: professional.timezone,
       cancellationPolicyHours: professional.cancellationPolicyHours,
+      plan: professional.plan,
       createdAt: professional.createdAt.toISOString(),
       updatedAt: professional.updatedAt.toISOString(),
     };

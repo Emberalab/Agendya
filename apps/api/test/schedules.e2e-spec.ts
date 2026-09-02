@@ -78,7 +78,7 @@ describe('Schedules + Availability (e2e)', () => {
     const createService = await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Corte de cabello', durationMinutes: 30 });
+      .send({ name: 'Corte de cabello', durationMinutes: 30, priceCents: 2000000 });
     serviceId = (createService.body as { id: string }).id;
   });
 

@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
 import { ServicesService } from './services.service';
@@ -7,9 +7,15 @@ const BASE_SERVICE = {
   id: 'service-1',
   professionalId: 'prof-1',
   name: 'Corte de cabello',
+  description: null,
   durationMinutes: 30,
+  priceCents: 2000000,
   isActive: true,
+  homeServiceEnabled: false,
+  homeDurationMinutes: null,
+  homePriceCents: null,
   sortOrder: 0,
+  deletedAt: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-02T00:00:00.000Z'),
 };
@@ -24,6 +30,9 @@ describe('ServicesService', () => {
       create: jest.Mock;
       update: jest.Mock;
     };
+    professional: {
+      findUniqueOrThrow: jest.Mock;
+    };
   };
 
   beforeEach(async () => {
@@ -31,9 +40,12 @@ describe('ServicesService', () => {
       service: {
         findMany: jest.fn(),
         findFirst: jest.fn(),
-        count: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
         create: jest.fn(),
         update: jest.fn(),
+      },
+      professional: {
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ plan: 'BASIC' }),
       },
     };
 
@@ -48,12 +60,17 @@ describe('ServicesService', () => {
   });
 
   describe('toDto', () => {
-    it('serializes dates to ISO strings', () => {
+    it('serializes dates to ISO strings and exposes pricing fields', () => {
       expect(service.toDto(BASE_SERVICE)).toEqual({
         id: 'service-1',
         name: 'Corte de cabello',
+        description: null,
         durationMinutes: 30,
+        priceCents: 2000000,
         isActive: true,
+        homeServiceEnabled: false,
+        homeDurationMinutes: null,
+        homePriceCents: null,
         sortOrder: 0,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-02T00:00:00.000Z',
@@ -62,13 +79,13 @@ describe('ServicesService', () => {
   });
 
   describe('findAllForProfessional', () => {
-    it('lists services ordered by sortOrder', async () => {
+    it('lists non-deleted services ordered by sortOrder', async () => {
       prisma.service.findMany.mockResolvedValue([BASE_SERVICE]);
 
       const result = await service.findAllForProfessional('prof-1');
 
       expect(prisma.service.findMany).toHaveBeenCalledWith({
-        where: { professionalId: 'prof-1' },
+        where: { professionalId: 'prof-1', deletedAt: null },
         orderBy: { sortOrder: 'asc' },
       });
       expect(result).toHaveLength(1);
@@ -86,17 +103,49 @@ describe('ServicesService', () => {
       const result = await service.create('prof-1', {
         name: 'Manicure',
         durationMinutes: 45,
+        priceCents: 1500000,
       });
 
       expect(prisma.service.create).toHaveBeenCalledWith({
-        data: {
+        data: expect.objectContaining({
           professionalId: 'prof-1',
           name: 'Manicure',
           durationMinutes: 45,
+          priceCents: 1500000,
           sortOrder: 2,
-        },
+        }),
       });
       expect(result.sortOrder).toBe(2);
+    });
+
+    it('rejects creating a service past the plan limit', async () => {
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({ plan: 'BASIC' });
+      prisma.service.count.mockResolvedValue(3);
+
+      await expect(
+        service.create('prof-1', {
+          name: 'Cuarto servicio',
+          durationMinutes: 30,
+          priceCents: 1000000,
+        }),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.service.create).not.toHaveBeenCalled();
+    });
+
+    it('allows unlimited services on the PRO plan', async () => {
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({ plan: 'PRO' });
+      prisma.service.count.mockResolvedValue(50);
+      prisma.service.create.mockImplementation(({ data }) =>
+        Promise.resolve({ ...BASE_SERVICE, ...data, id: 'service-51' }),
+      );
+
+      await expect(
+        service.create('prof-1', {
+          name: 'Servicio 51',
+          durationMinutes: 30,
+          priceCents: 1000000,
+        }),
+      ).resolves.toBeDefined();
     });
   });
 
@@ -124,6 +173,27 @@ describe('ServicesService', () => {
         data: { durationMinutes: 60 },
       });
     });
+
+    it('clears home-service fields when the toggle is turned off', async () => {
+      prisma.service.findFirst.mockResolvedValue({
+        ...BASE_SERVICE,
+        homeServiceEnabled: true,
+        homeDurationMinutes: 90,
+        homePriceCents: 5000000,
+      });
+      prisma.service.update.mockResolvedValue(BASE_SERVICE);
+
+      await service.update('prof-1', 'service-1', { homeServiceEnabled: false });
+
+      expect(prisma.service.update).toHaveBeenCalledWith({
+        where: { id: 'service-1' },
+        data: {
+          homeServiceEnabled: false,
+          homeDurationMinutes: null,
+          homePriceCents: null,
+        },
+      });
+    });
   });
 
   describe('softDelete', () => {
@@ -135,20 +205,54 @@ describe('ServicesService', () => {
       ).rejects.toThrow(NotFoundException);
     });
 
-    it('deactivates an owned service instead of removing the row', async () => {
+    it('stamps deletedAt instead of removing the row', async () => {
       prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
       prisma.service.update.mockResolvedValue({
         ...BASE_SERVICE,
+        deletedAt: new Date(),
         isActive: false,
       });
 
-      const result = await service.softDelete('prof-1', 'service-1');
+      await service.softDelete('prof-1', 'service-1');
 
       expect(prisma.service.update).toHaveBeenCalledWith({
         where: { id: 'service-1' },
-        data: { isActive: false },
+        data: { deletedAt: expect.any(Date), isActive: false },
       });
-      expect(result.isActive).toBe(false);
+    });
+  });
+
+  describe('duplicate', () => {
+    it('copies an owned service with a "(copia)" suffix', async () => {
+      prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
+      prisma.service.count.mockResolvedValue(1);
+      prisma.service.create.mockImplementation(({ data }) =>
+        Promise.resolve({ ...BASE_SERVICE, ...data, id: 'service-2' }),
+      );
+
+      const result = await service.duplicate('prof-1', 'service-1');
+
+      expect(prisma.service.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          professionalId: 'prof-1',
+          name: 'Corte de cabello (copia)',
+          durationMinutes: 30,
+          priceCents: 2000000,
+          sortOrder: 1,
+        }),
+      });
+      expect(result.name).toBe('Corte de cabello (copia)');
+    });
+
+    it('rejects duplicating past the plan limit', async () => {
+      prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({ plan: 'BASIC' });
+      prisma.service.count.mockResolvedValue(3);
+
+      await expect(service.duplicate('prof-1', 'service-1')).rejects.toThrow(
+        ForbiddenException,
+      );
+      expect(prisma.service.create).not.toHaveBeenCalled();
     });
   });
 });

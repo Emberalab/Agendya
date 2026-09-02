@@ -67,7 +67,7 @@ describe('Services (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Corte de cabello', durationMinutes: 30 })
+      .send({ name: 'Corte de cabello', durationMinutes: 30, priceCents: 2000000 })
       .expect(201);
 
     const body = res.body as {
@@ -75,10 +75,12 @@ describe('Services (e2e)', () => {
       name: string;
       sortOrder: number;
       isActive: boolean;
+      priceCents: number;
     };
     expect(body.name).toBe('Corte de cabello');
     expect(body.sortOrder).toBe(0);
     expect(body.isActive).toBe(true);
+    expect(body.priceCents).toBe(2000000);
 
     serviceId = body.id;
   });
@@ -87,7 +89,7 @@ describe('Services (e2e)', () => {
     await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Servicio inválido', durationMinutes: 0 })
+      .send({ name: 'Servicio inválido', durationMinutes: 0, priceCents: 1000 })
       .expect(400);
   });
 
@@ -95,7 +97,7 @@ describe('Services (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Manicure', durationMinutes: 45 })
+      .send({ name: 'Manicure', durationMinutes: 45, priceCents: 1500000 })
       .expect(201);
 
     expect((res.body as { sortOrder: number }).sortOrder).toBe(1);
@@ -129,20 +131,37 @@ describe('Services (e2e)', () => {
       .expect(404);
   });
 
-  it('soft-deletes a service instead of removing it', async () => {
+  it('duplicates a service with a "(copia)" suffix', async () => {
     const res = await request(app.getHttpServer())
+      .post(`/services/${serviceId}/duplicate`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .expect(201);
+
+    const body = res.body as { id: string; name: string; sortOrder: number };
+    expect(body.name).toBe('Corte de cabello (copia)');
+    expect(body.sortOrder).toBe(2);
+  });
+
+  it('rejects creating a service past the BASIC plan limit', async () => {
+    await request(app.getHttpServer())
+      .post('/services')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ name: 'Cuarto servicio', durationMinutes: 30, priceCents: 1000000 })
+      .expect(403);
+  });
+
+  it('removes a deleted service from the catalog listing', async () => {
+    await request(app.getHttpServer())
       .delete(`/services/${serviceId}`)
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
-
-    expect((res.body as { isActive: boolean }).isActive).toBe(false);
 
     const list = await request(app.getHttpServer())
       .get('/services')
       .set('Authorization', `Bearer ${accessToken}`)
       .expect(200);
-    const body = list.body as { id: string; isActive: boolean }[];
-    expect(body.find((s) => s.id === serviceId)?.isActive).toBe(false);
+    const body = list.body as { id: string }[];
+    expect(body.find((s) => s.id === serviceId)).toBeUndefined();
   });
 
   it("rejects deleting another professional's service", async () => {

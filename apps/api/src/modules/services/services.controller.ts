@@ -47,6 +47,11 @@ export class ServicesController {
     return this.servicesService.update(user.id, id, dto);
   }
 
+  @Post(':id/duplicate')
+  duplicate(@CurrentUser() user: Professional, @Param('id') id: string) {
+    return this.servicesService.duplicate(user.id, id);
+  }
+
   @Delete(':id')
   remove(@CurrentUser() user: Professional, @Param('id') id: string) {
     return this.servicesService.softDelete(user.id, id);
