@@ -49,6 +49,51 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-secondary);
 }
 
+/* Hue slider for the profile "Color de fondo" picker */
+.agendia-hue-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 28px;
+  border-radius: 999px;
+  outline: none;
+  cursor: pointer;
+  background: linear-gradient(to right, #FF0000 0%, #FFFF00 17%, #00FF00 33%, #00FFFF 50%, #0000FF 67%, #FF00FF 83%, #FF0000 100%);
+}
+.agendia-hue-slider::-webkit-slider-runnable-track {
+  height: 28px;
+  border-radius: 999px;
+  background: transparent;
+}
+.agendia-hue-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  margin-top: -4px; /* centre the 36px thumb on the 28px track */
+  border-radius: 50%;
+  background: transparent;
+  border: 9px solid #FFFFFF;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 2px 5px rgba(15, 23, 42, 0.28);
+  cursor: pointer;
+}
+.agendia-hue-slider::-moz-range-track {
+  height: 28px;
+  border-radius: 999px;
+  background: transparent;
+}
+.agendia-hue-slider::-moz-range-thumb {
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: 9px solid #FFFFFF;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 2px 5px rgba(15, 23, 42, 0.28);
+  cursor: pointer;
+}
+
 /* Moon input — visible border using design system tokens */
 .moon-input.moon-input-outline {
   box-shadow: inset 0 0 0 1px var(--color-border);

@@ -41,7 +41,8 @@ model Professional {
   slug                    String   @unique
   photoUrl                String?
   logoUrl                 String?
-  brandColor              String?  @default("#FFFFFF")
+  coverImageUrl           String?
+  brandColor              String?  @default("#4F46E5")
   description             String?
   timezone                String   @default("America/Bogota")
   cancellationPolicyHours Int      @default(24)
