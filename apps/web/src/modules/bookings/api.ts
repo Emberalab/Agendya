@@ -18,6 +18,13 @@ export async function cancelBooking(id: string): Promise<AgendaBooking> {
   return data;
 }
 
+export async function completeBooking(id: string): Promise<AgendaBooking> {
+  const { data } = await apiClient.patch<AgendaBooking>(
+    `/bookings/${id}/complete`,
+  );
+  return data;
+}
+
 export async function rescheduleBooking(
   id: string,
   input: RescheduleBookingInput,

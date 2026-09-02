@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { dateOnlySchema } from './schedule.schema';
 
 export const BOOKING_STATUSES = [
+  'PENDING',
   'CONFIRMED',
   'CANCELLED',
   'COMPLETED',
@@ -57,6 +58,9 @@ export const agendaBookingSchema = z.object({
   endAt: z.string(),
   status: bookingStatusSchema,
   cancellationPolicyHours: z.number(),
+  createdAt: z.string(),
+  cancelledAt: z.string().nullable(),
+  cancelledBy: z.string().nullable(),
 });
 
 export type AgendaBooking = z.infer<typeof agendaBookingSchema>;

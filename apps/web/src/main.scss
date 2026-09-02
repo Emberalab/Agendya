@@ -32,6 +32,11 @@ body {
   background-color: var(--color-surface);
 }
 
+/* Native form controls don't inherit the body font by default (browsers use their own UI font) */
+button, input, select, textarea, optgroup, option {
+  font-family: inherit;
+}
+
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
@@ -119,6 +124,9 @@ label:has(.moon-checkbox) span {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
 }
+
+/* Horizontally-scrollable chip strips (mobile KPI chips) — no visible scrollbar */
+.chip-scroll::-webkit-scrollbar { display: none; }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar { width: 6px; }

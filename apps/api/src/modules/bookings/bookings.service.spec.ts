@@ -340,6 +340,9 @@ describe('BookingsService', () => {
         durationMinutesSnapshot: 30,
         startAt: new Date('2026-08-10T14:00:00.000Z'),
         endAt: new Date('2026-08-10T14:30:00.000Z'),
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
       };
       prisma.booking.findFirst.mockResolvedValue(bookingRow);
       prisma.booking.update.mockResolvedValue({
