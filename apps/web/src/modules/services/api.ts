@@ -25,6 +25,11 @@ export async function updateService(
   return data;
 }
 
+export async function duplicateService(id: string): Promise<Service> {
+  const { data } = await apiClient.post<Service>(`/services/${id}/duplicate`);
+  return data;
+}
+
 export async function deleteService(id: string): Promise<Service> {
   const { data } = await apiClient.delete<Service>(`/services/${id}`);
   return data;

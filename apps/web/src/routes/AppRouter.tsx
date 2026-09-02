@@ -9,6 +9,7 @@ import { ProfilePage } from '../modules/professionals/ProfilePage';
 import { BookingCancelPage } from '../modules/publicBooking/BookingCancelPage';
 import { PublicBookingPage } from '../modules/publicBooking/PublicBookingPage';
 import { SchedulePage } from '../modules/schedules/SchedulePage';
+import { ServiceFormPage } from '../modules/services/ServiceFormPage';
 import { ServicesPage } from '../modules/services/ServicesPage';
 import { PrivateRoute } from './PrivateRoute';
 import { PublicRoute } from './PublicRoute';
@@ -29,6 +30,14 @@ export function AppRouter() {
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard/profile" element={<ProfilePage />} />
             <Route path="/dashboard/services" element={<ServicesPage />} />
+            <Route
+              path="/dashboard/services/new"
+              element={<ServiceFormPage />}
+            />
+            <Route
+              path="/dashboard/services/:id/edit"
+              element={<ServiceFormPage />}
+            />
             <Route path="/dashboard/schedule" element={<SchedulePage />} />
             <Route path="/dashboard/agenda" element={<AgendaPage />} />
           </Route>

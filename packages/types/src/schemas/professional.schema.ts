@@ -1,5 +1,20 @@
 import { z } from 'zod';
 
+export const PLANS = ['BASIC', 'PRO'] as const;
+export const planSchema = z.enum(PLANS);
+export type Plan = z.infer<typeof planSchema>;
+
+/** Max number of (non-deleted) services allowed per plan. `null` means unlimited. */
+export const PLAN_SERVICE_LIMITS: Record<Plan, number | null> = {
+  BASIC: 3,
+  PRO: null,
+};
+
+export const PLAN_LABELS: Record<Plan, string> = {
+  BASIC: 'Plan Básico',
+  PRO: 'Plan Pro',
+};
+
 export const CANCELLATION_POLICY_HOURS_OPTIONS = [2, 3, 4, 6, 24] as const;
 
 export const cancellationPolicyHoursSchema = z.union([
@@ -47,6 +62,7 @@ export const professionalProfileSchema = z.object({
   description: z.string().nullable(),
   timezone: z.string(),
   cancellationPolicyHours: z.number(),
+  plan: planSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
 });

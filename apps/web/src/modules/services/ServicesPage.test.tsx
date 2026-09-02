@@ -1,11 +1,52 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { Service } from '@agendya/types';
 import * as api from './api';
+import * as profileApi from '../professionals/api';
 import { ServicesPage } from './ServicesPage';
 
 vi.mock('./api');
+vi.mock('../professionals/api');
+
+const BASE_SERVICE: Service = {
+  id: 'service-1',
+  name: 'Corte de cabello',
+  description: 'Corte clásico o moderno.',
+  durationMinutes: 40,
+  priceCents: 2000000,
+  isActive: true,
+  homeServiceEnabled: false,
+  homeDurationMinutes: null,
+  homePriceCents: null,
+  sortOrder: 0,
+  createdAt: '2026-01-01T00:00:00.000Z',
+  updatedAt: '2026-01-01T00:00:00.000Z',
+};
+
+function makeService(overrides: Partial<Service>): Service {
+  return { ...BASE_SERVICE, ...overrides };
+}
+
+function setProfilePlan(plan: 'BASIC' | 'PRO') {
+  vi.mocked(profileApi.getMyProfile).mockResolvedValue({
+    id: 'prof-1',
+    email: 'pro@example.com',
+    businessName: 'Salón',
+    slug: 'salon',
+    photoUrl: null,
+    logoUrl: null,
+    brandColor: null,
+    description: null,
+    timezone: 'America/Bogota',
+    cancellationPolicyHours: 24,
+    plan,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  });
+}
 
 function renderPage() {
   const queryClient = new QueryClient({
@@ -13,62 +54,99 @@ function renderPage() {
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <ServicesPage />
+      <MemoryRouter initialEntries={['/dashboard/services']}>
+        <Routes>
+          <Route path="/dashboard/services" element={<ServicesPage />} />
+          <Route path="/dashboard/services/new" element={<div>NEW FORM</div>} />
+        </Routes>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
 
 describe('ServicesPage', () => {
   beforeEach(() => {
-    vi.mocked(api.listServices).mockResolvedValue([
-      {
-        id: 'service-1',
-        name: 'Corte de cabello',
-        durationMinutes: 30,
-        isActive: true,
-        sortOrder: 0,
-        createdAt: '2026-01-01T00:00:00.000Z',
-        updatedAt: '2026-01-01T00:00:00.000Z',
-      },
-    ]);
+    setProfilePlan('BASIC');
+    vi.mocked(api.listServices).mockResolvedValue([BASE_SERVICE]);
   });
 
   afterEach(() => {
     vi.resetAllMocks();
   });
 
-  it('lists existing services', async () => {
+  it('lists existing services with their duration', async () => {
     renderPage();
 
-    expect(await screen.findByText('Corte de cabello')).toBeInTheDocument();
-    expect(screen.getByText('30 min')).toBeInTheDocument();
+    expect(
+      (await screen.findAllByText('Corte de cabello')).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('40 min').length).toBeGreaterThan(0);
   });
 
-  it('creates a new service on submit', async () => {
-    vi.mocked(api.createService).mockResolvedValue({
-      id: 'service-2',
-      name: 'Manicure',
-      durationMinutes: 45,
-      isActive: true,
-      sortOrder: 1,
-      createdAt: '2026-01-01T00:00:00.000Z',
-      updatedAt: '2026-01-01T00:00:00.000Z',
-    });
+  it('shows the empty state when there are no services', async () => {
+    vi.mocked(api.listServices).mockResolvedValue([]);
+    renderPage();
 
+    expect(
+      await screen.findByText('Aún no has creado ningún servicio'),
+    ).toBeInTheDocument();
+  });
+
+  it('navigates to the create form when under the plan limit', async () => {
     const user = userEvent.setup();
     renderPage();
-    await screen.findByText('Corte de cabello');
+    await screen.findAllByText('Corte de cabello');
 
-    await user.type(
-      screen.getByPlaceholderText('Nombre del servicio'),
-      'Manicure',
+    await user.click(
+      screen.getAllByRole('button', { name: 'Crear servicio' })[0],
     );
-    await user.type(screen.getByPlaceholderText('Duración (min)'), '45');
-    await user.click(screen.getByRole('button', { name: 'Agregar servicio' }));
+
+    expect(await screen.findByText('NEW FORM')).toBeInTheDocument();
+  });
+
+  it('opens the plan-limit dialog instead of the form when at the limit', async () => {
+    vi.mocked(api.listServices).mockResolvedValue([
+      makeService({ id: 's1' }),
+      makeService({ id: 's2' }),
+      makeService({ id: 's3' }),
+    ]);
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText('Corte de cabello');
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Crear servicio' })[0],
+    );
+
+    expect(
+      await screen.findByText('Límite de servicios alcanzado'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('NEW FORM')).not.toBeInTheDocument();
+  });
+
+  it('deletes a service after confirmation', async () => {
+    vi.mocked(api.deleteService).mockResolvedValue(
+      makeService({ isActive: false }),
+    );
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText('Corte de cabello');
+
+    await user.click(
+      screen.getByRole('button', {
+        name: 'Más acciones para Corte de cabello',
+      }),
+    );
+    await user.click(await screen.findByText('Eliminar servicio'));
+
+    const dialog = await screen.findByRole('dialog', {
+      name: 'Eliminar servicio',
+    });
+    await user.click(within(dialog).getByRole('button', { name: 'Eliminar' }));
 
     await waitFor(() => {
-      expect(api.createService).toHaveBeenCalledWith(
-        { name: 'Manicure', durationMinutes: 45 },
+      expect(api.deleteService).toHaveBeenCalledWith(
+        'service-1',
         expect.anything(),
       );
     });
