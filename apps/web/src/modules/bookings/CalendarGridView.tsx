@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { AgendaBooking } from '@agendya/types';
 import { format } from 'date-fns';
-import { STATUS_CFG } from './statusBadge';
+import { STATUS_CFG } from './statusConfig';
 
 interface CalendarGridViewProps {
   bookings: AgendaBooking[];

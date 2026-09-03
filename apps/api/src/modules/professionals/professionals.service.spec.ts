@@ -98,7 +98,10 @@ describe('ProfessionalsService', () => {
       expect(prisma.professional.findUniqueOrThrow).toHaveBeenCalledWith({
         where: { id: 'prof-1' },
       });
-      const countArgs = prisma.booking.count.mock.calls[0][0];
+      type CountCall = [
+        { where: { createdAt: { gte: Date }; [key: string]: unknown } },
+      ];
+      const [[countArgs]] = prisma.booking.count.mock.calls as CountCall[];
       expect(countArgs.where).toMatchObject({
         professionalId: 'prof-1',
         status: { not: 'CANCELLED' },

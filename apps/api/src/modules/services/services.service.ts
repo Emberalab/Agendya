@@ -134,10 +134,7 @@ export class ServicesService {
     return this.toDto(service);
   }
 
-  async duplicate(
-    professionalId: string,
-    serviceId: string,
-  ): Promise<Service> {
+  async duplicate(professionalId: string, serviceId: string): Promise<Service> {
     const source = await this.findOwnedOrThrow(professionalId, serviceId);
     await this.assertWithinPlanLimit(professionalId);
 

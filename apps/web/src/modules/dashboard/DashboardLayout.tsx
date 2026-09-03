@@ -2,7 +2,8 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../auth/authStore';
 import Group from '../../imports/LogoGroup';
 import { Sidebar } from './Sidebar';
-import { NAV_ITEMS, NavIcon } from './navItems';
+import { NAV_ITEMS } from './navItems';
+import { NavIcon } from './NavIcon';
 
 export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);

@@ -84,9 +84,7 @@ export class ProfessionalsService {
           ? { businessName: input.businessName }
           : {}),
         ...(input.slug !== undefined ? { slug: input.slug } : {}),
-        ...(input.category !== undefined
-          ? { category: input.category }
-          : {}),
+        ...(input.category !== undefined ? { category: input.category } : {}),
         ...(input.description !== undefined
           ? { description: input.description }
           : {}),

@@ -2,7 +2,7 @@ import type { AgendaBooking } from '@agendya/types';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { STATUS_CFG } from './statusBadge';
+import { STATUS_CFG } from './statusConfig';
 
 function initials(name: string): string {
   return name

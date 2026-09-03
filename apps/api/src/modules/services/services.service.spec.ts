@@ -106,20 +106,22 @@ describe('ServicesService', () => {
         priceCents: 1500000,
       });
 
-      expect(prisma.service.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          professionalId: 'prof-1',
-          name: 'Manicure',
-          durationMinutes: 45,
-          priceCents: 1500000,
-          sortOrder: 2,
-        }),
+      type CreateCall = [{ data: Record<string, unknown> }];
+      const [[createArgs]] = prisma.service.create.mock.calls as CreateCall[];
+      expect(createArgs.data).toMatchObject({
+        professionalId: 'prof-1',
+        name: 'Manicure',
+        durationMinutes: 45,
+        priceCents: 1500000,
+        sortOrder: 2,
       });
       expect(result.sortOrder).toBe(2);
     });
 
     it('rejects creating a service past the plan limit', async () => {
-      prisma.professional.findUniqueOrThrow.mockResolvedValue({ plan: 'BASIC' });
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({
+        plan: 'BASIC',
+      });
       prisma.service.count.mockResolvedValue(3);
 
       await expect(
@@ -183,7 +185,9 @@ describe('ServicesService', () => {
       });
       prisma.service.update.mockResolvedValue(BASE_SERVICE);
 
-      await service.update('prof-1', 'service-1', { homeServiceEnabled: false });
+      await service.update('prof-1', 'service-1', {
+        homeServiceEnabled: false,
+      });
 
       expect(prisma.service.update).toHaveBeenCalledWith({
         where: { id: 'service-1' },
@@ -215,10 +219,16 @@ describe('ServicesService', () => {
 
       await service.softDelete('prof-1', 'service-1');
 
-      expect(prisma.service.update).toHaveBeenCalledWith({
-        where: { id: 'service-1' },
-        data: { deletedAt: expect.any(Date), isActive: false },
-      });
+      type UpdateCall = [
+        {
+          where: { id: string };
+          data: { deletedAt: unknown; isActive: boolean };
+        },
+      ];
+      const [[updateArgs]] = prisma.service.update.mock.calls as UpdateCall[];
+      expect(updateArgs.where).toEqual({ id: 'service-1' });
+      expect(updateArgs.data.isActive).toBe(false);
+      expect(updateArgs.data.deletedAt).toBeInstanceOf(Date);
     });
   });
 
@@ -232,21 +242,23 @@ describe('ServicesService', () => {
 
       const result = await service.duplicate('prof-1', 'service-1');
 
-      expect(prisma.service.create).toHaveBeenCalledWith({
-        data: expect.objectContaining({
-          professionalId: 'prof-1',
-          name: 'Corte de cabello (copia)',
-          durationMinutes: 30,
-          priceCents: 2000000,
-          sortOrder: 1,
-        }),
+      type CreateCall = [{ data: Record<string, unknown> }];
+      const [[createArgs]] = prisma.service.create.mock.calls as CreateCall[];
+      expect(createArgs.data).toMatchObject({
+        professionalId: 'prof-1',
+        name: 'Corte de cabello (copia)',
+        durationMinutes: 30,
+        priceCents: 2000000,
+        sortOrder: 1,
       });
       expect(result.name).toBe('Corte de cabello (copia)');
     });
 
     it('rejects duplicating past the plan limit', async () => {
       prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
-      prisma.professional.findUniqueOrThrow.mockResolvedValue({ plan: 'BASIC' });
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({
+        plan: 'BASIC',
+      });
       prisma.service.count.mockResolvedValue(3);
 
       await expect(service.duplicate('prof-1', 'service-1')).rejects.toThrow(

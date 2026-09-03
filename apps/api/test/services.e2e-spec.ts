@@ -67,7 +67,11 @@ describe('Services (e2e)', () => {
     const res = await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Corte de cabello', durationMinutes: 30, priceCents: 2000000 })
+      .send({
+        name: 'Corte de cabello',
+        durationMinutes: 30,
+        priceCents: 2000000,
+      })
       .expect(201);
 
     const body = res.body as {
@@ -146,7 +150,11 @@ describe('Services (e2e)', () => {
     await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Cuarto servicio', durationMinutes: 30, priceCents: 1000000 })
+      .send({
+        name: 'Cuarto servicio',
+        durationMinutes: 30,
+        priceCents: 1000000,
+      })
       .expect(403);
   });
 

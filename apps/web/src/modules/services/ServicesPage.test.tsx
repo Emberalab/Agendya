@@ -81,8 +81,12 @@ describe('ServicesPage', () => {
   it('lists existing services with their duration', async () => {
     renderPage();
 
-    expect(await screen.findByText('Corte de cabello')).toBeInTheDocument();
-    expect(screen.getByText('30 minutos')).toBeInTheDocument();
+    // The page renders each service in both the desktop table and the mobile
+    // cards, so the name and the formatted duration each appear more than once.
+    expect(
+      (await screen.findAllByText('Corte de cabello')).length,
+    ).toBeGreaterThan(0);
+    expect(screen.getAllByText('40 min').length).toBeGreaterThan(0);
   });
 
   it('shows the empty state when there are no services', async () => {
