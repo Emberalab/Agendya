@@ -9,6 +9,7 @@ const SERVICE = {
   id: 'service-1',
   professionalId: 'prof-1',
   durationMinutes: 30,
+  homeDurationMinutes: null,
   isActive: true,
 };
 
@@ -120,6 +121,29 @@ describe('AvailabilityService', () => {
       '2026-08-03T16:15:00.000Z',
       '2026-08-03T16:30:00.000Z',
     ]);
+  });
+
+  it('uses the at-home duration so long visits fit within working hours', async () => {
+    prisma.service.findMany.mockResolvedValue([
+      { ...SERVICE, durationMinutes: 30, homeDurationMinutes: 120 },
+    ]);
+    prisma.workingHour.findMany.mockResolvedValue([
+      { startMinute: 540, endMinute: 720 }, // 09:00–12:00 local
+    ]);
+
+    const slots = await service.getAvailableSlots(
+      'prof-1',
+      ['service-1'],
+      '2026-08-03',
+      true,
+    );
+
+    // 2-hour visit must end by 12:00 local (17:00 UTC): last start is 10:00
+    // local == 15:00 UTC.
+    expect(slots).toContain('2026-08-03T14:00:00.000Z');
+    expect(slots).toContain('2026-08-03T15:00:00.000Z');
+    expect(slots).not.toContain('2026-08-03T15:15:00.000Z');
+    expect(slots).not.toContain('2026-08-03T16:00:00.000Z');
   });
 
   it('generates slots for every working block and skips the gap between them', async () => {

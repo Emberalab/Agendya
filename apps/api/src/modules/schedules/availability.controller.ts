@@ -42,6 +42,7 @@ export class AvailabilityController {
       professional.id,
       serviceIds,
       query.date,
+      query.atHome ?? false,
     );
     return { slots };
   }

@@ -9,6 +9,7 @@ const BASE_PROFESSIONAL = {
   passwordHash: 'hash',
   businessName: 'María Belleza',
   slug: 'maria-belleza',
+  category: null,
   photoUrl: null,
   logoUrl: null,
   coverImageUrl: null,
@@ -62,6 +63,7 @@ describe('ProfessionalsService', () => {
         email: 'maria@example.com',
         businessName: 'María Belleza',
         slug: 'maria-belleza',
+        category: null,
         photoUrl: null,
         logoUrl: null,
         coverImageUrl: null,
@@ -170,7 +172,16 @@ describe('ProfessionalsService', () => {
       prisma.professional.findFirst.mockResolvedValue({
         ...BASE_PROFESSIONAL,
         services: [
-          { id: 'service-1', name: 'Corte de cabello', durationMinutes: 30 },
+          {
+            id: 'service-1',
+            name: 'Corte de cabello',
+            description: 'Clásico',
+            durationMinutes: 30,
+            priceCents: 3000000,
+            homeServiceEnabled: true,
+            homeDurationMinutes: 45,
+            homePriceCents: 5000000,
+          },
         ],
       });
 
@@ -180,7 +191,7 @@ describe('ProfessionalsService', () => {
         where: { slug: 'maria-belleza', isActive: true },
         include: {
           services: {
-            where: { isActive: true },
+            where: { isActive: true, deletedAt: null },
             orderBy: { sortOrder: 'asc' },
           },
         },
@@ -188,13 +199,23 @@ describe('ProfessionalsService', () => {
       expect(result).toEqual({
         businessName: 'María Belleza',
         slug: 'maria-belleza',
+        category: null,
         photoUrl: null,
         logoUrl: null,
         coverImageUrl: null,
         brandColor: '#4F46E5',
         description: null,
         services: [
-          { id: 'service-1', name: 'Corte de cabello', durationMinutes: 30 },
+          {
+            id: 'service-1',
+            name: 'Corte de cabello',
+            description: 'Clásico',
+            durationMinutes: 30,
+            priceCents: 3000000,
+            homeServiceEnabled: true,
+            homeDurationMinutes: 45,
+            homePriceCents: 5000000,
+          },
         ],
       });
     });

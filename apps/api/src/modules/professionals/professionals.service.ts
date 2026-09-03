@@ -25,6 +25,7 @@ export class ProfessionalsService {
       email: professional.email,
       businessName: professional.businessName,
       slug: professional.slug,
+      category: professional.category,
       photoUrl: professional.photoUrl,
       logoUrl: professional.logoUrl,
       coverImageUrl: professional.coverImageUrl,
@@ -83,6 +84,9 @@ export class ProfessionalsService {
           ? { businessName: input.businessName }
           : {}),
         ...(input.slug !== undefined ? { slug: input.slug } : {}),
+        ...(input.category !== undefined
+          ? { category: input.category }
+          : {}),
         ...(input.description !== undefined
           ? { description: input.description }
           : {}),
@@ -125,7 +129,10 @@ export class ProfessionalsService {
     const professional = await this.prisma.professional.findFirst({
       where: { slug, isActive: true },
       include: {
-        services: { where: { isActive: true }, orderBy: { sortOrder: 'asc' } },
+        services: {
+          where: { isActive: true, deletedAt: null },
+          orderBy: { sortOrder: 'asc' },
+        },
       },
     });
     if (!professional) {
@@ -135,6 +142,7 @@ export class ProfessionalsService {
     return {
       businessName: professional.businessName,
       slug: professional.slug,
+      category: professional.category,
       photoUrl: professional.photoUrl,
       logoUrl: professional.logoUrl,
       coverImageUrl: professional.coverImageUrl,
@@ -143,7 +151,12 @@ export class ProfessionalsService {
       services: professional.services.map((service) => ({
         id: service.id,
         name: service.name,
+        description: service.description,
         durationMinutes: service.durationMinutes,
+        priceCents: service.priceCents,
+        homeServiceEnabled: service.homeServiceEnabled,
+        homeDurationMinutes: service.homeDurationMinutes,
+        homePriceCents: service.homePriceCents,
       })),
     };
   }

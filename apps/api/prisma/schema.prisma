@@ -39,6 +39,7 @@ model Professional {
   googleId                String?  @unique
   businessName            String
   slug                    String   @unique
+  category                String?
   photoUrl                String?
   logoUrl                 String?
   coverImageUrl           String?
@@ -118,6 +119,9 @@ model Booking {
   customerName             String
   customerEmail            String
   customerPhone            String
+  customerNote             String?
+  atHome                   Boolean       @default(false)
+  customerAddress          String?
   startAt                  DateTime
   endAt                    DateTime
   status                   BookingStatus @default(CONFIRMED)

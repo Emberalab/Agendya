@@ -36,6 +36,7 @@ function setProfilePlan(plan: 'BASIC' | 'PRO') {
     email: 'pro@example.com',
     businessName: 'Salón',
     slug: 'salon',
+    category: null,
     photoUrl: null,
     logoUrl: null,
     coverImageUrl: null,

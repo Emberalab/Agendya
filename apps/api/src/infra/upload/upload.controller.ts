@@ -11,10 +11,12 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../modules/auth/guards/jwt-auth.guard';
 import { UploadService } from './upload.service';
 
+// The web app downscales images before upload; these are just abuse guards.
 const MAX_BYTES: Record<'logo' | 'cover', number> = {
-  logo: 2 * 1024 * 1024,
-  cover: 5 * 1024 * 1024,
+  logo: 6 * 1024 * 1024,
+  cover: 12 * 1024 * 1024,
 };
+const HARD_LIMIT_BYTES = 15 * 1024 * 1024;
 
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
@@ -23,7 +25,7 @@ export class UploadController {
 
   @Post('image')
   @UseInterceptors(
-    FileInterceptor('file', { limits: { fileSize: MAX_BYTES.cover } }),
+    FileInterceptor('file', { limits: { fileSize: HARD_LIMIT_BYTES } }),
   )
   async uploadImage(
     @UploadedFile() file: Express.Multer.File,
