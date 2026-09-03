@@ -64,6 +64,7 @@ export const BRAND_COLOR_PRESETS = [
 export const updateProfileSchema = z.object({
   businessName: z.string().trim().min(2).max(100).optional(),
   slug: slugSchema.optional(),
+  category: z.string().trim().max(60).nullable().optional(),
   description: z.string().trim().max(500).nullable().optional(),
   photoUrl: z.string().url().nullable().optional(),
   logoUrl: z.string().url().nullable().optional(),
@@ -80,6 +81,7 @@ export const professionalProfileSchema = z.object({
   email: z.string().email(),
   businessName: z.string(),
   slug: z.string(),
+  category: z.string().nullable(),
   photoUrl: z.string().nullable(),
   logoUrl: z.string().nullable(),
   coverImageUrl: z.string().nullable(),
@@ -113,7 +115,12 @@ export type CheckSlugResponse = z.infer<typeof checkSlugResponseSchema>;
 export const publicServiceSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  description: z.string().nullable(),
   durationMinutes: z.number(),
+  priceCents: z.number(),
+  homeServiceEnabled: z.boolean(),
+  homeDurationMinutes: z.number().nullable(),
+  homePriceCents: z.number().nullable(),
 });
 
 export type PublicService = z.infer<typeof publicServiceSchema>;
@@ -121,6 +128,7 @@ export type PublicService = z.infer<typeof publicServiceSchema>;
 export const publicProfessionalSchema = z.object({
   businessName: z.string(),
   slug: z.string(),
+  category: z.string().nullable(),
   photoUrl: z.string().nullable(),
   logoUrl: z.string().nullable(),
   coverImageUrl: z.string().nullable(),

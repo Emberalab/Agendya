@@ -100,6 +100,11 @@ export type ScheduleException = z.infer<typeof scheduleExceptionSchema>;
 export const availabilityQuerySchema = z.object({
   serviceIds: z.string().min(1), // Comma-separated UUIDs
   date: dateOnlySchema,
+  // Query params arrive as strings; treat the literal "true" as at-home.
+  atHome: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
 });
 
 export type AvailabilityQuery = z.infer<typeof availabilityQuerySchema>;

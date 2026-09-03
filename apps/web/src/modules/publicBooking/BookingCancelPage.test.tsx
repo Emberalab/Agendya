@@ -18,6 +18,8 @@ const BASE_BOOKING = {
   customerName: 'Ana',
   customerEmail: 'ana@example.com',
   customerPhone: '+57 300 1234567',
+  atHome: false,
+  customerAddress: null,
   startAt: '2026-08-03T14:00:00.000Z',
   endAt: '2026-08-03T14:30:00.000Z',
   status: 'CONFIRMED' as const,

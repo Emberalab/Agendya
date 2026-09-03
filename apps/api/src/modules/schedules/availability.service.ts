@@ -18,6 +18,7 @@ export class AvailabilityService {
     professionalId: string,
     serviceIds: string[],
     dateStr: string,
+    atHome = false,
   ): Promise<string[]> {
     const professional = await this.prisma.professional.findUnique({
       where: { id: professionalId },
@@ -41,9 +42,14 @@ export class AvailabilityService {
       throw new NotFoundException('Algunos servicios no están disponibles.');
     }
 
-    // Calcular duración total de todos los servicios
+    // Calcular duración total. A domicilio usa la duración configurada para ese
+    // servicio cuando existe, para no ofrecer horarios que luego no quepan.
     const totalDurationMinutes = services.reduce(
-      (sum, service) => sum + service.durationMinutes,
+      (sum, service) =>
+        sum +
+        (atHome
+          ? (service.homeDurationMinutes ?? service.durationMinutes)
+          : service.durationMinutes),
       0,
     );
 

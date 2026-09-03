@@ -16,6 +16,7 @@ import { checkSlugAvailability, uploadImage } from './api';
 import { useProfile } from './hooks/useProfile';
 import { useUpdateProfile } from './hooks/useUpdateProfile';
 import { hexToHue, hueToHex } from './color';
+import { downscaleImage } from './image';
 
 const profileFormSchema = z.object({
   businessName: z
@@ -24,6 +25,7 @@ const profileFormSchema = z.object({
     .min(2, 'Ingresa al menos 2 caracteres.')
     .max(100, 'Máximo 100 caracteres.'),
   slug: slugSchema,
+  category: z.string().trim().max(60, 'Máximo 60 caracteres.'),
   description: z.string().trim().max(500, 'Máximo 500 caracteres.'),
   logoUrl: z.string(),
   coverImageUrl: z.string(),
@@ -53,6 +55,7 @@ function toFormValues(profile: ProfessionalProfile): ProfileFormValues {
   return {
     businessName: profile.businessName,
     slug: profile.slug,
+    category: profile.category ?? '',
     description: profile.description ?? '',
     logoUrl: profile.logoUrl ?? '',
     coverImageUrl: profile.coverImageUrl ?? '',
@@ -90,6 +93,7 @@ export function ProfilePage() {
     defaultValues: {
       businessName: '',
       slug: '',
+      category: '',
       description: '',
       logoUrl: '',
       coverImageUrl: '',
@@ -114,6 +118,7 @@ export function ProfilePage() {
       {
         businessName: data.businessName,
         slug: data.slug,
+        category: data.category.trim() ? data.category.trim() : null,
         description: data.description.trim() ? data.description.trim() : null,
         logoUrl: data.logoUrl || null,
         coverImageUrl: data.coverImageUrl || null,
@@ -229,6 +234,19 @@ export function ProfilePage() {
               placeholder="Ej. Mi Barbería, Centro de Estética…"
               style={inputStyle}
               {...register('businessName')}
+            />
+          </Field>
+
+          <Field
+            label="Categoría"
+            hint="Aparece como etiqueta en tu página pública."
+            error={errors.category}
+          >
+            <input
+              type="text"
+              placeholder="Ej. Barbería, Spa, Consultorio…"
+              style={inputStyle}
+              {...register('category')}
             />
           </Field>
 
@@ -360,10 +378,12 @@ export function ProfilePage() {
                     uploading={uploadLogo.isPending}
                     error={uploadLogo.error}
                     onFile={(file) =>
-                      uploadLogo.mutate(file, {
-                        onSuccess: (url) =>
-                          setValue('logoUrl', url, { shouldDirty: true }),
-                      })
+                      void downscaleImage(file, 512).then((f) =>
+                        uploadLogo.mutate(f, {
+                          onSuccess: (url) =>
+                            setValue('logoUrl', url, { shouldDirty: true }),
+                        }),
+                      )
                     }
                     hint="PNG, JPG hasta 2MB"
                     ctaLabel="Sube tu logo"
@@ -398,10 +418,14 @@ export function ProfilePage() {
                   uploading={uploadCover.isPending}
                   error={uploadCover.error}
                   onFile={(file) =>
-                    uploadCover.mutate(file, {
-                      onSuccess: (url) =>
-                        setValue('coverImageUrl', url, { shouldDirty: true }),
-                    })
+                    void downscaleImage(file, 1600).then((f) =>
+                      uploadCover.mutate(f, {
+                        onSuccess: (url) =>
+                          setValue('coverImageUrl', url, {
+                            shouldDirty: true,
+                          }),
+                      }),
+                    )
                   }
                   hint="PNG, JPG hasta 5MB"
                   ctaLabel="Sube una imagen"

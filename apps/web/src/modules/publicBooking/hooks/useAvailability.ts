@@ -5,6 +5,7 @@ export function useAvailability(
   slug: string,
   serviceIds: string[],
   date: string,
+  atHome = false,
 ) {
   return useQuery({
     queryKey: [
@@ -14,8 +15,9 @@ export function useAvailability(
       'availability',
       serviceIds.join(','),
       date,
+      atHome,
     ],
-    queryFn: () => getAvailability(slug, serviceIds, date),
+    queryFn: () => getAvailability(slug, serviceIds, date, atHome),
     enabled: serviceIds.length > 0 && Boolean(date),
   });
 }

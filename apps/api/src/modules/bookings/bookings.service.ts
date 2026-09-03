@@ -12,6 +12,7 @@ import type {
   CreateBookingInput,
   PublicBooking,
   RescheduleBookingInput,
+  UpdateBookingInput,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
@@ -40,16 +41,158 @@ export class BookingsService {
       throw new NotFoundException('Profesional no encontrado.');
     }
 
-    // Parse comma-separated serviceIds
+    const { primaryServiceId, serviceNames, totalDurationMinutes } =
+      await this.resolveServiceSelection(professional.id, input);
+
+    const startAt = new Date(input.startAt);
+    if (Number.isNaN(startAt.getTime()) || startAt.getTime() <= Date.now()) {
+      throw new BadRequestException('Ese horario ya no está disponible.');
+    }
+    const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
+
+    await this.assertSlotWithinSchedule(
+      professional,
+      startAt,
+      totalDurationMinutes,
+    );
+
+    const booking = await this.commitBookingSlot({
+      professionalId: professional.id,
+      service: {
+        id: primaryServiceId,
+        name: serviceNames,
+        durationMinutes: totalDurationMinutes,
+      },
+      input,
+      startAt,
+      endAt,
+    });
+
+    await this.mailService.sendBookingConfirmation({
+      to: booking.customerEmail,
+      customerName: booking.customerName,
+      businessName: professional.businessName,
+      serviceName: booking.serviceNameSnapshot,
+      startAt: booking.startAt,
+      timezone: professional.timezone,
+      cancellationToken: booking.cancellationToken,
+    });
+
+    return this.toPublicBooking(booking, professional);
+  }
+
+  /**
+   * Lets a customer edit a confirmed booking in place via its cancellation
+   * token: service, modality, date/time, and contact details. Reuses the same
+   * validation and slot guards as {@link createPublicBooking}; no duplicate
+   * booking is created.
+   */
+  async updatePublicBooking(
+    token: string,
+    input: UpdateBookingInput,
+  ): Promise<PublicBooking> {
+    const booking = await this.prisma.booking.findUnique({
+      where: { cancellationToken: token },
+      include: { professional: true },
+    });
+    if (!booking) {
+      throw new NotFoundException('Reserva no encontrada.');
+    }
+    if (booking.status !== 'CONFIRMED') {
+      throw new ConflictException('Esta reserva ya fue cancelada.');
+    }
+
+    const { professional } = booking;
+    if (
+      !this.canCancel(booking.startAt, professional.cancellationPolicyHours)
+    ) {
+      throw new ForbiddenException(
+        `Solo puedes modificar con al menos ${professional.cancellationPolicyHours} horas de anticipación.`,
+      );
+    }
+
+    const { primaryServiceId, serviceNames, totalDurationMinutes } =
+      await this.resolveServiceSelection(professional.id, input);
+
+    const startAt = new Date(input.startAt);
+    if (Number.isNaN(startAt.getTime()) || startAt.getTime() <= Date.now()) {
+      throw new BadRequestException('Ese horario ya no está disponible.');
+    }
+    const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
+
+    await this.assertSlotWithinSchedule(
+      professional,
+      startAt,
+      totalDurationMinutes,
+    );
+
+    const oldStartAt = booking.startAt;
+    const updated = await this.commitBookingSlot({
+      professionalId: professional.id,
+      service: {
+        id: primaryServiceId,
+        name: serviceNames,
+        durationMinutes: totalDurationMinutes,
+      },
+      input,
+      startAt,
+      endAt,
+      existingBookingId: booking.id,
+    });
+
+    if (oldStartAt.getTime() !== startAt.getTime()) {
+      await this.mailService.sendBookingRescheduled({
+        to: updated.customerEmail,
+        customerName: updated.customerName,
+        businessName: professional.businessName,
+        serviceName: updated.serviceNameSnapshot,
+        oldStartAt,
+        newStartAt: startAt,
+        timezone: professional.timezone,
+      });
+      await this.mailService.sendBookingRescheduledToProfessional({
+        to: professional.email,
+        professionalName: professional.businessName,
+        customerName: updated.customerName,
+        serviceName: updated.serviceNameSnapshot,
+        oldStartAt,
+        newStartAt: startAt,
+        timezone: professional.timezone,
+      });
+    } else {
+      // Only the service, modality, or contact details changed — re-confirm
+      // with the same token.
+      await this.mailService.sendBookingConfirmation({
+        to: updated.customerEmail,
+        customerName: updated.customerName,
+        businessName: professional.businessName,
+        serviceName: updated.serviceNameSnapshot,
+        startAt: updated.startAt,
+        timezone: professional.timezone,
+        cancellationToken: updated.cancellationToken,
+      });
+    }
+
+    return this.toPublicBooking(updated, professional);
+  }
+
+  /**
+   * Resolves the requested (comma-separated) services for a professional and
+   * derives the combined name, duration, and primary id, applying the at-home
+   * rules. Shared by the create and token-edit booking flows.
+   */
+  private async resolveServiceSelection(
+    professionalId: string,
+    input: CreateBookingInput,
+  ): Promise<{
+    primaryServiceId: string;
+    serviceNames: string;
+    totalDurationMinutes: number;
+  }> {
     const serviceIds = input.serviceIds.split(',').map((id) => id.trim());
 
-    // Obtener todos los servicios seleccionados
     const services = await this.prisma.service.findMany({
-      where: {
-        id: { in: serviceIds },
-        professionalId: professional.id,
-        isActive: true,
-      },
+      where: { id: { in: serviceIds }, professionalId, isActive: true },
     });
     if (services.length === 0) {
       throw new NotFoundException('Servicios no encontrados.');
@@ -58,20 +201,47 @@ export class BookingsService {
       throw new NotFoundException('Algunos servicios no están disponibles.');
     }
 
-    // Calcular duración total y nombre combinado
+    const atHome = input.atHome ?? false;
+    if (atHome) {
+      if (!input.customerAddress) {
+        throw new BadRequestException(
+          'Ingresa la dirección para el servicio a domicilio.',
+        );
+      }
+      if (services.some((s) => !s.homeServiceEnabled)) {
+        throw new BadRequestException(
+          'Este servicio no está disponible a domicilio.',
+        );
+      }
+    }
+
+    // A domicilio usa la duración configurada para ese servicio cuando existe.
     const totalDurationMinutes = services.reduce(
-      (sum, s) => sum + s.durationMinutes,
+      (sum, s) =>
+        sum +
+        (atHome
+          ? (s.homeDurationMinutes ?? s.durationMinutes)
+          : s.durationMinutes),
       0,
     );
-    const serviceNames = services.map((s) => s.name).join(' + ');
-    const primaryServiceId = services[0].id;
 
-    const startAt = new Date(input.startAt);
-    if (Number.isNaN(startAt.getTime()) || startAt.getTime() <= Date.now()) {
-      throw new BadRequestException('Ese horario ya no está disponible.');
-    }
-    const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
+    return {
+      primaryServiceId: services[0].id,
+      serviceNames: services.map((s) => s.name).join(' + '),
+      totalDurationMinutes,
+    };
+  }
 
+  /**
+   * Throws when the `startAt`..`startAt + durationMinutes` window does not fit
+   * inside the professional's working hours for that day, or the day is blocked
+   * by a schedule exception.
+   */
+  private async assertSlotWithinSchedule(
+    professional: Professional,
+    startAt: Date,
+    durationMinutes: number,
+  ): Promise<void> {
     const { dateStr, minutesFromMidnight } = zonedDateParts(
       startAt,
       professional.timezone,
@@ -86,7 +256,7 @@ export class BookingsService {
     const fitsWorkingHours = workingBlocks.some(
       (block) =>
         minutesFromMidnight >= block.startMinute &&
-        minutesFromMidnight + totalDurationMinutes <= block.endMinute,
+        minutesFromMidnight + durationMinutes <= block.endMinute,
     );
     if (!fitsWorkingHours) {
       throw new ConflictException('Ese horario ya no está disponible.');
@@ -103,39 +273,45 @@ export class BookingsService {
     if (exception) {
       throw new ConflictException('Ese horario ya no está disponible.');
     }
+  }
 
-    const booking = await this.createConfirmedBooking(
-      professional.id,
-      {
-        id: primaryServiceId,
-        name: serviceNames,
-        durationMinutes: totalDurationMinutes,
-      },
+  /**
+   * Writes a booking into a slot inside a serializable transaction that rejects
+   * overlaps, retrying a few times on serialization failures. Creates a new
+   * booking, or updates `existingBookingId` in place (excluding that row from
+   * the overlap check) for the token-edit flow.
+   */
+  private async commitBookingSlot(params: {
+    professionalId: string;
+    service: { id: string; name: string; durationMinutes: number };
+    input: CreateBookingInput;
+    startAt: Date;
+    endAt: Date;
+    existingBookingId?: string;
+  }): Promise<Booking> {
+    const {
+      professionalId,
+      service,
       input,
       startAt,
       endAt,
-    );
+      existingBookingId,
+    } = params;
 
-    await this.mailService.sendBookingConfirmation({
-      to: booking.customerEmail,
-      customerName: booking.customerName,
-      businessName: professional.businessName,
-      serviceName: booking.serviceNameSnapshot,
-      startAt: booking.startAt,
-      timezone: professional.timezone,
-      cancellationToken: booking.cancellationToken,
-    });
+    const data = {
+      serviceId: service.id,
+      serviceNameSnapshot: service.name,
+      durationMinutesSnapshot: service.durationMinutes,
+      customerName: input.customerName,
+      customerEmail: input.customerEmail,
+      customerPhone: input.customerPhone,
+      customerNote: input.customerNote?.trim() || null,
+      atHome: input.atHome ?? false,
+      customerAddress: input.atHome ? (input.customerAddress ?? null) : null,
+      startAt,
+      endAt,
+    };
 
-    return this.toPublicBooking(booking, professional);
-  }
-
-  private async createConfirmedBooking(
-    professionalId: string,
-    service: { id: string; name: string; durationMinutes: number },
-    input: CreateBookingInput,
-    startAt: Date,
-    endAt: Date,
-  ): Promise<Booking> {
     const maxAttempts = 3;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       try {
@@ -147,24 +323,24 @@ export class BookingsService {
                 status: 'CONFIRMED',
                 startAt: { lt: endAt },
                 endAt: { gt: startAt },
+                ...(existingBookingId
+                  ? { id: { not: existingBookingId } }
+                  : {}),
               },
             });
             if (overlapping) {
               throw new ConflictException('Ese horario ya no está disponible.');
             }
 
+            if (existingBookingId) {
+              return tx.booking.update({
+                where: { id: existingBookingId },
+                data,
+              });
+            }
+
             return tx.booking.create({
-              data: {
-                professionalId,
-                serviceId: service.id,
-                serviceNameSnapshot: service.name,
-                durationMinutesSnapshot: service.durationMinutes,
-                customerName: input.customerName,
-                customerEmail: input.customerEmail,
-                customerPhone: input.customerPhone,
-                startAt,
-                endAt,
-              },
+              data: { professionalId, ...data },
             });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
@@ -514,6 +690,9 @@ export class BookingsService {
       customerName: booking.customerName,
       customerEmail: booking.customerEmail,
       customerPhone: booking.customerPhone,
+      customerNote: booking.customerNote,
+      atHome: booking.atHome,
+      customerAddress: booking.customerAddress,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       status: booking.status,
