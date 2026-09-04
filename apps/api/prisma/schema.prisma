@@ -1,4 +1,4 @@
-// Prisma schema — Ronda Fase 1 (MVP: Agenda Básica)
+// Prisma schema — Agendya Fase 1 (MVP: Agenda Básica)
 // Ver /Users/jorgeherrera/.claude/plans/dreamy-mixing-lark.md sección 1 para el razonamiento de diseño.
 
 generator client {
@@ -25,6 +25,11 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+  // A CONFIRMED booking whose startAt has passed without being completed,
+  // cancelled, or marked no-show. Set lazily (on-read, the instant a stale
+  // booking is touched) and by ExpirationScheduler's periodic sweep so it
+  // doesn't depend on the cron having run yet. See BookingsService.assertModifiable.
+  EXPIRED
 }
 
 enum Plan {

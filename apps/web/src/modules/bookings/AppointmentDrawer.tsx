@@ -323,25 +323,31 @@ export function AppointmentDrawer({
     </>
   );
 
+  // A booking can still be marked complete after its slot has passed (the
+  // professional forgot to close it out), but it can only be rescheduled
+  // while `canReschedule` holds — mirrors the backend's assertModifiable
+  // guard, which is what actually enforces this if the button is bypassed.
   const footer =
-    booking.status === 'CONFIRMED' ? (
+    booking.status === 'CONFIRMED' || booking.status === 'EXPIRED' ? (
       <div
         className={`flex gap-3 p-4 shrink-0${presentation === 'modal' ? ' sm:justify-end' : ''}`}
         style={{ borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
       >
-        <button
-          onClick={() => onReschedule(booking)}
-          className="shrink-0 px-5 py-3 rounded-2xl text-sm font-semibold"
-          style={{
-            fontFamily: 'var(--font-body)',
-            background: 'none',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-          }}
-        >
-          Reprogramar
-        </button>
+        {booking.canReschedule && (
+          <button
+            onClick={() => onReschedule(booking)}
+            className="shrink-0 px-5 py-3 rounded-2xl text-sm font-semibold"
+            style={{
+              fontFamily: 'var(--font-body)',
+              background: 'none',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            Reprogramar
+          </button>
+        )}
         <button
           onClick={() => setShowConfirm(true)}
           className={`${presentation === 'modal' ? 'flex-1 sm:flex-none sm:px-6' : 'flex-1'} py-3 rounded-2xl text-sm font-semibold`}

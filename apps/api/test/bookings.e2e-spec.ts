@@ -65,8 +65,8 @@ describe('Bookings (e2e)', () => {
   let prisma: PrismaService;
 
   const runId = Date.now();
-  const email = `e2e-bookings-${runId}@ronda.test`;
-  const otherEmail = `e2e-bookings-other-${runId}@ronda.test`;
+  const email = `e2e-bookings-${runId}@agendya.test`;
+  const otherEmail = `e2e-bookings-other-${runId}@agendya.test`;
   const password = 'supersecret123';
 
   let accessToken: string;
@@ -398,6 +398,166 @@ describe('Bookings (e2e)', () => {
         .patch(`/bookings/${bookingId}/cancel`)
         .set('Authorization', `Bearer ${otherAccessToken}`)
         .expect(404);
+    });
+  });
+
+  describe('rescheduling and expiration', () => {
+    // Seeded directly through Prisma rather than the public create endpoint:
+    // that endpoint is throttled to 10 requests/minute per IP, a limit this
+    // many setup bookings would blow through. Only the behavior actually
+    // under test (reschedule/cancel/complete) goes through real HTTP calls.
+    let professionalId: string;
+
+    beforeAll(async () => {
+      const professional = await prisma.professional.findUniqueOrThrow({
+        where: { slug },
+      });
+      professionalId = professional.id;
+    });
+
+    async function seedBooking(
+      startAt: Date,
+      overrides: Record<string, unknown> = {},
+    ) {
+      return prisma.booking.create({
+        data: {
+          professionalId,
+          serviceId,
+          serviceNameSnapshot: 'Corte de cabello',
+          durationMinutesSnapshot: 30,
+          customerName: 'Cliente Reagenda',
+          customerEmail: `reagenda-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`,
+          customerPhone: '+57 300 1111000',
+          startAt,
+          endAt: new Date(startAt.getTime() + 30 * 60_000),
+          ...overrides,
+        },
+      });
+    }
+
+    it('rejects rescheduling a booking that is too close to its start time', async () => {
+      const booking = await seedBooking(new Date(Date.now() + 2 * 60 * 60_000));
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/reschedule`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newStartAt: `${farFutureDay.dateStr}T17:00:00.000Z` })
+        .expect(403);
+    });
+
+    it('rejects rescheduling to a time in the past', async () => {
+      const booking = await seedBooking(
+        new Date(`${farFutureDay.dateStr}T17:00:00.000Z`),
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/reschedule`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newStartAt: '2020-01-01T12:00:00.000Z' })
+        .expect(400);
+    });
+
+    it('reschedules a booking outside the policy window and reports canReschedule/canCancel on the result', async () => {
+      const booking = await seedBooking(
+        new Date(`${farFutureDay.dateStr}T18:00:00.000Z`),
+      );
+
+      const res = await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/reschedule`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newStartAt: `${farFutureDay.dateStr}T19:00:00.000Z` })
+        .expect(200);
+
+      const body = res.body as { startAt: string; canReschedule: boolean };
+      expect(body.startAt).toBe(`${farFutureDay.dateStr}T19:00:00.000Z`);
+      expect(body.canReschedule).toBe(true);
+    });
+
+    it('reschedules a booking via its public cancellation token too', async () => {
+      const booking = await seedBooking(
+        new Date(`${farFutureDay.dateStr}T18:30:00.000Z`),
+      );
+
+      const res = await request(app.getHttpServer())
+        .post(`/public/bookings/${booking.cancellationToken}/reschedule`)
+        .send({ newStartAt: `${farFutureDay.dateStr}T19:30:00.000Z` })
+        .expect(201);
+
+      const body = res.body as {
+        startAt: string;
+        canCancel: boolean;
+        canReschedule: boolean;
+      };
+      expect(body.startAt).toBe(`${farFutureDay.dateStr}T19:30:00.000Z`);
+      expect(body.canCancel).toBe(true);
+      expect(body.canReschedule).toBe(true);
+    });
+
+    it('self-heals a stale CONFIRMED booking to EXPIRED and rejects rescheduling it', async () => {
+      // Simulates time having passed without the professional acting on it:
+      // seeded already in the past, exactly what a stale, never-swept
+      // booking looks like.
+      const booking = await seedBooking(new Date(Date.now() - 60 * 60_000), {
+        endAt: new Date(Date.now() - 30 * 60_000),
+      });
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/reschedule`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newStartAt: `${farFutureDay.dateStr}T20:00:00.000Z` })
+        .expect(403);
+
+      const row = await prisma.booking.findUniqueOrThrow({
+        where: { id: booking.id },
+      });
+      expect(row.status).toBe('EXPIRED');
+
+      // An expired booking can still be marked complete after the fact...
+      await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/complete`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+
+      // ...but once completed, it's no longer reschedulable either.
+      await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/reschedule`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ newStartAt: `${farFutureDay.dateStr}T20:00:00.000Z` })
+        .expect(409);
+    });
+
+    it("rejects rescheduling another professional's booking", async () => {
+      const booking = await seedBooking(
+        new Date(`${farFutureDay.dateStr}T20:30:00.000Z`),
+      );
+
+      await request(app.getHttpServer())
+        .patch(`/bookings/${booking.id}/reschedule`)
+        .set('Authorization', `Bearer ${otherAccessToken}`)
+        .send({ newStartAt: `${farFutureDay.dateStr}T21:00:00.000Z` })
+        .expect(404);
+    });
+
+    it('only one of two concurrent reschedules onto the same new slot succeeds', async () => {
+      const [first, second] = await Promise.all([
+        seedBooking(new Date(`${farFutureDay.dateStr}T21:15:00.000Z`)),
+        seedBooking(new Date(`${farFutureDay.dateStr}T21:45:00.000Z`)),
+      ]);
+      const targetStartAt = `${farFutureDay.dateStr}T13:30:00.000Z`;
+
+      const [rescheduleFirst, rescheduleSecond] = await Promise.all([
+        request(app.getHttpServer())
+          .patch(`/bookings/${first.id}/reschedule`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({ newStartAt: targetStartAt }),
+        request(app.getHttpServer())
+          .patch(`/bookings/${second.id}/reschedule`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({ newStartAt: targetStartAt }),
+      ]);
+
+      const statuses = [rescheduleFirst.status, rescheduleSecond.status].sort();
+      expect(statuses).toEqual([200, 409]);
     });
   });
 });

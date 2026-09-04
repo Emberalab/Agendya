@@ -6,7 +6,7 @@ export class AppService {
   constructor(private readonly prisma: PrismaService) {}
 
   getHello(): string {
-    return 'Ronda API';
+    return 'Agendya API';
   }
 
   async checkHealth() {

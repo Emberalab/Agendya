@@ -32,6 +32,13 @@ function StatusIcon({ status, color }: { status: BookingStatus; color: string })
           <path d="M7 4v3.2l2 2" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
         </svg>
       );
+    case 'EXPIRED':
+      return (
+        <svg width="12" height="12" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0 }}>
+          <circle cx="7" cy="7" r="6" stroke={color} strokeWidth="1.4" />
+          <path d="M7 4.3v3.1M7 9.5v.1" stroke={color} strokeWidth="1.4" strokeLinecap="round" />
+        </svg>
+      );
     default:
       return null;
   }

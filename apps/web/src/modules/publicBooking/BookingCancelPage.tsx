@@ -17,6 +17,7 @@ const STATUS_LABELS: Record<BookingStatus, string> = {
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',
   NO_SHOW: 'No asistió',
+  EXPIRED: 'Vencida',
 };
 
 export function BookingCancelPage() {
@@ -68,19 +69,21 @@ export function BookingCancelPage() {
       {booking.status === 'CONFIRMED' && booking.canCancel && !isRescheduling && (
         <div>
           <div className="flex gap-3">
-            <Button
-              type="button"
-              onClick={() => setIsRescheduling(true)}
-              variant="outline"
-              disabled={!booking.serviceId}
-              title={
-                !booking.serviceId
-                  ? 'Para modificar una reserva con servicios combinados, contacta directamente'
-                  : undefined
-              }
-            >
-              Modificar fecha/hora
-            </Button>
+            {booking.canReschedule && (
+              <Button
+                type="button"
+                onClick={() => setIsRescheduling(true)}
+                variant="outline"
+                disabled={!booking.serviceId}
+                title={
+                  !booking.serviceId
+                    ? 'Para modificar una reserva con servicios combinados, contacta directamente'
+                    : undefined
+                }
+              >
+                Modificar fecha/hora
+              </Button>
+            )}
             <Button
               type="button"
               onClick={() => cancelBooking.mutate()}
@@ -98,7 +101,7 @@ export function BookingCancelPage() {
         </div>
       )}
 
-      {booking.status === 'CONFIRMED' && booking.canCancel && isRescheduling && (
+      {booking.status === 'CONFIRMED' && booking.canReschedule && isRescheduling && (
         <div className="rounded border border-gray-200 dark:border-gray-700 p-4">
           <h2 className="mb-3 text-lg font-medium">Modificar fecha y hora</h2>
 
@@ -173,6 +176,13 @@ export function BookingCancelPage() {
           Ya no puedes cancelar o modificar esta reserva en línea: se requieren al menos{' '}
           {booking.cancellationPolicyHours} horas de anticipación. Contacta
           directamente a {booking.businessName}.
+        </p>
+      )}
+
+      {booking.status === 'EXPIRED' && (
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          Esta reserva ya venció: su horario ya pasó. Contacta directamente a{' '}
+          {booking.businessName} si necesitas agendar una nueva cita.
         </p>
       )}
 

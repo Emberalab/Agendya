@@ -26,6 +26,7 @@ const BASE_BOOKING = {
   cancellationToken: 'token-abc',
   cancellationPolicyHours: 24,
   canCancel: true,
+  canReschedule: true,
 };
 
 function renderPage(token = 'token-abc') {
@@ -73,6 +74,7 @@ describe('BookingCancelPage', () => {
     vi.mocked(api.getBookingByToken).mockResolvedValue({
       ...BASE_BOOKING,
       canCancel: false,
+      canReschedule: false,
     });
 
     renderPage();

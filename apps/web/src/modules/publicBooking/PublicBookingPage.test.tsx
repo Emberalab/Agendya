@@ -122,6 +122,7 @@ describe('PublicBookingPage', () => {
       cancellationToken: 'token-abc',
       cancellationPolicyHours: 24,
       canCancel: true,
+      canReschedule: true,
     });
 
     const user = userEvent.setup();
@@ -288,6 +289,7 @@ describe('PublicBookingPage', () => {
       cancellationToken: 'token-abc',
       cancellationPolicyHours: 24,
       canCancel: true,
+      canReschedule: true,
     };
     vi.mocked(api.createPublicBooking).mockResolvedValue(CONFIRMED);
     vi.mocked(api.updateBookingByToken).mockResolvedValue({

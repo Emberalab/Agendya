@@ -7,6 +7,7 @@ export const BOOKING_STATUSES = [
   'CANCELLED',
   'COMPLETED',
   'NO_SHOW',
+  'EXPIRED',
 ] as const;
 
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
@@ -58,6 +59,7 @@ export const publicBookingSchema = z.object({
   cancellationToken: z.string(),
   cancellationPolicyHours: z.number(),
   canCancel: z.boolean(),
+  canReschedule: z.boolean(),
 });
 
 export type PublicBooking = z.infer<typeof publicBookingSchema>;
@@ -74,6 +76,7 @@ export const agendaBookingSchema = z.object({
   endAt: z.string(),
   status: bookingStatusSchema,
   cancellationPolicyHours: z.number(),
+  canReschedule: z.boolean(),
   createdAt: z.string(),
   cancelledAt: z.string().nullable(),
   cancelledBy: z.string().nullable(),

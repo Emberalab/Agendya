@@ -11,7 +11,7 @@ describe('AppController', () => {
       providers: [
         {
           provide: AppService,
-          useValue: { getHello: () => 'Ronda API' },
+          useValue: { getHello: () => 'Agendya API' },
         },
       ],
     }).compile();
@@ -20,8 +20,8 @@ describe('AppController', () => {
   });
 
   describe('root', () => {
-    it('should return "Ronda API"', () => {
-      expect(appController.getHello()).toBe('Ronda API');
+    it('should return "Agendya API"', () => {
+      expect(appController.getHello()).toBe('Agendya API');
     });
   });
 });

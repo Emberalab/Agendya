@@ -10,8 +10,8 @@ describe('Services (e2e)', () => {
   let prisma: PrismaService;
 
   const runId = Date.now();
-  const email = `e2e-services-${runId}@ronda.test`;
-  const otherEmail = `e2e-services-other-${runId}@ronda.test`;
+  const email = `e2e-services-${runId}@agendya.test`;
+  const otherEmail = `e2e-services-other-${runId}@agendya.test`;
   const password = 'supersecret123';
 
   let accessToken: string;
