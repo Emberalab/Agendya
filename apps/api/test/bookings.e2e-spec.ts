@@ -65,8 +65,8 @@ describe('Bookings (e2e)', () => {
   let prisma: PrismaService;
 
   const runId = Date.now();
-  const email = `e2e-bookings-${runId}@ronda.test`;
-  const otherEmail = `e2e-bookings-other-${runId}@ronda.test`;
+  const email = `e2e-bookings-${runId}@agendya.test`;
+  const otherEmail = `e2e-bookings-other-${runId}@agendya.test`;
   const password = 'supersecret123';
 
   let accessToken: string;

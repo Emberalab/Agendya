@@ -1,4 +1,4 @@
-// Prisma schema — Ronda Fase 1 (MVP: Agenda Básica)
+// Prisma schema — Agendya Fase 1 (MVP: Agenda Básica)
 // Ver /Users/jorgeherrera/.claude/plans/dreamy-mixing-lark.md sección 1 para el razonamiento de diseño.
 
 generator client {

@@ -25,7 +25,7 @@ That folder is a self-contained Figma Make export kept for design reference (it 
 
 ## Naming note: "ronda" vs "agendya"
 
-The product appears to have been renamed from "Ronda" to "Agendya". Some infra/config still uses the old name: `infra/docker-compose.yml` container and DB credentials, the CI Postgres service credentials, and a comment in `apps/api/prisma/schema.prisma` referencing a local plan file path on the original author's machine (not portable — ignore that path if it doesn't exist). These are just leftover names, not a separate product.
+The product was renamed from "Ronda" to "Agendya" early on. Infra/config, CI, and app-visible identifiers (local Postgres credentials, the `agendya-auth`/`agendya-theme` localStorage keys, the API's root health-check string, Cloudinary upload folders, Prisma schema header) have all been updated to "Agendya" — a leftover `Ronda`/`ronda.test` reference outside the hand-authored planning docs (`Arquitectura-Tecnica.md`, `Stack-Tecnologico.md`, `MVP-v1.md`, `Fase-4-Negocios-WhatsApp.md` — old product-name mentions there are historical prose, not live config, and are intentionally left as-is) is a regression worth fixing. `apps/api/prisma/schema.prisma`'s second line still references a local plan file path on the original author's machine — not portable, ignore it if it doesn't exist.
 
 ## Tech stack
 

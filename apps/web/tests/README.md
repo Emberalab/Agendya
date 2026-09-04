@@ -29,7 +29,7 @@ folder via `tsconfig.e2e.json`.
   assertions.
 - **Third-party services** (Google OAuth, Cloudinary, Resend) are never
   contacted; their asset hosts are blocked for speed.
-- **Auth**: `auth.setup.ts` seeds the `ronda-auth` `localStorage` entry the
+- **Auth**: `auth.setup.ts` seeds the `agendya-auth` `localStorage` entry the
   zustand store persists and snapshots it to `playwright/.auth/user.json`.
   Dashboard specs opt in with `test.use({ storageState: STORAGE_STATE })`.
   Test identity comes from `E2E_USER_EMAIL` / `E2E_USER_BUSINESS_NAME` /
