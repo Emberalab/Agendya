@@ -24,6 +24,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'CANCELLED', label: 'Canceladas' },
   { value: 'COMPLETED', label: 'Completadas' },
   { value: 'NO_SHOW', label: 'No asistieron' },
+  { value: 'EXPIRED', label: 'Vencidas' },
 ];
 
 const MOBILE_STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
@@ -31,16 +32,11 @@ const MOBILE_STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'CONFIRMED', label: 'Confirmadas' },
   { value: 'PENDING', label: 'Pendientes' },
   { value: 'CANCELLED', label: 'Canceladas' },
+  { value: 'EXPIRED', label: 'Vencidas' },
 ];
 
 function toDateOnly(date: Date): string {
   return format(date, 'yyyy-MM-dd');
-}
-
-function canModifyBooking(booking: AgendaBooking): boolean {
-  if (booking.status !== 'CONFIRMED') return false;
-  const hoursUntil = (new Date(booking.startAt).getTime() - Date.now()) / 3_600_000;
-  return hoursUntil >= booking.cancellationPolicyHours;
 }
 
 function contactCustomer(phone: string) {
@@ -205,7 +201,7 @@ function RowActions({
           onReschedule={() => onReschedule(booking)}
           onContact={() => contactCustomer(booking.customerPhone)}
           onCancel={() => onCancel(booking.id)}
-          canModify={canModifyBooking(booking)}
+          canModify={booking.canReschedule}
         />
       )}
     </div>
@@ -318,7 +314,7 @@ function AppointmentCardMobile({
             onReschedule={() => onReschedule(booking)}
             onContact={() => contactCustomer(booking.customerPhone)}
             onCancel={() => onCancel(booking.id)}
-            canModify={canModifyBooking(booking)}
+            canModify={booking.canReschedule}
           />
         )}
       </div>
