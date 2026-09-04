@@ -214,7 +214,7 @@ export function BlockedDatesManager() {
                   style={{
                     border: '1px solid #FECDD3',
                     background: 'none',
-                    color: '#EF4444',
+                    color: 'var(--color-danger)',
                     cursor: deleteException.isPending
                       ? 'not-allowed'
                       : 'pointer',

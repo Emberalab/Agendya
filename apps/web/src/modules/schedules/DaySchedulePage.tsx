@@ -287,7 +287,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
                   border: '1px solid #FECDD3',
                   background: 'none',
                   cursor: 'pointer',
-                  color: '#EF4444',
+                  color: 'var(--color-danger)',
                 }}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -382,7 +382,7 @@ function ConfirmDeleteBlockDialog({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
+      style={{ backgroundColor: 'var(--overlay-scrim)' }}
       onClick={onCancel}
     >
       <div
@@ -463,7 +463,7 @@ function ConfirmDeleteBlockDialog({
             className="flex-1 py-3 rounded-2xl text-sm font-semibold"
             style={{
               fontFamily: 'var(--font-body)',
-              backgroundColor: '#EF4444',
+              backgroundColor: 'var(--color-danger)',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',

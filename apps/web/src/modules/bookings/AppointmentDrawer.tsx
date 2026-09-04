@@ -46,7 +46,7 @@ function ConfirmCompleteDialog({
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center px-4"
-      style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
+      style={{ backgroundColor: 'var(--overlay-scrim)' }}
     >
       <div
         className="rounded-3xl p-8 flex flex-col items-center gap-4 w-full max-w-sm"
@@ -145,7 +145,7 @@ export function AppointmentDrawer({
     <>
       {booking.status === 'CANCELLED' && (
         <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3' }}>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: '#EF4444' }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-danger)' }}>
             {cancelledByLabel(booking.cancelledBy)}
             {booking.cancelledAt
               ? ` · ${format(new Date(booking.cancelledAt), "d 'de' MMMM 'de' yyyy, h:mm a", { locale: es })}`
@@ -164,8 +164,8 @@ export function AppointmentDrawer({
 
         {booking.status === 'COMPLETED' && (
           <div className="flex items-center gap-2 mb-3">
-            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: '#10B981' }} />
-            <span style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: '#10B981' }}>
+            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: 'var(--color-success)' }} />
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-success)' }}>
               Servicio completado
             </span>
           </div>
@@ -361,7 +361,7 @@ export function AppointmentDrawer({
       <>
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-          style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
+          style={{ backgroundColor: 'var(--overlay-scrim)' }}
           onClick={onClose}
         >
           <div

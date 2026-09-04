@@ -55,7 +55,7 @@ export function Sidebar() {
               title={item.label}
               className="flex items-center justify-center w-10 h-10 rounded-xl"
               style={({ isActive }) => ({
-                backgroundColor: isActive ? 'rgba(79,70,229,0.08)' : 'transparent',
+                backgroundColor: isActive ? 'var(--color-brand-tint)' : 'transparent',
                 color: isActive ? 'var(--color-brand-primary)' : 'var(--color-text-muted)',
               })}
             >
@@ -157,7 +157,7 @@ export function Sidebar() {
                   to={item.to}
                   className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl text-left w-full"
                   style={({ isActive }) => ({
-                    backgroundColor: isActive ? 'rgba(79,70,229,0.08)' : 'transparent',
+                    backgroundColor: isActive ? 'var(--color-brand-tint)' : 'transparent',
                     color: isActive ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
                     fontFamily: 'var(--font-body)',
                     fontWeight: isActive ? 600 : 400,
@@ -199,7 +199,7 @@ export function Sidebar() {
               }}
               onMouseEnter={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'rgba(239,68,68,0.06)';
-                (e.currentTarget as HTMLButtonElement).style.color = '#EF4444';
+                (e.currentTarget as HTMLButtonElement).style.color = 'var(--color-danger)';
               }}
               onMouseLeave={(e) => {
                 (e.currentTarget as HTMLButtonElement).style.backgroundColor = 'transparent';

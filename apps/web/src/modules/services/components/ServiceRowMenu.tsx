@@ -79,7 +79,7 @@ export function ServiceRowMenu({
         fontSize: '14px',
         lineHeight: '20px',
         fontWeight: 500,
-        color: danger ? '#EF4444' : 'var(--color-text-primary)',
+        color: danger ? 'var(--color-danger)' : 'var(--color-text-primary)',
         background: 'none',
         border: 'none',
         cursor: 'pointer',
@@ -113,7 +113,7 @@ export function ServiceRowMenu({
         border: '1px solid var(--color-border)',
         borderRadius: 12,
         padding: '4px 0',
-        boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
+        boxShadow: 'var(--shadow-menu)',
       }}
     >
       {item(
@@ -154,7 +154,7 @@ export function ServiceRowMenu({
           height="15"
           viewBox="0 0 15 15"
           fill="none"
-          style={{ color: '#EF4444' }}
+          style={{ color: 'var(--color-danger)' }}
         >
           <path
             d="M2.5 4h10M6 4V2.8h3V4M4 4l.7 8.2a1 1 0 0 0 1 .8h3.6a1 1 0 0 0 1-.8L11 4"

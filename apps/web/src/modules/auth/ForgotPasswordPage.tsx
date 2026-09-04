@@ -52,7 +52,7 @@ function PasswordStrengthBar({ password }: { password: string }) {
   ];
   const metCount = checks.filter((c) => c.met).length;
   const strength = metCount <= 1 ? 'Débil' : metCount <= 2 ? 'Regular' : metCount === 3 ? 'Medio' : 'Fuerte';
-  const strengthColor = metCount <= 1 ? '#EF4444' : metCount <= 2 ? '#F59E0B' : metCount === 3 ? '#F59E0B' : '#10B981';
+  const strengthColor = metCount <= 1 ? 'var(--color-danger)' : metCount <= 2 ? '#F59E0B' : metCount === 3 ? '#F59E0B' : 'var(--color-success)';
   const barWidth = `${(metCount / 4) * 100}%`;
 
   return (
@@ -249,7 +249,7 @@ export function ForgotPasswordPage() {
           <StatusCard
             variant="success"
             icon={
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#10B981' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success)' }}>
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M4 9l3.5 3.5L14 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -390,7 +390,7 @@ export function ForgotPasswordPage() {
                 </button>
               </div>
               {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-xs mt-1" style={{ color: '#EF4444', fontFamily: 'var(--font-mono)' }}>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-danger)', fontFamily: 'var(--font-mono)' }}>
                   Las contraseñas no coinciden
                 </p>
               )}
@@ -500,7 +500,7 @@ export function ForgotPasswordPage() {
           <StatusCard
             variant="success"
             icon={
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#10B981' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success)' }}>
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M4 9l3.5 3.5L14 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -546,7 +546,7 @@ export function ForgotPasswordPage() {
         <StatusCard
           variant="error"
           icon={
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#EF4444' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-danger)' }}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M9 2L2 15h14L9 2z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M9 7v4M9 13h.01" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />

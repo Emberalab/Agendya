@@ -9,7 +9,12 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b --noEmit"
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:report": "playwright show-report",
+    "test:e2e:install": "playwright install --with-deps chromium",
+    "typecheck": "tsc -b --noEmit && tsc -p tsconfig.e2e.json"
   },
   "dependencies": {
     "@agendya/types": "^0.0.0",
@@ -17,7 +22,6 @@
     "@moondesignsystem/react": "^2.5.21",
     "@moondesignsystem/ui": "^3.7.2",
     "@tanstack/react-query": "^5.101.4",
-    "axios": "^1.18.1",
     "date-fns": "^4.4.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
@@ -27,6 +31,7 @@
     "zustand": "^5.0.14"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
