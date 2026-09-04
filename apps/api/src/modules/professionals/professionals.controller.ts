@@ -18,7 +18,7 @@ export class ProfessionalsController {
 
   @Get('me')
   getMe(@CurrentUser() user: Professional) {
-    return this.professionalsService.toProfile(user);
+    return this.professionalsService.getProfile(user.id);
   }
 
   @Patch('me')

@@ -18,6 +18,7 @@ export class AvailabilityService {
     professionalId: string,
     serviceIds: string[],
     dateStr: string,
+    atHome = false,
   ): Promise<string[]> {
     const professional = await this.prisma.professional.findUnique({
       where: { id: professionalId },
@@ -41,21 +42,25 @@ export class AvailabilityService {
       throw new NotFoundException('Algunos servicios no están disponibles.');
     }
 
-    // Calcular duración total de todos los servicios
+    // Calcular duración total. A domicilio usa la duración configurada para ese
+    // servicio cuando existe, para no ofrecer horarios que luego no quepan.
     const totalDurationMinutes = services.reduce(
-      (sum, service) => sum + service.durationMinutes,
+      (sum, service) =>
+        sum +
+        (atHome
+          ? (service.homeDurationMinutes ?? service.durationMinutes)
+          : service.durationMinutes),
       0,
     );
 
-    const workingHour = await this.prisma.workingHour.findUnique({
+    const workingBlocks = await this.prisma.workingHour.findMany({
       where: {
-        professionalId_dayOfWeek: {
-          professionalId,
-          dayOfWeek: weekdayFromDateString(dateStr),
-        },
+        professionalId,
+        dayOfWeek: weekdayFromDateString(dateStr),
       },
+      orderBy: { startMinute: 'asc' },
     });
-    if (!workingHour) {
+    if (workingBlocks.length === 0) {
       return [];
     }
 
@@ -89,27 +94,29 @@ export class AvailabilityService {
     const now = Date.now();
     const slots: string[] = [];
 
-    for (
-      let start = workingHour.startMinute;
-      start + totalDurationMinutes <= workingHour.endMinute;
-      start += gridMinutes
-    ) {
-      const slotStart = zonedInstant(dateStr, start, professional.timezone);
-      const slotStartMs = slotStart.getTime();
-      if (slotStartMs <= now) {
-        continue;
-      }
+    for (const block of workingBlocks) {
+      for (
+        let start = block.startMinute;
+        start + totalDurationMinutes <= block.endMinute;
+        start += gridMinutes
+      ) {
+        const slotStart = zonedInstant(dateStr, start, professional.timezone);
+        const slotStartMs = slotStart.getTime();
+        if (slotStartMs <= now) {
+          continue;
+        }
 
-      const slotEndMs = slotStartMs + totalDurationMinutes * 60_000;
-      const overlapsBusy = busyRanges.some(
-        ([busyStart, busyEnd]) =>
-          slotStartMs < busyEnd && slotEndMs > busyStart,
-      );
-      if (overlapsBusy) {
-        continue;
-      }
+        const slotEndMs = slotStartMs + totalDurationMinutes * 60_000;
+        const overlapsBusy = busyRanges.some(
+          ([busyStart, busyEnd]) =>
+            slotStartMs < busyEnd && slotEndMs > busyStart,
+        );
+        if (overlapsBusy) {
+          continue;
+        }
 
-      slots.push(slotStart.toISOString());
+        slots.push(slotStart.toISOString());
+      }
     }
 
     return slots;

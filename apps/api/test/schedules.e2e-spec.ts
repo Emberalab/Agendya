@@ -78,7 +78,11 @@ describe('Schedules + Availability (e2e)', () => {
     const createService = await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)
-      .send({ name: 'Corte de cabello', durationMinutes: 30 });
+      .send({
+        name: 'Corte de cabello',
+        durationMinutes: 30,
+        priceCents: 2000000,
+      });
     serviceId = (createService.body as { id: string }).id;
   });
 
@@ -122,6 +126,37 @@ describe('Schedules + Availability (e2e)', () => {
       startMinute: 540,
       endMinute: 1080,
     });
+  });
+
+  it('stores several working blocks for the same weekday', async () => {
+    const res = await request(app.getHttpServer())
+      .put('/schedules/working-hours')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        days: [
+          { dayOfWeek: workDay.weekday, startMinute: 540, endMinute: 780 },
+          { dayOfWeek: workDay.weekday, startMinute: 900, endMinute: 1080 },
+        ],
+      })
+      .expect(200);
+
+    const body = res.body as { dayOfWeek: string; startMinute: number }[];
+    const forDay = body.filter((b) => b.dayOfWeek === workDay.weekday);
+    expect(forDay).toHaveLength(2);
+    expect(forDay.map((b) => b.startMinute)).toEqual([540, 900]);
+  });
+
+  it('rejects overlapping blocks on the same weekday', async () => {
+    await request(app.getHttpServer())
+      .put('/schedules/working-hours')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({
+        days: [
+          { dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 780 },
+          { dayOfWeek: 'MONDAY', startMinute: 700, endMinute: 1000 },
+        ],
+      })
+      .expect(400);
   });
 
   it('rejects working hours where the closing time is before the opening time', async () => {

@@ -12,6 +12,7 @@ import { useAvailability } from './hooks/useAvailability';
 import { SlotGrid } from './components/SlotGrid';
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
+  PENDING: 'Pendiente',
   CONFIRMED: 'Confirmada',
   CANCELLED: 'Cancelada',
   COMPLETED: 'Completada',
@@ -40,7 +41,7 @@ export function BookingCancelPage() {
 
   if (isError || !booking) {
     return (
-      <p className="p-6 text-center text-red-600">
+      <p role="alert" className="p-6 text-center text-red-600 dark:text-red-400">
         No encontramos esta reserva.
       </p>
     );
@@ -52,12 +53,12 @@ export function BookingCancelPage() {
   });
 
   return (
-    <div className="mx-auto max-w-md px-4 py-10">
+    <main className="mx-auto max-w-md px-4 py-10">
       <h1 className="mb-4 text-2xl font-semibold">Tu reserva</h1>
-      <div className="mb-6 rounded border border-gray-200 p-4">
+      <div className="mb-6 rounded border border-gray-200 dark:border-gray-700 p-4">
         <p className="font-medium">{booking.serviceName}</p>
-        <p className="text-sm text-gray-600">con {booking.businessName}</p>
-        <p className="mt-2 text-sm text-gray-600">{formattedDate}</p>
+        <p className="text-sm text-gray-600 dark:text-gray-400">con {booking.businessName}</p>
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{formattedDate}</p>
         <p className="mt-2 text-sm">
           Estado:{' '}
           <span className="font-medium">{STATUS_LABELS[booking.status]}</span>
@@ -90,7 +91,7 @@ export function BookingCancelPage() {
             </Button>
           </div>
           {!booking.serviceId && (
-            <p className="mt-2 text-xs text-gray-500">
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               💡 Para modificar la fecha/hora de esta reserva (servicios combinados), contacta directamente a {booking.businessName}
             </p>
           )}
@@ -98,7 +99,7 @@ export function BookingCancelPage() {
       )}
 
       {booking.status === 'CONFIRMED' && booking.canCancel && isRescheduling && (
-        <div className="rounded border border-gray-200 p-4">
+        <div className="rounded border border-gray-200 dark:border-gray-700 p-4">
           <h2 className="mb-3 text-lg font-medium">Modificar fecha y hora</h2>
 
           <Input
@@ -115,7 +116,7 @@ export function BookingCancelPage() {
           {newDate && (
             <Card className="mt-4">
               <CardContent className="py-4">
-                <p className="mb-3 text-sm font-medium text-gray-700">
+                <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
                   Horarios disponibles
                 </p>
                 <SlotGrid
@@ -160,7 +161,7 @@ export function BookingCancelPage() {
             </Button>
           </div>
           {rescheduleBooking.isError && (
-            <p className="mt-2 text-sm text-red-600">
+            <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
               {getApiErrorMessage(rescheduleBooking.error)}
             </p>
           )}
@@ -168,7 +169,7 @@ export function BookingCancelPage() {
       )}
 
       {booking.status === 'CONFIRMED' && !booking.canCancel && (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-gray-500 dark:text-gray-400">
           Ya no puedes cancelar o modificar esta reserva en línea: se requieren al menos{' '}
           {booking.cancellationPolicyHours} horas de anticipación. Contacta
           directamente a {booking.businessName}.
@@ -176,14 +177,14 @@ export function BookingCancelPage() {
       )}
 
       {booking.status === 'CANCELLED' && (
-        <p className="text-sm text-gray-500">Esta reserva ya fue cancelada.</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Esta reserva ya fue cancelada.</p>
       )}
 
       {cancelBooking.isError && !isRescheduling && (
-        <p className="mt-2 text-sm text-red-600">
+        <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
           {getApiErrorMessage(cancelBooking.error)}
         </p>
       )}
-    </div>
+    </main>
   );
 }

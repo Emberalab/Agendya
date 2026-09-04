@@ -1,8 +1,30 @@
 import { z } from 'zod';
 
-export const CANCELLATION_POLICY_HOURS_OPTIONS = [2, 3, 4, 6, 24] as const;
+export const PLANS = ['BASIC', 'PRO'] as const;
+export const planSchema = z.enum(PLANS);
+export type Plan = z.infer<typeof planSchema>;
+
+/** Max number of (non-deleted) services allowed per plan. `null` means unlimited. */
+export const PLAN_SERVICE_LIMITS: Record<Plan, number | null> = {
+  BASIC: 3,
+  PRO: null,
+};
+
+export const PLAN_LABELS: Record<Plan, string> = {
+  BASIC: 'Plan Gratuito',
+  PRO: 'Plan Pro',
+};
+
+/** Bookings allowed per calendar month. `null` means unlimited. */
+export const PLAN_MONTHLY_BOOKING_LIMITS: Record<Plan, number | null> = {
+  BASIC: 100,
+  PRO: null,
+};
+
+export const CANCELLATION_POLICY_HOURS_OPTIONS = [1, 2, 3, 4, 6, 24] as const;
 
 export const cancellationPolicyHoursSchema = z.union([
+  z.literal(1),
   z.literal(2),
   z.literal(3),
   z.literal(4),
@@ -21,15 +43,33 @@ export const slugSchema = z
     'El enlace solo puede contener letras minúsculas, números y guiones.',
   );
 
-export const BRAND_COLOR_OPTIONS = ['#F5F5F5', '#E8F4F8', '#FFF8E1'] as const;
+/** Any 6-digit hex colour, e.g. `#4F46E5`. */
+export const hexColorSchema = z
+  .string()
+  .trim()
+  .regex(/^#[0-9a-fA-F]{6}$/, 'Usa un color hexadecimal, por ejemplo #4F46E5.');
+
+/** Suggested quick-pick swatches shown under the colour slider. */
+export const BRAND_COLOR_PRESETS = [
+  '#4F46E5',
+  '#0EA5E9',
+  '#10B981',
+  '#F59E0B',
+  '#EF4444',
+  '#8B5CF6',
+  '#EC4899',
+  '#0F172A',
+] as const;
 
 export const updateProfileSchema = z.object({
   businessName: z.string().trim().min(2).max(100).optional(),
   slug: slugSchema.optional(),
+  category: z.string().trim().max(60).nullable().optional(),
   description: z.string().trim().max(500).nullable().optional(),
   photoUrl: z.string().url().nullable().optional(),
   logoUrl: z.string().url().nullable().optional(),
-  brandColor: z.enum(BRAND_COLOR_OPTIONS).optional(),
+  coverImageUrl: z.string().url().nullable().optional(),
+  brandColor: hexColorSchema.optional(),
   timezone: z.string().min(1).optional(),
   cancellationPolicyHours: cancellationPolicyHoursSchema.optional(),
 });
@@ -41,12 +81,19 @@ export const professionalProfileSchema = z.object({
   email: z.string().email(),
   businessName: z.string(),
   slug: z.string(),
+  category: z.string().nullable(),
   photoUrl: z.string().nullable(),
   logoUrl: z.string().nullable(),
+  coverImageUrl: z.string().nullable(),
   brandColor: z.string().nullable(),
   description: z.string().nullable(),
   timezone: z.string(),
   cancellationPolicyHours: z.number(),
+  plan: planSchema,
+  /** Non-cancelled bookings created in the current calendar month. */
+  bookingsThisMonth: z.number(),
+  /** Monthly booking allowance for the current plan; `null` means unlimited. */
+  monthlyBookingLimit: z.number().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -68,7 +115,12 @@ export type CheckSlugResponse = z.infer<typeof checkSlugResponseSchema>;
 export const publicServiceSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
+  description: z.string().nullable(),
   durationMinutes: z.number(),
+  priceCents: z.number(),
+  homeServiceEnabled: z.boolean(),
+  homeDurationMinutes: z.number().nullable(),
+  homePriceCents: z.number().nullable(),
 });
 
 export type PublicService = z.infer<typeof publicServiceSchema>;
@@ -76,8 +128,10 @@ export type PublicService = z.infer<typeof publicServiceSchema>;
 export const publicProfessionalSchema = z.object({
   businessName: z.string(),
   slug: z.string(),
+  category: z.string().nullable(),
   photoUrl: z.string().nullable(),
   logoUrl: z.string().nullable(),
+  coverImageUrl: z.string().nullable(),
   brandColor: z.string().nullable(),
   description: z.string().nullable(),
   services: z.array(publicServiceSchema),

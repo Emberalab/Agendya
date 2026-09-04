@@ -49,8 +49,8 @@ export function GoogleCallbackPage() {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <div className="text-center">
-        <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-black"></div>
-        <p className="text-gray-600">Iniciando sesión...</p>
+        <div className="mb-4 inline-block h-12 w-12 animate-spin rounded-full border-4 border-gray-200 dark:border-gray-700 border-t-black dark:border-t-white"></div>
+        <p className="text-gray-600 dark:text-gray-400">Iniciando sesión...</p>
       </div>
     </div>
   );

@@ -18,11 +18,16 @@ export async function getAvailability(
   slug: string,
   serviceIds: string[],
   date: string,
+  atHome = false,
 ): Promise<string[]> {
   const { data } = await apiClient.get<{ slots: string[] }>(
     `/public/professionals/${slug}/availability`,
     {
-      params: { serviceIds: serviceIds.join(','), date },
+      params: {
+        serviceIds: serviceIds.join(','),
+        date,
+        ...(atHome ? { atHome: 'true' } : {}),
+      },
     },
   );
   return data.slots;
@@ -42,6 +47,17 @@ export async function createPublicBooking(
 export async function getBookingByToken(token: string): Promise<PublicBooking> {
   const { data } = await apiClient.get<PublicBooking>(
     `/public/bookings/${token}`,
+  );
+  return data;
+}
+
+export async function updateBookingByToken(
+  token: string,
+  input: CreateBookingInput,
+): Promise<PublicBooking> {
+  const { data } = await apiClient.patch<PublicBooking>(
+    `/public/bookings/${token}`,
+    input,
   );
   return data;
 }

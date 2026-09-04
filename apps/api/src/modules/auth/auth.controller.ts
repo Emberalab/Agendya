@@ -65,8 +65,14 @@ export class AuthController {
       req.user as GoogleUser,
     );
 
-    // Redirect to frontend with token
-    const redirectUrl = `${process.env.WEB_URL}/auth/callback?token=${authResponse.accessToken}`;
+    // Redirect to frontend with token. Trim any trailing slash from WEB_URL so a
+    // value like "http://localhost:5173/" does not produce a "//auth/callback"
+    // path that the frontend router fails to match.
+    const webUrl = (process.env.WEB_URL ?? 'http://localhost:5173').replace(
+      /\/+$/,
+      '',
+    );
+    const redirectUrl = `${webUrl}/auth/callback?token=${authResponse.accessToken}`;
     res.redirect(redirectUrl);
   }
 }

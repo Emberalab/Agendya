@@ -33,14 +33,20 @@ export async function checkSlugAvailability(
   return data;
 }
 
-export async function uploadImage(file: File): Promise<string> {
+export async function uploadImage(
+  file: File,
+  type: 'logo' | 'cover' = 'logo',
+): Promise<string> {
   const formData = new FormData();
   formData.append('file', file);
 
-  const { data } = await apiClient.post<{ url: string }>('/upload/image', formData, {
-    headers: {
-      'Content-Type': 'multipart/form-data',
+  const { data } = await apiClient.post<{ url: string }>(
+    '/upload/image',
+    formData,
+    {
+      params: { type },
+      headers: { 'Content-Type': 'multipart/form-data' },
     },
-  });
+  );
   return data.url;
 }

@@ -9,10 +9,15 @@ const BASE_PROFESSIONAL = {
   passwordHash: 'hash',
   businessName: 'María Belleza',
   slug: 'maria-belleza',
+  category: null,
   photoUrl: null,
+  logoUrl: null,
+  coverImageUrl: null,
+  brandColor: '#4F46E5',
   description: null,
   timezone: 'America/Bogota',
   cancellationPolicyHours: 24,
+  plan: 'BASIC',
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -23,16 +28,20 @@ describe('ProfessionalsService', () => {
   let prisma: {
     professional: {
       findFirst: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
       update: jest.Mock;
     };
+    booking: { count: jest.Mock };
   };
 
   beforeEach(async () => {
     prisma = {
       professional: {
         findFirst: jest.fn(),
+        findUniqueOrThrow: jest.fn().mockResolvedValue(BASE_PROFESSIONAL),
         update: jest.fn(),
       },
+      booking: { count: jest.fn().mockResolvedValue(0) },
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -47,21 +56,58 @@ describe('ProfessionalsService', () => {
 
   describe('toProfile', () => {
     it('serializes dates to ISO strings and drops the password hash', () => {
-      const profile = service.toProfile(BASE_PROFESSIONAL);
+      const profile = service.toProfile(BASE_PROFESSIONAL, 12);
 
       expect(profile).toEqual({
         id: 'prof-1',
         email: 'maria@example.com',
         businessName: 'María Belleza',
         slug: 'maria-belleza',
+        category: null,
         photoUrl: null,
+        logoUrl: null,
+        coverImageUrl: null,
+        brandColor: '#4F46E5',
         description: null,
         timezone: 'America/Bogota',
         cancellationPolicyHours: 24,
+        plan: 'BASIC',
+        bookingsThisMonth: 12,
+        monthlyBookingLimit: 100,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-02T00:00:00.000Z',
       });
       expect(profile).not.toHaveProperty('passwordHash');
+    });
+
+    it('reports an unlimited monthly allowance for the PRO plan', () => {
+      const profile = service.toProfile(
+        { ...BASE_PROFESSIONAL, plan: 'PRO' },
+        999,
+      );
+      expect(profile.monthlyBookingLimit).toBeNull();
+    });
+  });
+
+  describe('getProfile', () => {
+    it('loads the professional and this month’s booking count', async () => {
+      prisma.booking.count.mockResolvedValue(7);
+
+      const profile = await service.getProfile('prof-1');
+
+      expect(prisma.professional.findUniqueOrThrow).toHaveBeenCalledWith({
+        where: { id: 'prof-1' },
+      });
+      type CountCall = [
+        { where: { createdAt: { gte: Date }; [key: string]: unknown } },
+      ];
+      const [[countArgs]] = prisma.booking.count.mock.calls as CountCall[];
+      expect(countArgs.where).toMatchObject({
+        professionalId: 'prof-1',
+        status: { not: 'CANCELLED' },
+      });
+      expect(countArgs.where.createdAt.gte).toBeInstanceOf(Date);
+      expect(profile.bookingsThisMonth).toBe(7);
     });
   });
 
@@ -77,6 +123,23 @@ describe('ProfessionalsService', () => {
       expect(prisma.professional.update).toHaveBeenCalledWith({
         where: { id: 'prof-1' },
         data: { businessName: 'Nuevo Nombre' },
+      });
+    });
+
+    it('persists the cover image and brand colour', async () => {
+      prisma.professional.update.mockResolvedValue(BASE_PROFESSIONAL);
+
+      await service.updateProfile('prof-1', {
+        coverImageUrl: 'https://cdn.test/cover.jpg',
+        brandColor: '#0EA5E9',
+      });
+
+      expect(prisma.professional.update).toHaveBeenCalledWith({
+        where: { id: 'prof-1' },
+        data: {
+          coverImageUrl: 'https://cdn.test/cover.jpg',
+          brandColor: '#0EA5E9',
+        },
       });
     });
 
@@ -112,7 +175,16 @@ describe('ProfessionalsService', () => {
       prisma.professional.findFirst.mockResolvedValue({
         ...BASE_PROFESSIONAL,
         services: [
-          { id: 'service-1', name: 'Corte de cabello', durationMinutes: 30 },
+          {
+            id: 'service-1',
+            name: 'Corte de cabello',
+            description: 'Clásico',
+            durationMinutes: 30,
+            priceCents: 3000000,
+            homeServiceEnabled: true,
+            homeDurationMinutes: 45,
+            homePriceCents: 5000000,
+          },
         ],
       });
 
@@ -122,7 +194,7 @@ describe('ProfessionalsService', () => {
         where: { slug: 'maria-belleza', isActive: true },
         include: {
           services: {
-            where: { isActive: true },
+            where: { isActive: true, deletedAt: null },
             orderBy: { sortOrder: 'asc' },
           },
         },
@@ -130,10 +202,23 @@ describe('ProfessionalsService', () => {
       expect(result).toEqual({
         businessName: 'María Belleza',
         slug: 'maria-belleza',
+        category: null,
         photoUrl: null,
+        logoUrl: null,
+        coverImageUrl: null,
+        brandColor: '#4F46E5',
         description: null,
         services: [
-          { id: 'service-1', name: 'Corte de cabello', durationMinutes: 30 },
+          {
+            id: 'service-1',
+            name: 'Corte de cabello',
+            description: 'Clásico',
+            durationMinutes: 30,
+            priceCents: 3000000,
+            homeServiceEnabled: true,
+            homeDurationMinutes: 45,
+            homePriceCents: 5000000,
+          },
         ],
       });
     });

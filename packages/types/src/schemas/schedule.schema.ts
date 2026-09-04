@@ -25,16 +25,44 @@ const workingHourEntrySchema = z
     path: ['endMinute'],
   });
 
+/** Max blocks per weekday, matching the editor UI. */
+export const MAX_BLOCKS_PER_DAY = 6;
+
 export const setWorkingHoursSchema = z.object({
+  // A weekday may appear more than once: each entry is one working block. Blocks
+  // for the same day must not overlap.
   days: z
     .array(workingHourEntrySchema)
-    .max(7)
-    .refine(
-      (days) => new Set(days.map((day) => day.dayOfWeek)).size === days.length,
-      {
-        message: 'No puedes repetir el mismo día dos veces.',
-      },
-    ),
+    .max(7 * MAX_BLOCKS_PER_DAY)
+    .superRefine((days, ctx) => {
+      const byDay = new Map<string, typeof days>();
+      days.forEach((entry) => {
+        const list = byDay.get(entry.dayOfWeek) ?? [];
+        list.push(entry);
+        byDay.set(entry.dayOfWeek, list);
+      });
+
+      for (const [dayOfWeek, blocks] of byDay) {
+        if (blocks.length > MAX_BLOCKS_PER_DAY) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `Máximo ${MAX_BLOCKS_PER_DAY} bloques por día.`,
+          });
+        }
+        const sorted = [...blocks].sort(
+          (a, b) => a.startMinute - b.startMinute,
+        );
+        for (let i = 1; i < sorted.length; i += 1) {
+          if (sorted[i].startMinute < sorted[i - 1].endMinute) {
+            ctx.addIssue({
+              code: 'custom',
+              message: `Los bloques de ${dayOfWeek} se superponen.`,
+            });
+            break;
+          }
+        }
+      }
+    }),
 });
 
 export type SetWorkingHoursInput = z.infer<typeof setWorkingHoursSchema>;
@@ -72,6 +100,11 @@ export type ScheduleException = z.infer<typeof scheduleExceptionSchema>;
 export const availabilityQuerySchema = z.object({
   serviceIds: z.string().min(1), // Comma-separated UUIDs
   date: dateOnlySchema,
+  // Query params arrive as strings; treat the literal "true" as at-home.
+  atHome: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((value) => value === 'true'),
 });
 
 export type AvailabilityQuery = z.infer<typeof availabilityQuerySchema>;

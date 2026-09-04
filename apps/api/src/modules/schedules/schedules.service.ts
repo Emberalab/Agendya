@@ -20,7 +20,7 @@ export class SchedulesService {
   async getWorkingHours(professionalId: string): Promise<WorkingHour[]> {
     const hours = await this.prisma.workingHour.findMany({
       where: { professionalId },
-      orderBy: { dayOfWeek: 'asc' },
+      orderBy: [{ dayOfWeek: 'asc' }, { startMinute: 'asc' }],
     });
 
     return hours.map((hour) => ({

@@ -52,7 +52,7 @@ function PasswordStrengthBar({ password }: { password: string }) {
   ];
   const metCount = checks.filter((c) => c.met).length;
   const strength = metCount <= 1 ? 'Débil' : metCount <= 2 ? 'Regular' : metCount === 3 ? 'Medio' : 'Fuerte';
-  const strengthColor = metCount <= 1 ? '#EF4444' : metCount <= 2 ? '#F59E0B' : metCount === 3 ? '#F59E0B' : '#10B981';
+  const strengthColor = metCount <= 1 ? 'var(--color-danger)' : metCount <= 2 ? '#F59E0B' : metCount === 3 ? '#F59E0B' : 'var(--color-success)';
   const barWidth = `${(metCount / 4) * 100}%`;
 
   return (
@@ -202,7 +202,7 @@ export function ForgotPasswordPage() {
             <Link
               to="/login"
               className="font-semibold underline"
-              style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+              style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
             >
               Inicia sesión
             </Link>
@@ -249,7 +249,7 @@ export function ForgotPasswordPage() {
           <StatusCard
             variant="success"
             icon={
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#10B981' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success)' }}>
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M4 9l3.5 3.5L14 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -307,7 +307,7 @@ export function ForgotPasswordPage() {
             <Link
               to="/login"
               className="font-semibold"
-              style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+              style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
             >
               Volver al inicio de sesión
             </Link>
@@ -356,7 +356,7 @@ export function ForgotPasswordPage() {
                   type="button"
                   onClick={() => setShowNew(!showNew)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label={showNew ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {eyeIcon(showNew)}
@@ -383,14 +383,14 @@ export function ForgotPasswordPage() {
                   type="button"
                   onClick={() => setShowConfirm(!showConfirm)}
                   className="absolute right-3 top-1/2 -translate-y-1/2"
-                  style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                  style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                   aria-label={showConfirm ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                 >
                   {eyeIcon(showConfirm)}
                 </button>
               </div>
               {confirmPassword && newPassword !== confirmPassword && (
-                <p className="text-xs mt-1" style={{ color: '#EF4444', fontFamily: 'var(--font-mono)' }}>
+                <p className="text-xs mt-1" style={{ color: 'var(--color-danger)', fontFamily: 'var(--font-mono)' }}>
                   Las contraseñas no coinciden
                 </p>
               )}
@@ -468,7 +468,7 @@ export function ForgotPasswordPage() {
             <Link
               to="/login"
               className="font-semibold"
-              style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+              style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
             >
               Volver al inicio de sesión
             </Link>
@@ -500,7 +500,7 @@ export function ForgotPasswordPage() {
           <StatusCard
             variant="success"
             icon={
-              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#10B981' }}>
+              <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-success)' }}>
                 <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                   <path d="M4 9l3.5 3.5L14 6" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
@@ -518,7 +518,7 @@ export function ForgotPasswordPage() {
             style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-body)' }}
           >
             Serás redirigido automáticamente en{' '}
-            <span style={{ color: 'var(--color-brand-primary)', fontWeight: 600 }}>{countdown} segundos</span>
+            <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>{countdown} segundos</span>
           </p>
         </div>
       );
@@ -546,7 +546,7 @@ export function ForgotPasswordPage() {
         <StatusCard
           variant="error"
           icon={
-            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#EF4444' }}>
+            <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-danger-fill)' }}>
               <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
                 <path d="M9 2L2 15h14L9 2z" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 <path d="M9 7v4M9 13h.01" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" />
@@ -572,7 +572,7 @@ export function ForgotPasswordPage() {
           <Link
             to="/login"
             className="font-semibold"
-            style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+            style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
           >
             Volver al inicio de sesión
           </Link>
@@ -597,7 +597,7 @@ export function ForgotPasswordPage() {
               fontFamily: 'var(--font-display)',
               fontWeight: 700,
               fontSize: '24px',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             agendya
