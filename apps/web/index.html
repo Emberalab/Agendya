@@ -12,11 +12,13 @@
       // Applies the theme before first paint so switching to dark mode never
       // flashes light first. Mirrors the persisted-state shape written by
       // zustand's `persist` middleware in shared/theme/themeStore.ts (same
-      // storage key, `{ state: { theme } }`) — keep the two in sync.
+      // storage key, `{ state: { manualTheme } }`) — keep the two in sync.
+      // No stored `manualTheme` (or none yet) means the user never overrode
+      // the OS preference, so `prefers-color-scheme` decides.
       (function () {
         try {
           var stored = localStorage.getItem('agendya-theme');
-          var theme = stored ? JSON.parse(stored).state.theme : null;
+          var theme = stored ? JSON.parse(stored).state.manualTheme : null;
           if (theme !== 'light' && theme !== 'dark') {
             theme = window.matchMedia('(prefers-color-scheme: dark)').matches
               ? 'dark'

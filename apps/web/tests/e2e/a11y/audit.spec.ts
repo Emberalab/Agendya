@@ -30,12 +30,12 @@ async function expectNoViolations(page: Page) {
   expect(results.violations.length, summary).toBe(0);
 }
 
-/** Seeds the theme the same way the app's own boot script reads it, before any app code runs. */
+/** Seeds an explicit manual theme choice the same way the app's own boot script reads it, before any app code runs. */
 async function setTheme(page: Page, theme: 'light' | 'dark') {
   await page.addInitScript((t) => {
     window.localStorage.setItem(
       'agendya-theme',
-      JSON.stringify({ state: { theme: t }, version: 0 }),
+      JSON.stringify({ state: { manualTheme: t }, version: 0 }),
     );
   }, theme);
 }
