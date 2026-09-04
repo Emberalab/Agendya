@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Resend } from 'resend';
+import { escapeHtml } from './html.util';
 
 interface SendParams {
   to: string;
@@ -55,28 +56,37 @@ export class MailService {
     params: BookingConfirmationParams,
   ): Promise<void> {
     const formattedDate = this.formatDate(params.startAt, params.timezone);
+    const customerName = escapeHtml(params.customerName);
+    const businessName = escapeHtml(params.businessName);
+    const serviceName = escapeHtml(params.serviceName);
     await this.send({
       to: params.to,
       subject: `Reserva confirmada con ${params.businessName}`,
-      html: `<p>Hola ${params.customerName},</p><p>Tu cita para <strong>${params.serviceName}</strong> con ${params.businessName} quedó confirmada para el ${formattedDate}.</p><p>Si necesitas cancelarla, puedes hacerlo aquí: ${this.cancelUrl(params.cancellationToken)}</p>`,
+      html: `<p>Hola ${customerName},</p><p>Tu cita para <strong>${serviceName}</strong> con ${businessName} quedó confirmada para el ${formattedDate}.</p><p>Si necesitas cancelarla, puedes hacerlo aquí: ${this.cancelUrl(params.cancellationToken)}</p>`,
     });
   }
 
   async sendBookingCancelled(params: BookingEmailParams): Promise<void> {
     const formattedDate = this.formatDate(params.startAt, params.timezone);
+    const customerName = escapeHtml(params.customerName);
+    const businessName = escapeHtml(params.businessName);
+    const serviceName = escapeHtml(params.serviceName);
     await this.send({
       to: params.to,
       subject: `Reserva cancelada con ${params.businessName}`,
-      html: `<p>Hola ${params.customerName},</p><p>Tu cita para <strong>${params.serviceName}</strong> con ${params.businessName} del ${formattedDate} fue cancelada.</p>`,
+      html: `<p>Hola ${customerName},</p><p>Tu cita para <strong>${serviceName}</strong> con ${businessName} del ${formattedDate} fue cancelada.</p>`,
     });
   }
 
   async sendBookingReminder(params: BookingReminderParams): Promise<void> {
     const formattedDate = this.formatDate(params.startAt, params.timezone);
+    const customerName = escapeHtml(params.customerName);
+    const businessName = escapeHtml(params.businessName);
+    const serviceName = escapeHtml(params.serviceName);
     await this.send({
       to: params.to,
       subject: `Recordatorio: tu cita con ${params.businessName}`,
-      html: `<p>Hola ${params.customerName},</p><p>Te recordamos tu cita para <strong>${params.serviceName}</strong> con ${params.businessName} el ${formattedDate} (en aproximadamente ${params.hoursBefore} horas).</p>`,
+      html: `<p>Hola ${customerName},</p><p>Te recordamos tu cita para <strong>${serviceName}</strong> con ${businessName} el ${formattedDate} (en aproximadamente ${params.hoursBefore} horas).</p>`,
     });
   }
 
@@ -91,10 +101,13 @@ export class MailService {
       params.newStartAt,
       params.timezone,
     );
+    const customerName = escapeHtml(params.customerName);
+    const businessName = escapeHtml(params.businessName);
+    const serviceName = escapeHtml(params.serviceName);
     await this.send({
       to: params.to,
       subject: `Cita modificada con ${params.businessName}`,
-      html: `<p>Hola ${params.customerName},</p><p>Tu cita para <strong>${params.serviceName}</strong> con ${params.businessName} fue modificada.</p><p><strong>Fecha anterior:</strong> ${oldFormattedDate}</p><p><strong>Nueva fecha:</strong> ${newFormattedDate}</p>`,
+      html: `<p>Hola ${customerName},</p><p>Tu cita para <strong>${serviceName}</strong> con ${businessName} fue modificada.</p><p><strong>Fecha anterior:</strong> ${oldFormattedDate}</p><p><strong>Nueva fecha:</strong> ${newFormattedDate}</p>`,
     });
   }
 
@@ -109,10 +122,13 @@ export class MailService {
       params.newStartAt,
       params.timezone,
     );
+    const customerName = escapeHtml(params.customerName);
+    const professionalName = escapeHtml(params.professionalName);
+    const serviceName = escapeHtml(params.serviceName);
     await this.send({
       to: params.to,
       subject: `Modificación de reserva - ${params.customerName}`,
-      html: `<p>Hola ${params.professionalName},</p><p>El cliente <strong>${params.customerName}</strong> modificó su cita para <strong>${params.serviceName}</strong>.</p><p><strong>Fecha anterior:</strong> ${oldFormattedDate}</p><p><strong>Nueva fecha:</strong> ${newFormattedDate}</p>`,
+      html: `<p>Hola ${professionalName},</p><p>El cliente <strong>${customerName}</strong> modificó su cita para <strong>${serviceName}</strong>.</p><p><strong>Fecha anterior:</strong> ${oldFormattedDate}</p><p><strong>Nueva fecha:</strong> ${newFormattedDate}</p>`,
     });
   }
 

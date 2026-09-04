@@ -1,14 +1,22 @@
 import { useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from './authStore';
 
 export function GoogleCallbackPage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const setSession = useAuthStore((state) => state.setSession);
 
   useEffect(() => {
-    const token = searchParams.get('token');
+    // The API redirects here with the token in the URL *fragment*
+    // (`#token=...`), not a query string, so it's never sent to any server or
+    // recorded in server/proxy logs or a Referer header — see
+    // AuthController#googleAuthCallback.
+    const token = new URLSearchParams(window.location.hash.slice(1)).get(
+      'token',
+    );
+
+    // Drop the token from the visible URL/history as soon as we've read it.
+    window.history.replaceState(null, '', window.location.pathname);
 
     if (!token) {
       // No token, redirect to login
@@ -44,7 +52,7 @@ export function GoogleCallbackPage() {
       console.error('Failed to process token:', error);
       navigate('/login', { replace: true });
     }
-  }, [searchParams, setSession, navigate]);
+  }, [setSession, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center">
