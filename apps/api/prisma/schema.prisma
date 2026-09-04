@@ -25,6 +25,11 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+  // A CONFIRMED booking whose startAt has passed without being completed,
+  // cancelled, or marked no-show. Set lazily (on-read, the instant a stale
+  // booking is touched) and by ExpirationScheduler's periodic sweep so it
+  // doesn't depend on the cron having run yet. See BookingsService.assertModifiable.
+  EXPIRED
 }
 
 enum Plan {

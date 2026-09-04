@@ -36,4 +36,10 @@ export const STATUS_CFG: Record<
     bg: 'var(--status-noshow-bg)',
     border: 'var(--status-noshow-border)',
   },
+  EXPIRED: {
+    label: 'Vencida',
+    color: 'var(--status-expired-color)',
+    bg: 'var(--status-expired-bg)',
+    border: 'var(--status-expired-border)',
+  },
 };

@@ -79,6 +79,11 @@
   --status-noshow-color: #B91C1C;
   --status-noshow-bg: #FFF1F2;
   --status-noshow-border: #FECDD3;
+  // Distinct orange/terracotta family — reads as "overdue", not "error" (red,
+  // no-show) or "waiting" (amber, pending). #9A3412 measures 6.9–7.3:1 here.
+  --status-expired-color: #9A3412;
+  --status-expired-bg: #FFF7ED;
+  --status-expired-border: #FED7AA;
 }
 
 /**
@@ -151,6 +156,10 @@ html[data-theme='dark'] {
   --status-noshow-color: #F87171;
   --status-noshow-bg: rgba(239, 68, 68, 0.16);
   --status-noshow-border: rgba(239, 68, 68, 0.4);
+  // #FB923C measures 7.6–8.5:1 against the dark surfaces.
+  --status-expired-color: #FB923C;
+  --status-expired-bg: rgba(249, 115, 22, 0.16);
+  --status-expired-border: rgba(249, 115, 22, 0.4);
 }
 
 // The hue-slider thumb / track need the same declarations for the WebKit and

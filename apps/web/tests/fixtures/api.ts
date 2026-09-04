@@ -346,6 +346,7 @@ export class ApiMock {
       cancellationToken: 'e2e-cancellation-token',
       cancellationPolicyHours: 24,
       canCancel: true,
+      canReschedule: true,
     };
   }
 }
