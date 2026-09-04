@@ -1,59 +1,128 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { AgendaPage } from '../modules/bookings/AgendaPage';
-import { ForgotPasswordPage } from '../modules/auth/ForgotPasswordPage';
-import { GoogleCallbackPage } from '../modules/auth/GoogleCallbackPage';
 import { LoginPage } from '../modules/auth/LoginPage';
-import { RegisterPage } from '../modules/auth/RegisterPage';
-import { DashboardLayout } from '../modules/dashboard/DashboardLayout';
-import { ProfilePage } from '../modules/professionals/ProfilePage';
-import { BookingCancelPage } from '../modules/publicBooking/BookingCancelPage';
-import { PublicBookingPage } from '../modules/publicBooking/PublicBookingPage';
-import { DaySchedulePage } from '../modules/schedules/DaySchedulePage';
-import { SchedulePage } from '../modules/schedules/SchedulePage';
-import { ServiceFormPage } from '../modules/services/ServiceFormPage';
-import { ServicesPage } from '../modules/services/ServicesPage';
 import { PrivateRoute } from './PrivateRoute';
 import { PublicRoute } from './PublicRoute';
+
+// `/login` is the guaranteed entry point (the root and every unknown route
+// redirect there), so it stays in the initial bundle. Everything else is
+// code-split: the dashboard subtree and the public booking flow (which pulls in
+// the large multi-step wizard) load only when their route is visited.
+const RegisterPage = lazy(() =>
+  import('../modules/auth/RegisterPage').then((m) => ({
+    default: m.RegisterPage,
+  })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import('../modules/auth/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
+const GoogleCallbackPage = lazy(() =>
+  import('../modules/auth/GoogleCallbackPage').then((m) => ({
+    default: m.GoogleCallbackPage,
+  })),
+);
+const DashboardLayout = lazy(() =>
+  import('../modules/dashboard/DashboardLayout').then((m) => ({
+    default: m.DashboardLayout,
+  })),
+);
+const ProfilePage = lazy(() =>
+  import('../modules/professionals/ProfilePage').then((m) => ({
+    default: m.ProfilePage,
+  })),
+);
+const ServicesPage = lazy(() =>
+  import('../modules/services/ServicesPage').then((m) => ({
+    default: m.ServicesPage,
+  })),
+);
+const ServiceFormPage = lazy(() =>
+  import('../modules/services/ServiceFormPage').then((m) => ({
+    default: m.ServiceFormPage,
+  })),
+);
+const SchedulePage = lazy(() =>
+  import('../modules/schedules/SchedulePage').then((m) => ({
+    default: m.SchedulePage,
+  })),
+);
+const DaySchedulePage = lazy(() =>
+  import('../modules/schedules/DaySchedulePage').then((m) => ({
+    default: m.DaySchedulePage,
+  })),
+);
+const AgendaPage = lazy(() =>
+  import('../modules/bookings/AgendaPage').then((m) => ({
+    default: m.AgendaPage,
+  })),
+);
+const PublicBookingPage = lazy(() =>
+  import('../modules/publicBooking/PublicBookingPage').then((m) => ({
+    default: m.PublicBookingPage,
+  })),
+);
+const BookingCancelPage = lazy(() =>
+  import('../modules/publicBooking/BookingCancelPage').then((m) => ({
+    default: m.BookingCancelPage,
+  })),
+);
+
+function RouteFallback() {
+  return (
+    <div
+      className="flex min-h-screen items-center justify-center"
+      style={{ fontFamily: 'var(--font-body)' }}
+    >
+      <p style={{ fontSize: '14px', color: 'var(--color-text-muted)' }}>
+        Cargando…
+      </p>
+    </div>
+  );
+}
 
 export function AppRouter() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<PublicRoute />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        </Route>
-
-        <Route path="/auth/callback" element={<GoogleCallbackPage />} />
-
-        <Route element={<PrivateRoute />}>
-          <Route element={<DashboardLayout />}>
-            <Route path="/dashboard/profile" element={<ProfilePage />} />
-            <Route path="/dashboard/services" element={<ServicesPage />} />
-            <Route
-              path="/dashboard/services/new"
-              element={<ServiceFormPage />}
-            />
-            <Route
-              path="/dashboard/services/:id/edit"
-              element={<ServiceFormPage />}
-            />
-            <Route path="/dashboard/schedule" element={<SchedulePage />} />
-            <Route
-              path="/dashboard/schedule/:day"
-              element={<DaySchedulePage />}
-            />
-            <Route path="/dashboard/agenda" element={<AgendaPage />} />
+      <Suspense fallback={<RouteFallback />}>
+        <Routes>
+          <Route element={<PublicRoute />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           </Route>
-        </Route>
 
-        <Route path="/bookings/:token" element={<BookingCancelPage />} />
-        <Route path="/:slug" element={<PublicBookingPage />} />
+          <Route path="/auth/callback" element={<GoogleCallbackPage />} />
 
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
+          <Route element={<PrivateRoute />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/dashboard/profile" element={<ProfilePage />} />
+              <Route path="/dashboard/services" element={<ServicesPage />} />
+              <Route
+                path="/dashboard/services/new"
+                element={<ServiceFormPage />}
+              />
+              <Route
+                path="/dashboard/services/:id/edit"
+                element={<ServiceFormPage />}
+              />
+              <Route path="/dashboard/schedule" element={<SchedulePage />} />
+              <Route
+                path="/dashboard/schedule/:day"
+                element={<DaySchedulePage />}
+              />
+              <Route path="/dashboard/agenda" element={<AgendaPage />} />
+            </Route>
+          </Route>
+
+          <Route path="/bookings/:token" element={<BookingCancelPage />} />
+          <Route path="/:slug" element={<PublicBookingPage />} />
+
+          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   );
 }

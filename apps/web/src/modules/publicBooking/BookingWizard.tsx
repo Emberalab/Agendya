@@ -1,10 +1,10 @@
 import type { PublicBooking, PublicProfessional } from '@agendya/types';
 import { createBookingSchema } from '@agendya/types';
 import { zodResolver } from '@hookform/resolvers/zod';
-import axios from 'axios';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
+import { isApiError } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { formatCOP, formatDuration } from '../services/format';
 import { Toggle } from '../services/components/Toggle';
@@ -42,10 +42,10 @@ interface AddressFields {
 
 /** True when a booking failed because the chosen time is no longer bookable. */
 function isTimeConflict(error: unknown): boolean {
-  if (!axios.isAxiosError(error)) return false;
-  const status = error.response?.status;
+  if (!isApiError(error)) return false;
+  const status = error.status;
   if (status === 409) return true;
-  const data = error.response?.data as { message?: string } | undefined;
+  const data = error.data as { message?: string } | undefined;
   return (
     status === 400 &&
     typeof data?.message === 'string' &&
