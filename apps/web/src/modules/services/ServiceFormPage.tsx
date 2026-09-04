@@ -123,7 +123,7 @@ function FieldError({ message }: { message?: string }) {
       style={{
         fontFamily: 'var(--font-body)',
         fontSize: '12px',
-        color: '#EF4444',
+        color: 'var(--color-danger)',
       }}
     >
       {message}

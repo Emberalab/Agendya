@@ -763,7 +763,7 @@ function Field({
         }}
       >
         {label}
-        {required && <span style={{ color: '#EF4444' }}> *</span>}
+        {required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
       </label>
       {hint && (
         <p
@@ -775,7 +775,7 @@ function Field({
       )}
       {children}
       {error?.message && (
-        <p className="mt-1" style={{ fontSize: '12px', color: '#EF4444' }}>
+        <p className="mt-1" style={{ fontSize: '12px', color: 'var(--color-danger)' }}>
           {error.message}
         </p>
       )}
@@ -914,7 +914,7 @@ function ImageDropzone({
         onChange={(e) => take(e.target.files?.[0])}
       />
       {Boolean(error) && (
-        <p className="mt-1" style={{ fontSize: '12px', color: '#EF4444' }}>
+        <p className="mt-1" style={{ fontSize: '12px', color: 'var(--color-danger)' }}>
           {getApiErrorMessage(error)}
         </p>
       )}
