@@ -61,14 +61,29 @@ export const BRAND_COLOR_PRESETS = [
   '#0F172A',
 ] as const;
 
+/**
+ * An http(s) URL. Plain `z.string().url()` also accepts schemes like
+ * `javascript:` or `data:` (the WHATWG URL parser it's built on treats them
+ * as valid URLs) — harmless for the current `<img src>` rendering of these
+ * fields, but worth closing off at the schema level as defense in depth
+ * against a future `<a href>`/redirect use.
+ */
+const httpUrlSchema = z
+  .string()
+  .url()
+  .refine(
+    (value) => /^https?:\/\//i.test(value),
+    'La URL debe empezar por http:// o https://.',
+  );
+
 export const updateProfileSchema = z.object({
   businessName: z.string().trim().min(2).max(100).optional(),
   slug: slugSchema.optional(),
   category: z.string().trim().max(60).nullable().optional(),
   description: z.string().trim().max(500).nullable().optional(),
-  photoUrl: z.string().url().nullable().optional(),
-  logoUrl: z.string().url().nullable().optional(),
-  coverImageUrl: z.string().url().nullable().optional(),
+  photoUrl: httpUrlSchema.nullable().optional(),
+  logoUrl: httpUrlSchema.nullable().optional(),
+  coverImageUrl: httpUrlSchema.nullable().optional(),
   brandColor: hexColorSchema.optional(),
   timezone: z.string().min(1).optional(),
   cancellationPolicyHours: cancellationPolicyHoursSchema.optional(),
