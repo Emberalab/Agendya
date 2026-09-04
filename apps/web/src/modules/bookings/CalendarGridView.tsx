@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { AgendaBooking } from '@agendya/types';
 import { format } from 'date-fns';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { STATUS_CFG } from './statusConfig';
 
 interface CalendarGridViewProps {
@@ -70,6 +71,8 @@ function DaySidebar({
   onClose: () => void;
   onSelect: (b: AgendaBooking) => void;
 }) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
+
   const inner = (
     <div className="flex flex-col gap-5 h-full">
       <div className="flex items-start justify-between">
@@ -77,10 +80,13 @@ function DaySidebar({
           <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.08em' }}>
             Agenda del día
           </p>
-          <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '20px', color: 'var(--color-text-primary)', lineHeight: 1.3 }}>
+          <h2
+            id="day-sidebar-heading"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '20px', color: 'var(--color-text-primary)', lineHeight: 1.3 }}
+          >
             {formatDayLabel(dateKey)}
-          </p>
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-brand-primary)', fontWeight: 500 }}>
+          </h2>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', color: 'var(--color-text-brand)', fontWeight: 500 }}>
             {bookings.length} {bookings.length === 1 ? 'cita programada' : 'citas programadas'}
           </p>
         </div>
@@ -114,7 +120,7 @@ function DaySidebar({
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '14px', color: 'var(--color-brand-primary)' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontWeight: 700, fontSize: '14px', color: 'var(--color-text-brand)' }}>
                   {format(new Date(b.startAt), 'HH:mm')}–{format(new Date(b.endAt), 'HH:mm')}
                 </p>
                 <span
@@ -153,6 +159,11 @@ function DaySidebar({
     <>
       <div className="fixed inset-0 z-[80]" style={{ backgroundColor: 'rgba(15,23,42,0.35)' }} onClick={onClose} />
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="day-sidebar-heading"
         className="fixed z-[90] inset-x-0 bottom-0 max-h-[85vh] rounded-t-[20px] lg:inset-y-0 lg:inset-x-auto lg:left-auto lg:right-0 lg:w-80 lg:max-h-none lg:rounded-none"
         style={{ backgroundColor: 'var(--color-surface-soft)', overflowY: 'auto', borderLeft: '1px solid var(--color-border)' }}
       >
@@ -284,7 +295,7 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                 style={{
                   minHeight: 112,
                   borderRadius: 12,
-                  border: `1px solid ${isSelected ? 'var(--color-brand-primary)' : 'var(--color-border)'}`,
+                  border: `1px solid ${isSelected ? 'var(--color-text-brand)' : 'var(--color-border)'}`,
                   padding: 10,
                   overflow: 'hidden',
                   cursor: hasBookings ? 'pointer' : 'default',
@@ -365,7 +376,7 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                           fontFamily: 'var(--font-body)',
                           fontWeight: 600,
                           fontSize: '11px',
-                          color: 'var(--color-brand-primary)',
+                          color: 'var(--color-text-brand)',
                           lineHeight: '14px',
                           whiteSpace: 'nowrap',
                         }}

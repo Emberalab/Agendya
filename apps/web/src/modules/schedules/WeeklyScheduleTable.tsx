@@ -47,8 +47,8 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
   return (
     <div>
       {setWorkingHours.isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 mb-4">
-          <p className="text-sm text-red-600">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
+          <p className="text-sm text-red-600 dark:text-red-400">
             {getApiErrorMessage(setWorkingHours.error)}
           </p>
         </div>
@@ -250,8 +250,8 @@ function BlockPills({ blocks }: { blocks: Block[] }) {
           key={`${block.startMinute}-${bi}`}
           className="px-3 py-1 rounded-full"
           style={{
-            border: '1px solid #C7D2FE',
-            color: 'var(--color-brand-primary)',
+            border: '1px solid var(--color-brand-border)',
+            color: 'var(--color-text-brand)',
             fontSize: '13px',
             fontWeight: 500,
             whiteSpace: 'nowrap',

@@ -1,4 +1,5 @@
 import { PLAN_SERVICE_LIMITS, type Plan } from '@agendya/types';
+import { useFocusTrap } from '../../../shared/a11y/useFocusTrap';
 
 interface PlanLimitDialogProps {
   plan: Plan;
@@ -21,6 +22,7 @@ export function PlanLimitDialog({
   onSeePlans,
 }: PlanLimitDialogProps) {
   const limit = PLAN_SERVICE_LIMITS[plan];
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   return (
     <div
@@ -29,6 +31,8 @@ export function PlanLimitDialog({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Límite de servicios alcanzado"
@@ -41,7 +45,7 @@ export function PlanLimitDialog({
       >
         <div
           className="w-16 h-16 rounded-full flex items-center justify-center mb-5"
-          style={{ backgroundColor: '#EEF2FF' }}
+          style={{ backgroundColor: 'var(--color-brand-surface)' }}
         >
           <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
             <rect
@@ -92,7 +96,7 @@ export function PlanLimitDialog({
 
         <div
           className="w-full flex items-center gap-2.5 rounded-xl px-4 py-3 mt-6"
-          style={{ backgroundColor: '#EEF2FF' }}
+          style={{ backgroundColor: 'var(--color-brand-surface)' }}
         >
           <span
             className="w-2 h-2 rounded-full shrink-0"
@@ -103,7 +107,7 @@ export function PlanLimitDialog({
               fontFamily: 'var(--font-body)',
               fontSize: '14px',
               fontWeight: 500,
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             Actualmente tienes{' '}
@@ -134,7 +138,7 @@ export function PlanLimitDialog({
             fontSize: '11px',
             fontWeight: 700,
             letterSpacing: '0.08em',
-            color: 'var(--color-brand-primary)',
+            color: 'var(--color-text-brand)',
           }}
         >
           CON UN PLAN SUPERIOR PODRÁS:

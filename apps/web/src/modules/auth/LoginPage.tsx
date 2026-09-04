@@ -48,7 +48,7 @@ export function LoginPage() {
               fontFamily: 'var(--font-display)',
               fontWeight: 700,
               fontSize: '24px',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             agendya
@@ -94,9 +94,15 @@ export function LoginPage() {
                     size="md"
                     variant="outline"
                     error={!!errors.email}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'email-error' : undefined}
                     style={{ paddingLeft: '12px', paddingRight: '12px' }}
                   />
-                  {errors.email && <FormGroup.Hint>{errors.email.message}</FormGroup.Hint>}
+                  {errors.email && (
+                    <FormGroup.Hint id="email-error" role="alert">
+                      {errors.email.message}
+                    </FormGroup.Hint>
+                  )}
                 </FormGroup>
               )}
             />
@@ -119,6 +125,8 @@ export function LoginPage() {
                       size="md"
                       variant="outline"
                       error={!!errors.password}
+                      aria-invalid={!!errors.password}
+                      aria-describedby={errors.password ? 'password-error' : undefined}
                       className="pr-10"
                       style={{ paddingLeft: '12px', paddingRight: '12px' }}
                     />
@@ -126,7 +134,7 @@ export function LoginPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2"
-                      style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     >
                       {showPassword ? (
@@ -143,7 +151,11 @@ export function LoginPage() {
                       )}
                     </button>
                   </div>
-                  {errors.password && <FormGroup.Hint>{errors.password.message}</FormGroup.Hint>}
+                  {errors.password && (
+                    <FormGroup.Hint id="password-error" role="alert">
+                      {errors.password.message}
+                    </FormGroup.Hint>
+                  )}
                 </FormGroup>
               )}
             />
@@ -157,15 +169,15 @@ export function LoginPage() {
               <Link
                 to="/forgot-password"
                 className="text-sm font-medium"
-                style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+                style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
               >
                 ¿Olvidaste tu contraseña?
               </Link>
             </div>
 
             {loginMutation.isError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                <p className="text-sm text-red-600" style={{ fontFamily: 'var(--font-body)' }}>
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+                <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
                   {getApiErrorMessage(loginMutation.error)}
                 </p>
               </div>
@@ -232,7 +244,7 @@ export function LoginPage() {
             <Link
               to="/register"
               className="font-semibold underline"
-              style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+              style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
             >
               Regístrate gratis
             </Link>

@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { minutesToTimeString, timeStringToMinutes } from './time.util';
 import { findOverlap, formatRange, type Block } from './blocks';
 
@@ -27,14 +28,7 @@ export function BlockFormDrawer({
     initial ? minutesToTimeString(initial.endMinute) : '15:00',
   );
   const [applyToAllDays, setApplyToAllDays] = useState(false);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onCancel();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onCancel);
 
   const startMinute = timeStringToMinutes(startTime);
   const endMinute = timeStringToMinutes(endTime);
@@ -53,6 +47,8 @@ export function BlockFormDrawer({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label={isEdit ? 'Editar bloque' : 'Nuevo bloque'}

@@ -144,8 +144,8 @@ export function BlockedDatesManager() {
       </form>
 
       {createException.isError && (
-        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3">
-          <p className="text-sm text-red-600">
+        <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+          <p className="text-sm text-red-600 dark:text-red-400">
             {getApiErrorMessage(createException.error)}
           </p>
         </div>
@@ -212,7 +212,7 @@ export function BlockedDatesManager() {
                   disabled={deleteException.isPending}
                   className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold"
                   style={{
-                    border: '1px solid #FECDD3',
+                    border: '1px solid var(--color-danger-border)',
                     background: 'none',
                     color: 'var(--color-danger)',
                     cursor: deleteException.isPending

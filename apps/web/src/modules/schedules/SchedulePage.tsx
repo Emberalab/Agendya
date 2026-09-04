@@ -8,7 +8,7 @@ export function SchedulePage() {
   return (
     <div style={{ fontFamily: 'var(--font-body)' }} className="w-full">
       <h1
-        className="text-[22px] lg:text-[26px]"
+        className="text-[24px] lg:text-[28px]"
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,

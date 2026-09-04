@@ -54,7 +54,7 @@ function StatCard({ label, value, sub, icon }: { label: string; value: number; s
         <p
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
+            fontSize: '11px',
             color: 'var(--color-text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -68,7 +68,7 @@ function StatCard({ label, value, sub, icon }: { label: string; value: number; s
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
-          fontSize: '30px',
+          fontSize: '32px',
           color: 'var(--color-text-primary)',
           lineHeight: 1,
           marginBottom: '4px',
@@ -137,7 +137,7 @@ function StatusChip({ label, active, onClick }: { label: string; active: boolean
         fontWeight: active ? 600 : 400,
         border: `1px solid ${active ? 'rgba(79,70,229,0.2)' : 'var(--color-border)'}`,
         backgroundColor: active ? 'var(--color-brand-tint)' : 'transparent',
-        color: active ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
+        color: active ? 'var(--color-text-brand)' : 'var(--color-text-secondary)',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
       }}
@@ -168,7 +168,7 @@ function RowActions({
           fontFamily: 'var(--font-body)',
           fontSize: '13px',
           fontWeight: 600,
-          color: 'var(--color-brand-primary)',
+          color: 'var(--color-text-brand)',
           background: 'none',
           border: 'none',
           cursor: 'pointer',
@@ -187,6 +187,8 @@ function RowActions({
           border: 'none',
           cursor: 'pointer',
         }}
+        aria-haspopup="true"
+        aria-expanded={menuOpen}
         aria-label="Acciones"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -225,22 +227,22 @@ function AppointmentRow({
   return (
     <div className="flex items-center gap-4 px-5 py-3.5" style={{ minHeight: '60px' }}>
       <div className="shrink-0 w-28">
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
           {format(start, 'HH:mm')}–{format(new Date(booking.endAt), 'HH:mm')}
         </p>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
           {booking.durationMinutes} min
         </p>
       </div>
 
       <div className="shrink-0 w-36">
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
           {booking.serviceName}
         </p>
       </div>
 
       <div className="flex-1 min-w-0">
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
           {booking.customerName}
         </p>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
@@ -290,7 +292,7 @@ function AppointmentCardMobile({
       <div className="flex items-center justify-between">
         <button
           onClick={() => onViewDetail(booking)}
-          style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-brand-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-brand)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           Ver detalle
         </button>
@@ -298,6 +300,8 @@ function AppointmentCardMobile({
           ref={triggerRef}
           onClick={() => setMenuOpen((o) => !o)}
           style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+          aria-haspopup="true"
+          aria-expanded={menuOpen}
           aria-label="Acciones"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -420,7 +424,7 @@ export function AgendaPage() {
     <div style={{ fontFamily: 'var(--font-body)' }}>
       <div className="mb-6">
         <h1
-          className="text-[22px] lg:text-[26px]"
+          className="text-[24px] lg:text-[28px]"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}
         >
           Tu agenda
@@ -548,8 +552,9 @@ export function AgendaPage() {
           <div className="flex items-end gap-3 flex-wrap">
             <div className="flex-1 min-w-48 hidden lg:block">
               <FormGroup>
-                <FormGroup.Label className="agendia-label">Buscar</FormGroup.Label>
+                <FormGroup.Label htmlFor="agenda-search" className="agendia-label">Buscar</FormGroup.Label>
                 <Input
+                  id="agenda-search"
                   type="search"
                   placeholder="Nombre, teléfono o servicio"
                   value={search}
@@ -567,13 +572,14 @@ export function AgendaPage() {
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
                 style={{ border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
               >
-                <span style={{ color: 'var(--color-brand-primary)', flexShrink: 0 }}>
+                <span style={{ color: 'var(--color-text-brand)', flexShrink: 0 }}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
                     <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </span>
                 <input
+                  aria-label="Buscar cita"
                   placeholder="Buscar cita..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -592,8 +598,9 @@ export function AgendaPage() {
 
             <div className="hidden lg:block shrink-0">
               <FormGroup>
-                <FormGroup.Label className="agendia-label">Desde</FormGroup.Label>
+                <FormGroup.Label htmlFor="agenda-from" className="agendia-label">Desde</FormGroup.Label>
                 <Input
+                  id="agenda-from"
                   type="date"
                   value={from}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFrom(e.target.value)}
@@ -606,8 +613,9 @@ export function AgendaPage() {
 
             <div className="hidden lg:block shrink-0">
               <FormGroup>
-                <FormGroup.Label className="agendia-label">Hasta</FormGroup.Label>
+                <FormGroup.Label htmlFor="agenda-to" className="agendia-label">Hasta</FormGroup.Label>
                 <Input
+                  id="agenda-to"
                   type="date"
                   value={to}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTo(e.target.value)}
@@ -638,6 +646,7 @@ export function AgendaPage() {
                 Estado
               </span>
               <Select
+                aria-label="Estado"
                 value={statusFilter}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as StatusFilter)}
                 size="sm"
@@ -701,8 +710,8 @@ export function AgendaPage() {
       )}
 
       {mutationError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 mt-4">
-          <p className="text-sm text-red-600" style={{ fontFamily: 'var(--font-body)' }}>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mt-4">
+          <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
             {getApiErrorMessage(mutationError)}
           </p>
         </div>
