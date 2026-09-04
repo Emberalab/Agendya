@@ -17,6 +17,6 @@ export const useAuthStore = create<AuthState>()(
       setSession: ({ accessToken, user }) => set({ accessToken, user }),
       logout: () => set({ accessToken: null, user: null }),
     }),
-    { name: 'ronda-auth' },
+    { name: 'agendya-auth' },
   ),
 );

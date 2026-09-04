@@ -6,7 +6,7 @@ import { STORAGE_STATE } from './utils/auth-state';
 
 /**
  * The app is a client-only SPA whose session lives in `localStorage` under the
- * zustand-persist key `ronda-auth`. We seed that entry directly instead of
+ * zustand-persist key `agendya-auth`. We seed that entry directly instead of
  * driving the Google OAuth popup (which can't run headless in CI) or the email
  * login form (covered on its own in `e2e/auth/login.spec.ts`), then snapshot the
  * storage state for the dashboard specs to reuse.
@@ -17,7 +17,7 @@ setup('seed an authenticated session', async ({ page }) => {
   await page.evaluate(
     ({ token, user }) => {
       window.localStorage.setItem(
-        'ronda-auth',
+        'agendya-auth',
         JSON.stringify({ state: { accessToken: token, user }, version: 0 }),
       );
     },

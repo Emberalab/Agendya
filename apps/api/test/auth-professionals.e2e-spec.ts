@@ -10,7 +10,7 @@ describe('Auth + Professionals (e2e)', () => {
   let prisma: PrismaService;
 
   const runId = Date.now();
-  const email = `e2e-${runId}@ronda.test`;
+  const email = `e2e-${runId}@agendya.test`;
   const password = 'supersecret123';
   const businessName = `E2E Belleza ${runId}`;
 
@@ -127,7 +127,7 @@ describe('Auth + Professionals (e2e)', () => {
   });
 
   it('reports the current slug as taken by someone else as unavailable via check-slug', async () => {
-    const otherEmail = `e2e-other-${runId}@ronda.test`;
+    const otherEmail = `e2e-other-${runId}@agendya.test`;
     const other = await request(app.getHttpServer())
       .post('/auth/register')
       .send({
