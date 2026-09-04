@@ -86,7 +86,7 @@ export function ContextMenu({
         color: disabled
           ? 'var(--color-text-muted)'
           : danger
-            ? '#EF4444'
+            ? 'var(--color-danger)'
             : 'var(--color-text-primary)',
         background: 'none',
         border: 'none',
@@ -120,7 +120,7 @@ export function ContextMenu({
         border: '1px solid var(--color-border)',
         borderRadius: 12,
         padding: '4px 0',
-        boxShadow: '0 8px 24px rgba(15,23,42,0.12)',
+        boxShadow: 'var(--shadow-menu)',
       }}
     >
       {item('Ver detalle', onViewDetail)}

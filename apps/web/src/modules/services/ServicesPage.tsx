@@ -162,7 +162,7 @@ function ConfirmDeleteDialog({
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
+      style={{ backgroundColor: 'var(--overlay-scrim)' }}
       onClick={onCancel}
     >
       <div
@@ -237,7 +237,7 @@ function ConfirmDeleteDialog({
             className="flex-1 py-3 rounded-2xl text-sm font-semibold"
             style={{
               fontFamily: 'var(--font-body)',
-              backgroundColor: '#EF4444',
+              backgroundColor: 'var(--color-danger)',
               color: '#fff',
               border: 'none',
               cursor: pending ? 'not-allowed' : 'pointer',
@@ -755,7 +755,7 @@ export function ServicesPage() {
                       fontFamily: 'var(--font-body)',
                       border: '1px solid #FECDD3',
                       background: 'none',
-                      color: '#EF4444',
+                      color: 'var(--color-danger)',
                       cursor: 'pointer',
                     }}
                   >

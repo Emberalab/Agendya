@@ -4,6 +4,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
+  color-scheme: light;
+
+  // Brand + surface palette
   --color-brand-primary: #4F46E5;
   --color-brand-primary-hover: #4338CA;
   --color-brand-secondary: #0F172A;
@@ -14,6 +17,42 @@
   --color-text-primary: #0F172A;
   --color-text-secondary: #64748B;
   --color-text-muted: #94A3B8;
+
+  // Semantic status colors (repeated across error / success UI)
+  --color-danger: #EF4444;
+  --color-success: #10B981;
+
+  // Foreground on a brand-colored surface (filled buttons, slider thumb ring)
+  --color-text-on-brand: #FFFFFF;
+  // Translucent brand wash for active / hover nav and chips
+  --color-brand-tint: rgba(79, 70, 229, 0.08);
+
+  // Overlay + elevation
+  --overlay-scrim: rgba(15, 23, 42, 0.45);
+  --shadow-menu: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-focus-brand: 0 0 0 3px rgba(79, 70, 229, 0.3);
+
+  // Radius for form controls (inputs, buttons)
+  --radius-control: 8px;
+}
+
+// The hue-slider thumb / track need the same declarations for the WebKit and
+// Firefox pseudo-elements; a mixin keeps the two pairs in sync.
+@mixin hue-slider-track {
+  height: 28px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+@mixin hue-slider-thumb {
+  box-sizing: border-box;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  border: 9px solid var(--color-text-on-brand);
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 2px 5px rgba(15, 23, 42, 0.28);
+  cursor: pointer;
 }
 
 * {
@@ -61,43 +100,25 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(to right, #FF0000 0%, #FFFF00 17%, #00FF00 33%, #00FFFF 50%, #0000FF 67%, #FF00FF 83%, #FF0000 100%);
 }
 .agendia-hue-slider::-webkit-slider-runnable-track {
-  height: 28px;
-  border-radius: 999px;
-  background: transparent;
+  @include hue-slider-track;
 }
 .agendia-hue-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  box-sizing: border-box;
-  width: 36px;
-  height: 36px;
   margin-top: -4px; /* centre the 36px thumb on the 28px track */
-  border-radius: 50%;
-  background: transparent;
-  border: 9px solid #FFFFFF;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 2px 5px rgba(15, 23, 42, 0.28);
-  cursor: pointer;
+  @include hue-slider-thumb;
 }
 .agendia-hue-slider::-moz-range-track {
-  height: 28px;
-  border-radius: 999px;
-  background: transparent;
+  @include hue-slider-track;
 }
 .agendia-hue-slider::-moz-range-thumb {
-  box-sizing: border-box;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: transparent;
-  border: 9px solid #FFFFFF;
-  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.06), 0 2px 5px rgba(15, 23, 42, 0.28);
-  cursor: pointer;
+  @include hue-slider-thumb;
 }
 
 /* Moon input — visible border using design system tokens */
 .moon-input.moon-input-outline {
   box-shadow: inset 0 0 0 1px var(--color-border);
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   font-family: var(--font-body);
 }
 .moon-input.moon-input-outline:focus {
@@ -126,17 +147,17 @@ label:has(.moon-checkbox) span {
 /* Restore Moon button fill background that Tailwind preflight resets to transparent */
 .moon-button {
   background-color: var(--color-brand-primary);
-  color: #ffffff;
+  color: var(--color-text-on-brand);
   font-family: var(--font-body);
   font-weight: 600;
-  border-radius: 8px;
+  border-radius: var(--radius-control);
   transition: background-color 0.15s, box-shadow 0.15s;
 }
 .moon-button:hover:not(:disabled):not([aria-disabled="true"]) {
   background-color: var(--color-brand-primary-hover);
 }
 .moon-button:focus-visible {
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.3);
+  box-shadow: var(--shadow-focus-brand);
 }
 .moon-button:disabled,
 .moon-button[aria-disabled="true"] {
@@ -180,10 +201,6 @@ label:has(.moon-checkbox) span {
 
 // Previous classes
 $focus-ring-color: #111827;
-
-:root {
-  color-scheme: light;
-}
 
 a,
 button {

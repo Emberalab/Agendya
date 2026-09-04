@@ -49,7 +49,7 @@ export function BlockFormDrawer({
   return createPortal(
     <div
       className="fixed inset-0 z-[100] flex items-end justify-end sm:items-stretch"
-      style={{ backgroundColor: 'rgba(15,23,42,0.45)' }}
+      style={{ backgroundColor: 'var(--overlay-scrim)' }}
       onClick={onCancel}
     >
       <div
@@ -129,7 +129,7 @@ export function BlockFormDrawer({
           />
 
           {invalidRange && (
-            <p style={{ fontSize: '13px', color: '#EF4444' }}>
+            <p style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
               La hora de fin debe ser posterior a la de inicio.
             </p>
           )}

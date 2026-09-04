@@ -136,7 +136,7 @@ function StatusChip({ label, active, onClick }: { label: string; active: boolean
         fontFamily: 'var(--font-body)',
         fontWeight: active ? 600 : 400,
         border: `1px solid ${active ? 'rgba(79,70,229,0.2)' : 'var(--color-border)'}`,
-        backgroundColor: active ? 'rgba(79,70,229,0.08)' : 'transparent',
+        backgroundColor: active ? 'var(--color-brand-tint)' : 'transparent',
         color: active ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
