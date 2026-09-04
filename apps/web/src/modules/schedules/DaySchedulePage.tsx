@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import type { Weekday } from '@agendya/types';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { BlockFormDrawer } from './BlockFormDrawer';
 import {
@@ -115,13 +116,13 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
           Horario
         </button>
         <span>›</span>
-        <span style={{ color: 'var(--color-brand-primary)', fontWeight: 600 }}>
+        <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>
           {WEEKDAY_LABELS[weekday]}
         </span>
       </nav>
 
       <h1
-        className="text-[22px] lg:text-[26px]"
+        className="text-[24px] lg:text-[28px]"
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
@@ -139,8 +140,8 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
       </p>
 
       {setWorkingHours.isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 mb-4">
-          <p className="text-sm text-red-600">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
+          <p className="text-sm text-red-600 dark:text-red-400">
             {getApiErrorMessage(setWorkingHours.error)}
           </p>
         </div>
@@ -172,8 +173,8 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
             onClick={() => setDrawer({ mode: 'create' })}
             className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-semibold"
             style={{
-              backgroundColor: '#EEF2FF',
-              color: 'var(--color-brand-primary)',
+              backgroundColor: 'var(--color-brand-surface)',
+              color: 'var(--color-text-brand)',
               border: 'none',
               cursor: 'pointer',
             }}
@@ -220,7 +221,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
                 height="16"
                 viewBox="0 0 16 16"
                 fill="none"
-                style={{ color: 'var(--color-brand-primary)', flexShrink: 0 }}
+                style={{ color: 'var(--color-text-brand)', flexShrink: 0 }}
               >
                 <circle
                   cx="8"
@@ -284,7 +285,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
                 aria-label={`Eliminar bloque ${formatRange(block)}`}
                 className="flex items-center justify-center w-8 h-8 rounded-lg"
                 style={{
-                  border: '1px solid #FECDD3',
+                  border: '1px solid var(--color-danger-border)',
                   background: 'none',
                   cursor: 'pointer',
                   color: 'var(--color-danger)',
@@ -308,7 +309,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
       {applyToAll && (
         <p
           className="mt-3"
-          style={{ fontSize: '12px', color: 'var(--color-brand-primary)' }}
+          style={{ fontSize: '12px', color: 'var(--color-text-brand)' }}
         >
           Al guardar, estos bloques se copiarán a todos los días activos.
         </p>
@@ -379,6 +380,8 @@ function ConfirmDeleteBlockDialog({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onCancel);
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -386,6 +389,8 @@ function ConfirmDeleteBlockDialog({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Eliminar bloque"
@@ -398,7 +403,7 @@ function ConfirmDeleteBlockDialog({
       >
         <div
           className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-          style={{ backgroundColor: '#FFF1F2' }}
+          style={{ backgroundColor: 'var(--color-danger-surface)' }}
         >
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <path
@@ -463,7 +468,7 @@ function ConfirmDeleteBlockDialog({
             className="flex-1 py-3 rounded-2xl text-sm font-semibold"
             style={{
               fontFamily: 'var(--font-body)',
-              backgroundColor: 'var(--color-danger)',
+              backgroundColor: 'var(--color-danger-fill)',
               color: '#fff',
               border: 'none',
               cursor: 'pointer',

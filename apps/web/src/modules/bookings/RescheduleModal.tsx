@@ -1,6 +1,7 @@
 import type { AgendaBooking } from '@agendya/types';
 import { useState } from 'react';
 import { Button, FormGroup, Input } from '@moondesignsystem/react';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { useProfile } from '../professionals/hooks/useProfile';
 import { useAvailability } from '../publicBooking/hooks/useAvailability';
 import { SlotGrid } from '../publicBooking/components/SlotGrid';
@@ -37,6 +38,7 @@ export function RescheduleModal({
   const [newSlot, setNewSlot] = useState<string | null>(null);
 
   const { data: profile } = useProfile();
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   const availability = useAvailability(
     profile?.slug ?? '',
@@ -127,9 +129,9 @@ export function RescheduleModal({
               <div className="flex items-center gap-3 mb-3">
                 <div
                   className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: '#EEF2FF' }}
+                  style={{ backgroundColor: 'var(--color-brand-surface)' }}
                 >
-                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px', color: 'var(--color-brand-primary)' }}>
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px', color: 'var(--color-text-brand)' }}>
                     {initials(booking.customerName)}
                   </span>
                 </div>
@@ -233,6 +235,8 @@ export function RescheduleModal({
         onClick={onClose}
       >
         <div
+          ref={dialogRef}
+          tabIndex={-1}
           role="dialog"
           aria-modal="true"
           aria-label="Modificar fecha y hora"
@@ -251,6 +255,11 @@ export function RescheduleModal({
       <div className="fixed inset-0 z-40" style={{ backgroundColor: 'rgba(15,23,42,0.3)' }} onClick={onClose} />
 
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Modificar fecha y hora"
         className="fixed top-0 right-0 bottom-0 z-50 flex flex-col w-full"
         style={{
           maxWidth: '440px',

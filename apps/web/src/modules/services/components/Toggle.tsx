@@ -46,7 +46,7 @@ export function Toggle({
           width: '20px',
           height: '20px',
           borderRadius: '50%',
-          backgroundColor: '#fff',
+          backgroundColor: 'var(--color-text-on-brand)',
           boxShadow: '0 1px 3px rgba(15,23,42,0.25)',
           transition: 'left 0.15s',
         }}

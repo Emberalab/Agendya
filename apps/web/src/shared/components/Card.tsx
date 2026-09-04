@@ -26,7 +26,7 @@ export function Card({
 
   return (
     <div
-      className={`bg-white rounded-lg border border-gray-200 shadow-sm ${paddingClasses[padding]} ${hoverClass} ${className}`}
+      className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${paddingClasses[padding]} ${hoverClass} ${className}`}
       onClick={onClick}
     >
       {children}
@@ -39,11 +39,11 @@ export function CardHeader({ children, className = '' }: { children: ReactNode; 
 }
 
 export function CardTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h2 className={`text-xl font-semibold text-gray-900 ${className}`}>{children}</h2>;
+  return <h2 className={`text-xl font-semibold text-gray-900 dark:text-gray-100 ${className}`}>{children}</h2>;
 }
 
 export function CardDescription({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <p className={`mt-1 text-sm text-gray-600 ${className}`}>{children}</p>;
+  return <p className={`mt-1 text-sm text-gray-600 dark:text-gray-400 ${className}`}>{children}</p>;
 }
 
 export function CardContent({ children, className = '' }: { children: ReactNode; className?: string }) {

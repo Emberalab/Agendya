@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFocusTrap } from '../../../shared/a11y/useFocusTrap';
 
 interface ServiceRowMenuProps {
   anchorRef: React.RefObject<HTMLElement | null>;
@@ -18,6 +19,7 @@ export function ServiceRowMenu({
 }: ServiceRowMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  useFocusTrap(true, onClose, ref);
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -102,6 +104,8 @@ export function ServiceRowMenu({
   return createPortal(
     <div
       ref={ref}
+      tabIndex={-1}
+      aria-label="Más acciones"
       style={{
         position: 'fixed',
         top: pos ? pos.top : -9999,

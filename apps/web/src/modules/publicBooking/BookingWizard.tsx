@@ -513,7 +513,7 @@ function Stepper({
                   fontSize: '13px',
                   fontWeight: active ? 700 : done ? 600 : 500,
                   color: active
-                    ? 'var(--color-brand-primary)'
+                    ? 'var(--color-text-brand)'
                     : done
                       ? 'var(--color-text-primary)'
                       : 'var(--color-text-muted)',
@@ -623,8 +623,8 @@ function BusinessCard({
               style={{
                 fontSize: '12px',
                 fontWeight: 600,
-                backgroundColor: '#EEF2FF',
-                color: 'var(--color-brand-primary)',
+                backgroundColor: 'var(--color-brand-surface)',
+                color: 'var(--color-text-brand)',
               }}
             >
               {professional.category}
@@ -728,7 +728,7 @@ function ServiceStep({
                       fontFamily: 'var(--font-display)',
                       fontWeight: 700,
                       fontSize: '17px',
-                      color: 'var(--color-brand-primary)',
+                      color: 'var(--color-text-brand)',
                     }}
                   >
                     {formatCOP(s.priceCents)}
@@ -946,7 +946,7 @@ function AddressField({
         }}
       >
         {label}
-        {required && <span style={{ color: '#DC2626' }}> *</span>}
+        {required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
       </label>
       <input
         id={id}
@@ -959,11 +959,11 @@ function AddressField({
           fontSize: '14px',
           color: 'var(--color-text-primary)',
           backgroundColor: 'var(--color-surface)',
-          border: `1px solid ${error ? '#DC2626' : 'var(--color-border)'}`,
+          border: `1px solid ${error ? 'var(--color-danger)' : 'var(--color-border)'}`,
         }}
       />
       {error && (
-        <p className="mt-1.5" style={{ fontSize: '13px', color: '#DC2626' }}>
+        <p className="mt-1.5" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
           {error}
         </p>
       )}
@@ -999,7 +999,7 @@ function ModalityRow({
       style={{
         backgroundColor: 'var(--color-surface)',
         border: `${selected ? '2px' : '1px'} solid ${
-          selected ? 'var(--color-brand-primary)' : 'var(--color-border)'
+          selected ? 'var(--color-text-brand)' : 'var(--color-border)'
         }`,
         boxShadow: selected ? '0 0 0 4px rgba(79,70,229,0.10)' : 'none',
         opacity: disabled ? 0.55 : 1,
@@ -1010,7 +1010,7 @@ function ModalityRow({
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
         style={{
           backgroundColor: 'var(--color-surface-soft)',
-          color: 'var(--color-brand-primary)',
+          color: 'var(--color-text-brand)',
         }}
       >
         {icon}
@@ -1039,7 +1039,7 @@ function ModalityRow({
         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
         style={{
           border: `2px solid ${
-            selected ? 'var(--color-brand-primary)' : 'var(--color-border)'
+            selected ? 'var(--color-text-brand)' : 'var(--color-border)'
           }`,
         }}
       >
@@ -1126,7 +1126,7 @@ function DateTimeStep({
                 className="rounded-xl px-4 py-6 text-center"
                 style={{
                   fontSize: '14px',
-                  color: '#DC2626',
+                  color: 'var(--color-danger)',
                   backgroundColor: 'var(--color-surface-soft)',
                   border: '1px solid var(--color-border)',
                 }}
@@ -1197,11 +1197,11 @@ function SlotPills({
               fontSize: '14px',
               fontWeight: selected ? 600 : 500,
               color: selected
-                ? 'var(--color-brand-primary)'
+                ? 'var(--color-text-brand)'
                 : 'var(--color-text-primary)',
-              backgroundColor: selected ? '#EEF2FF' : 'var(--color-surface)',
+              backgroundColor: selected ? 'var(--color-brand-surface)' : 'var(--color-surface)',
               border: `1px solid ${
-                selected ? 'var(--color-brand-primary)' : 'var(--color-border)'
+                selected ? 'var(--color-text-brand)' : 'var(--color-border)'
               }`,
               cursor: 'pointer',
             }}
@@ -1299,7 +1299,7 @@ function DetailsStep({
               color: 'var(--color-text-primary)',
               backgroundColor: 'var(--color-surface)',
               border: `1px solid ${
-                errors.customerNote ? '#DC2626' : 'var(--color-border)'
+                errors.customerNote ? 'var(--color-danger)' : 'var(--color-border)'
               }`,
               resize: 'vertical',
             }}
@@ -1307,7 +1307,7 @@ function DetailsStep({
           {errors.customerNote && (
             <p
               className="mt-1.5"
-              style={{ fontSize: '13px', color: '#DC2626' }}
+              style={{ fontSize: '13px', color: 'var(--color-danger)' }}
             >
               {errors.customerNote.message}
             </p>
@@ -1327,7 +1327,7 @@ function DetailsStep({
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
             style={{
               backgroundColor: 'var(--color-surface-soft)',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             <ShieldIcon />
@@ -1407,7 +1407,7 @@ function TextField({
         }}
       >
         {label}
-        {required && <span style={{ color: '#DC2626' }}> *</span>}
+        {required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
       </label>
       <input
         id={id}
@@ -1419,11 +1419,11 @@ function TextField({
           fontSize: '14px',
           color: 'var(--color-text-primary)',
           backgroundColor: 'var(--color-surface)',
-          border: `1px solid ${error ? '#DC2626' : 'var(--color-border)'}`,
+          border: `1px solid ${error ? 'var(--color-danger)' : 'var(--color-border)'}`,
         }}
       />
       {error && (
-        <p className="mt-1.5" style={{ fontSize: '13px', color: '#DC2626' }}>
+        <p className="mt-1.5" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
           {error}
         </p>
       )}
@@ -1581,7 +1581,7 @@ function ConfirmStep({
               onClick={() => onEdit(step)}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
               style={{
-                color: 'var(--color-brand-primary)',
+                color: 'var(--color-text-brand)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',

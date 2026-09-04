@@ -105,7 +105,7 @@ function SectionLabel({ children }: { children: React.ReactNode }) {
           fontSize: '11px',
           fontWeight: 600,
           letterSpacing: '0.08em',
-          color: 'var(--color-brand-primary)',
+          color: 'var(--color-text-brand)',
           textTransform: 'uppercase',
         }}
       >
@@ -358,7 +358,7 @@ export function ServiceFormPage() {
             fontFamily: 'var(--font-body)',
             fontSize: '13px',
             fontWeight: 600,
-            color: 'var(--color-brand-primary)',
+            color: 'var(--color-text-brand)',
             background: 'none',
             border: 'none',
             cursor: 'pointer',
@@ -618,9 +618,9 @@ export function ServiceFormPage() {
         </div>
 
         {mutationError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3 mt-4">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mt-4">
             <p
-              className="text-sm text-red-600"
+              className="text-sm text-red-600 dark:text-red-400"
               style={{ fontFamily: 'var(--font-body)' }}
             >
               {getApiErrorMessage(mutationError)}

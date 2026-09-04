@@ -151,7 +151,7 @@ export function ProfilePage() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1
-            className="text-[22px] lg:text-[26px]"
+            className="text-[24px] lg:text-[28px]"
             style={{
               fontFamily: 'var(--font-display)',
               fontWeight: 700,
@@ -197,7 +197,7 @@ export function ProfilePage() {
             style={{
               fontSize: '13px',
               fontWeight: 700,
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             {completion}%
@@ -225,32 +225,40 @@ export function ProfilePage() {
           subtitle="Completa estos datos para que tu negocio se vea bien en la reserva."
         >
           <Field
+            htmlFor="businessName"
             label="Nombre del negocio"
             required
             error={errors.businessName}
           >
             <input
+              id="businessName"
               type="text"
               placeholder="Ej. Mi Barbería, Centro de Estética…"
               style={inputStyle}
+              aria-invalid={!!errors.businessName}
+              aria-describedby={errors.businessName ? 'businessName-error' : undefined}
               {...register('businessName')}
             />
           </Field>
 
           <Field
+            htmlFor="category"
             label="Categoría"
             hint="Aparece como etiqueta en tu página pública."
             error={errors.category}
           >
             <input
+              id="category"
               type="text"
               placeholder="Ej. Barbería, Spa, Consultorio…"
               style={inputStyle}
+              aria-invalid={!!errors.category}
+              aria-describedby={errors.category ? 'category-error' : 'category-hint'}
               {...register('category')}
             />
           </Field>
 
-          <Field label="Enlace público" error={errors.slug}>
+          <Field htmlFor="slug" label="Enlace público" error={errors.slug}>
             <div className="flex flex-col gap-2 sm:flex-row">
               <div
                 className="flex items-center flex-1 rounded-lg overflow-hidden"
@@ -266,9 +274,12 @@ export function ProfilePage() {
                   agendya.com/
                 </span>
                 <input
+                  id="slug"
                   type="text"
                   placeholder="nombre-del-negocio"
                   style={{ ...inputStyle, border: 'none', paddingLeft: 0 }}
+                  aria-invalid={!!errors.slug}
+                  aria-describedby={errors.slug ? 'slug-error' : undefined}
                   {...register('slug')}
                 />
               </div>
@@ -290,7 +301,7 @@ export function ProfilePage() {
                     border: '1px solid var(--color-border)',
                     background: 'none',
                     color: values.slug
-                      ? 'var(--color-brand-primary)'
+                      ? 'var(--color-text-brand)'
                       : 'var(--color-text-muted)',
                     cursor: values.slug ? 'pointer' : 'not-allowed',
                   }}
@@ -316,7 +327,7 @@ export function ProfilePage() {
                     color:
                       !values.slug || checkSlug.isPending
                         ? 'var(--color-text-muted)'
-                        : 'var(--color-brand-primary)',
+                        : 'var(--color-text-brand)',
                     cursor:
                       !values.slug || checkSlug.isPending
                         ? 'not-allowed'
@@ -334,7 +345,7 @@ export function ProfilePage() {
                 className="mt-1.5"
                 style={{
                   fontSize: '13px',
-                  color: checkSlug.data.available ? '#15803D' : '#DC2626',
+                  color: checkSlug.data.available ? '#15803D' : 'var(--color-danger)',
                 }}
               >
                 {checkSlug.data.available
@@ -344,8 +355,9 @@ export function ProfilePage() {
             )}
           </Field>
 
-          <Field label="Descripción" required error={errors.description}>
+          <Field htmlFor="description" label="Descripción" required error={errors.description}>
             <textarea
+              id="description"
               placeholder="Describe tu negocio…"
               rows={4}
               style={{
@@ -356,6 +368,8 @@ export function ProfilePage() {
                 lineHeight: 1.55,
                 resize: 'vertical',
               }}
+              aria-invalid={!!errors.description}
+              aria-describedby={errors.description ? 'description-error' : undefined}
               {...register('description')}
             />
           </Field>
@@ -588,12 +602,14 @@ export function ProfilePage() {
           subtitle="Ajustes generales de tu reserva."
         >
           <Field
+            htmlFor="cancellationPolicyHours"
             label="Política de cancelación"
             required
             hint="Tú puedes cancelar la cita hasta el tiempo indicado antes. Tu cliente también puede cancelar hasta el mismo tiempo antes de su cita."
           >
             <div style={{ position: 'relative' }}>
               <select
+                id="cancellationPolicyHours"
                 style={{
                   ...inputStyle,
                   appearance: 'none',
@@ -601,6 +617,7 @@ export function ProfilePage() {
                   paddingRight: '34px',
                   cursor: 'pointer',
                 }}
+                aria-describedby="cancellationPolicyHours-hint"
                 {...register('cancellationPolicyHours', {
                   valueAsNumber: true,
                 })}
@@ -638,8 +655,8 @@ export function ProfilePage() {
         </Section>
 
         {updateProfile.isError && (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-            <p className="text-sm text-red-600">
+          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+            <p className="text-sm text-red-600 dark:text-red-400">
               {getApiErrorMessage(updateProfile.error)}
             </p>
           </div>
@@ -739,21 +756,28 @@ function Section({
 }
 
 function Field({
+  htmlFor,
   label,
   required,
   hint,
   error,
   children,
 }: {
+  /** Matches the wrapped control's `id`, so the visible label is also its accessible name. */
+  htmlFor?: string;
   label: string;
   required?: boolean;
   hint?: string;
   error?: { message?: string };
   children: React.ReactNode;
 }) {
+  const hintId = htmlFor && hint ? `${htmlFor}-hint` : undefined;
+  const errorId = htmlFor && error?.message ? `${htmlFor}-error` : undefined;
+
   return (
     <div>
       <label
+        htmlFor={htmlFor}
         style={{
           display: 'block',
           fontSize: '14px',
@@ -767,6 +791,7 @@ function Field({
       </label>
       {hint && (
         <p
+          id={hintId}
           className="mb-2"
           style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}
         >
@@ -775,7 +800,12 @@ function Field({
       )}
       {children}
       {error?.message && (
-        <p className="mt-1" style={{ fontSize: '12px', color: 'var(--color-danger)' }}>
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1"
+          style={{ fontSize: '12px', color: 'var(--color-danger)' }}
+        >
           {error.message}
         </p>
       )}
@@ -867,22 +897,22 @@ function ImageDropzone({
         style={{
           height: boxHeight,
           border: `1.5px dashed ${
-            dragOver ? 'var(--color-brand-primary)' : '#C7D2FE'
+            dragOver ? 'var(--color-brand-primary)' : 'var(--color-brand-border)'
           }`,
-          backgroundColor: dragOver ? '#EEF2FF' : 'var(--color-surface-soft)',
+          backgroundColor: dragOver ? 'var(--color-brand-surface)' : 'var(--color-surface-soft)',
           cursor: 'pointer',
         }}
       >
         <span
           className="flex items-center justify-center w-10 h-10 rounded-full"
-          style={{ backgroundColor: '#EEF2FF' }}
+          style={{ backgroundColor: 'var(--color-brand-surface)' }}
         >
           <svg
             width="18"
             height="18"
             viewBox="0 0 18 18"
             fill="none"
-            style={{ color: 'var(--color-brand-primary)' }}
+            style={{ color: 'var(--color-text-brand)' }}
           >
             <path
               d="M9 12V4M5.5 7.5L9 4l3.5 3.5M3.5 13.5h11"
@@ -897,7 +927,7 @@ function ImageDropzone({
           style={{
             fontSize: '14px',
             fontWeight: 600,
-            color: 'var(--color-brand-primary)',
+            color: 'var(--color-text-brand)',
           }}
         >
           {uploading ? 'Subiendo…' : ctaLabel}

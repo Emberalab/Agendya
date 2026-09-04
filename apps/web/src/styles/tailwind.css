@@ -13,3 +13,8 @@
   --font-body: 'Plus Jakarta Sans', sans-serif;
   --font-mono: 'Inter', monospace;
 }
+
+/* Drive Tailwind's `dark:` variant off our own theme toggle (data-theme on
+   <html>, set in shared/theme/themeStore.ts) instead of the OS-level
+   `prefers-color-scheme` default, so `dark:` classes follow the in-app switch. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));

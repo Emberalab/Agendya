@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PLAN_SERVICE_LIMITS, type Service } from '@agendya/types';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useProfile } from '../professionals/hooks/useProfile';
 import { PlanLimitDialog } from './components/PlanLimitDialog';
@@ -62,8 +63,8 @@ function HomeServicePill({ service }: { service: Service }) {
     <span
       className="inline-flex items-center gap-1 mt-1.5 px-2 py-0.5 rounded-md"
       style={{
-        backgroundColor: '#EEF2FF',
-        color: 'var(--color-brand-primary)',
+        backgroundColor: 'var(--color-brand-surface)',
+        color: 'var(--color-text-brand)',
         fontFamily: 'var(--font-body)',
         fontSize: '11px',
         fontWeight: 600,
@@ -128,6 +129,8 @@ function RowActions({
           cursor: 'pointer',
           color: 'var(--color-text-secondary)',
         }}
+        aria-haspopup="true"
+        aria-expanded={menuOpen}
         aria-label={`Más acciones para ${service.name}`}
       >
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
@@ -159,6 +162,8 @@ function ConfirmDeleteDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onCancel);
+
   return (
     <div
       className="fixed inset-0 z-[100] flex items-center justify-center p-4"
@@ -166,6 +171,8 @@ function ConfirmDeleteDialog({
       onClick={onCancel}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-label="Eliminar servicio"
@@ -178,7 +185,7 @@ function ConfirmDeleteDialog({
       >
         <div
           className="w-12 h-12 rounded-full flex items-center justify-center mb-3"
-          style={{ backgroundColor: '#FFF1F2' }}
+          style={{ backgroundColor: 'var(--color-danger-surface)' }}
         >
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <path
@@ -237,7 +244,7 @@ function ConfirmDeleteDialog({
             className="flex-1 py-3 rounded-2xl text-sm font-semibold"
             style={{
               fontFamily: 'var(--font-body)',
-              backgroundColor: 'var(--color-danger)',
+              backgroundColor: 'var(--color-danger-fill)',
               color: '#fff',
               border: 'none',
               cursor: pending ? 'not-allowed' : 'pointer',
@@ -301,7 +308,7 @@ export function ServicesPage() {
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <h1
-            className="text-[22px] lg:text-[26px]"
+            className="text-[24px] lg:text-[28px]"
             style={{
               fontFamily: 'var(--font-display)',
               fontWeight: 700,
@@ -345,9 +352,9 @@ export function ServicesPage() {
       </div>
 
       {mutationError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 mb-4">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
           <p
-            className="text-sm text-red-600"
+            className="text-sm text-red-600 dark:text-red-400"
             style={{ fontFamily: 'var(--font-body)' }}
           >
             {getApiErrorMessage(mutationError)}
@@ -434,7 +441,7 @@ export function ServicesPage() {
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{
-                border: '2px dashed #C7D2FE',
+                border: '2px dashed var(--color-brand-border)',
                 backgroundColor: '#F5F3FF',
               }}
             >
@@ -753,7 +760,7 @@ export function ServicesPage() {
                     className="py-2 px-3 rounded-lg text-sm font-semibold"
                     style={{
                       fontFamily: 'var(--font-body)',
-                      border: '1px solid #FECDD3',
+                      border: '1px solid var(--color-danger-border)',
                       background: 'none',
                       color: 'var(--color-danger)',
                       cursor: 'pointer',

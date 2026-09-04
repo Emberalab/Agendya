@@ -2,6 +2,7 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useAuthStore } from '../auth/authStore';
 import Group from '../../imports/LogoGroup';
 import { Sidebar } from './Sidebar';
+import { ThemeToggle } from '../../shared/theme/ThemeToggle';
 import { NAV_ITEMS } from './navItems';
 import { NavIcon } from './NavIcon';
 
@@ -11,6 +12,10 @@ export function DashboardLayout() {
 
   return (
     <div className="flex min-h-screen" style={{ fontFamily: 'var(--font-body)', backgroundColor: 'var(--color-surface-soft)' }}>
+      <a href="#main-content" className="agendia-skip-link">
+        Saltar al contenido principal
+      </a>
+
       <Sidebar />
 
       <div className="flex flex-1 flex-col min-h-screen pb-16 lg:pb-0" style={{ minWidth: 0 }}>
@@ -23,27 +28,31 @@ export function DashboardLayout() {
             <div className="w-7 h-7 relative">
               <Group />
             </div>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '18px', color: 'var(--color-brand-primary)' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '18px', color: 'var(--color-text-brand)' }}>
               agendya
             </span>
           </div>
-          <div
-            className="w-9 h-9 rounded-full flex items-center justify-center"
-            style={{ backgroundColor: 'var(--color-brand-primary)' }}
-          >
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', color: '#fff' }}>
-              {initial}
-            </span>
+          <div className="flex items-center gap-3">
+            <ThemeToggle />
+            <div
+              className="w-9 h-9 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: 'var(--color-brand-primary)' }}
+            >
+              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', color: 'var(--color-text-on-brand)' }}>
+                {initial}
+              </span>
+            </div>
           </div>
         </div>
 
-        <main className="flex-1 w-full px-4 py-6 lg:px-8 lg:py-8" style={{ overflowX: 'hidden' }}>
+        <main id="main-content" tabIndex={-1} className="flex-1 w-full px-4 py-6 lg:px-8 lg:py-8" style={{ overflowX: 'hidden' }}>
           <Outlet />
         </main>
       </div>
 
       {/* Mobile bottom nav */}
       <nav
+        aria-label="Principal"
         className="flex lg:hidden fixed bottom-0 left-0 right-0 items-center justify-around px-4 py-3"
         style={{ backgroundColor: 'var(--color-surface)', borderTop: '1px solid var(--color-border)', zIndex: 50 }}
       >
@@ -52,7 +61,7 @@ export function DashboardLayout() {
             key={item.id}
             to={item.to}
             className="flex flex-col items-center gap-0.5"
-            style={({ isActive }) => ({ color: isActive ? 'var(--color-brand-primary)' : 'var(--color-text-muted)', minWidth: '56px' })}
+            style={({ isActive }) => ({ color: isActive ? 'var(--color-text-brand)' : 'var(--color-text-muted)', minWidth: '56px' })}
           >
             {({ isActive }) => (
               <>
