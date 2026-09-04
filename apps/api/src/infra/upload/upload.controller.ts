@@ -18,6 +18,19 @@ const MAX_BYTES: Record<'logo' | 'cover', number> = {
 };
 const HARD_LIMIT_BYTES = 15 * 1024 * 1024;
 
+// Raster formats only. In particular, SVG is excluded even though it starts
+// with "image/": an SVG can embed <script>/event-handler markup, and this
+// check is the only gate before the file reaches Cloudinary — the client
+// -supplied mimetype it's read from isn't verified against the actual file
+// contents, so it must not be trusted to admit a format that can carry
+// script.
+const ALLOWED_MIME_TYPES = new Set([
+  'image/png',
+  'image/jpeg',
+  'image/webp',
+  'image/gif',
+]);
+
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
 export class UploadController {
@@ -36,8 +49,10 @@ export class UploadController {
     if (!file) {
       throw new BadRequestException('No se recibió ningún archivo.');
     }
-    if (!file.mimetype?.startsWith('image/')) {
-      throw new BadRequestException('El archivo debe ser una imagen.');
+    if (!ALLOWED_MIME_TYPES.has(file.mimetype)) {
+      throw new BadRequestException(
+        'El archivo debe ser una imagen PNG, JPEG, WEBP o GIF.',
+      );
     }
     if (file.size > MAX_BYTES[variant]) {
       const mb = MAX_BYTES[variant] / (1024 * 1024);
