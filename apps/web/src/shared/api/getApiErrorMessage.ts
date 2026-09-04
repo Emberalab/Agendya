@@ -1,12 +1,11 @@
-import axios from 'axios';
+import { isApiError } from './apiClient';
 
 export function getApiErrorMessage(
   error: unknown,
   fallback = 'Ocurrió un error. Intenta de nuevo.',
 ): string {
-  if (axios.isAxiosError(error)) {
-    const data = error.response?.data as
-      { message?: string | string[] } | undefined;
+  if (isApiError(error)) {
+    const data = error.data as { message?: string | string[] } | undefined;
     if (Array.isArray(data?.message)) {
       return data.message.join(' ');
     }
