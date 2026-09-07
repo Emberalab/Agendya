@@ -1,7 +1,6 @@
-// Imports from Figma Make Design System
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+// Fonts (Outfit / Plus Jakarta Sans / Inter) are loaded via <link> tags in
+// index.html — see the comment there. A CSS @import here would be render-blocking
+// and only discovered after this stylesheet parses, delaying first paint.
 
 :root {
   color-scheme: light;

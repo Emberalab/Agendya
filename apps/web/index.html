@@ -8,6 +8,25 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>agendya</title>
+    <meta
+      name="description"
+      content="Agendya es la plataforma de reservas online para barberías y peluquerías: tu propia página de reservas, gestión de servicios y horarios, y confirmación automática de citas."
+    />
+    <!--
+      Fonts are loaded here rather than via `@import url(...)` inside main.scss:
+      a CSS @import is only discovered after the app stylesheet has downloaded
+      and parsed, then serializes three more round trips before the first font
+      request — a measurable hit to First Contentful Paint. As <link> tags in
+      the head the browser starts them immediately, in parallel with the bundle,
+      as one combined css2 request. Keep the families/weights in sync with the
+      `@theme` block in src/styles/tailwind.css.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
+    />
     <script>
       // Applies the theme before first paint so switching to dark mode never
       // flashes light first. Mirrors the persisted-state shape written by
