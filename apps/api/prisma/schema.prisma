@@ -62,26 +62,27 @@ model Professional {
   scheduleExceptions ScheduleException[]
   bookings           Booking[]
 
-  @@index([slug])
-  @@index([googleId])
+  // `slug` and `googleId` are already `@unique`; the unique constraint's btree
+  // index fully serves equality lookups and sorts on those columns, so no
+  // secondary @@index is needed here.
 }
 
 model Service {
-  id                  String   @id @default(uuid())
+  id                  String       @id @default(uuid())
   professionalId      String
   professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   name                String
   description         String?
   durationMinutes     Int
-  priceCents          Int      @default(0)
-  isActive            Boolean  @default(true)
-  homeServiceEnabled  Boolean  @default(false)
+  priceCents          Int          @default(0)
+  isActive            Boolean      @default(true)
+  homeServiceEnabled  Boolean      @default(false)
   homeDurationMinutes Int?
   homePriceCents      Int?
-  sortOrder           Int      @default(0)
+  sortOrder           Int          @default(0)
   deletedAt           DateTime?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   bookings Booking[]
 
@@ -119,25 +120,34 @@ model Booking {
   professional            Professional  @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   serviceId               String?
   service                 Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  serviceNameSnapshot      String
-  durationMinutesSnapshot  Int
-  customerName             String
-  customerEmail            String
-  customerPhone            String
-  customerNote             String?
-  atHome                   Boolean       @default(false)
-  customerAddress          String?
-  startAt                  DateTime
-  endAt                    DateTime
-  status                   BookingStatus @default(CONFIRMED)
-  cancellationToken        String        @unique @default(uuid())
-  cancelledAt              DateTime?
-  cancelledBy              String?
-  reminder24hSentAt        DateTime?
-  reminder2hSentAt         DateTime?
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  serviceNameSnapshot     String
+  durationMinutesSnapshot Int
+  customerName            String
+  customerEmail           String
+  customerPhone           String
+  customerNote            String?
+  atHome                  Boolean       @default(false)
+  customerAddress         String?
+  startAt                 DateTime
+  endAt                   DateTime
+  status                  BookingStatus @default(CONFIRMED)
+  cancellationToken       String        @unique @default(uuid())
+  cancelledAt             DateTime?
+  cancelledBy             String?
+  reminder24hSentAt       DateTime?
+  reminder2hSentAt        DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
 
+  // Agenda list: professional's bookings within a date range, any status.
   @@index([professionalId, startAt])
+  // Availability + overlap guard (createPublicBooking / reschedule): equality on
+  // professionalId + status=CONFIRMED, range on startAt. Keeps the scan bounded
+  // to live bookings instead of walking every past row for the professional.
+  @@index([professionalId, status, startAt])
+  // Global reminder / expiration sweeps: status + startAt, no professional filter.
   @@index([status, startAt])
+  // FK column: Postgres does not auto-index it. Guards the SetNull path and any
+  // "bookings for this service" lookup from a full table scan.
+  @@index([serviceId])
 }
