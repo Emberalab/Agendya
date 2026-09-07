@@ -1,0 +1,8 @@
+# Public booking pages (/:slug) and the marketing/auth landing pages are
+# indexable. Everything behind auth, the OAuth callback, and tokenized
+# cancellation links are not.
+User-agent: *
+Allow: /
+Disallow: /dashboard/
+Disallow: /auth/
+Disallow: /bookings/

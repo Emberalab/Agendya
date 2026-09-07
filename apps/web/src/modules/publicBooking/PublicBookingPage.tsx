@@ -2,6 +2,7 @@ import type { PublicBooking } from '@agendya/types';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Logo from '../../imports/LogoGroup';
+import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { ThemeToggle } from '../../shared/theme/ThemeToggle';
 import { BookingWizard } from './BookingWizard';
 import type { BookingWizardInitialValues } from './BookingWizard';
@@ -162,8 +163,14 @@ export function PublicBookingPage() {
           <div className="relative">
             {professional.coverImageUrl ? (
               <img
-                src={professional.coverImageUrl}
+                src={cloudinaryImageUrl(professional.coverImageUrl, {
+                  width: 1600,
+                })}
                 alt=""
+                width={1600}
+                height={600}
+                fetchPriority="high"
+                decoding="async"
                 className="h-40 w-full object-cover sm:h-52"
               />
             ) : (
@@ -197,8 +204,13 @@ export function PublicBookingPage() {
               >
                 {professional.logoUrl ? (
                   <img
-                    src={professional.logoUrl}
+                    src={cloudinaryImageUrl(professional.logoUrl, {
+                      width: 176,
+                    })}
                     alt={professional.businessName}
+                    width={176}
+                    height={176}
+                    decoding="async"
                     className="h-full w-full object-cover"
                   />
                 ) : (
