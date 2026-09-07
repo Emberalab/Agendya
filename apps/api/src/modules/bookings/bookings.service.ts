@@ -22,6 +22,11 @@ import {
   zonedDateParts,
   zonedInstant,
 } from '../../common/utils/timezone.util';
+import {
+  isModifiable,
+  isPast,
+  meetsCancellationWindow,
+} from './booking-policy';
 
 @Injectable()
 export class BookingsService {
@@ -45,7 +50,7 @@ export class BookingsService {
       await this.resolveServiceSelection(professional.id, input);
 
     const startAt = new Date(input.startAt);
-    if (Number.isNaN(startAt.getTime()) || this.isPast(startAt)) {
+    if (Number.isNaN(startAt.getTime()) || isPast(startAt)) {
       throw new BadRequestException('Ese horario ya no está disponible.');
     }
     const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
@@ -105,7 +110,7 @@ export class BookingsService {
       await this.resolveServiceSelection(professional.id, input);
 
     const startAt = new Date(input.startAt);
-    if (Number.isNaN(startAt.getTime()) || this.isPast(startAt)) {
+    if (Number.isNaN(startAt.getTime()) || isPast(startAt)) {
       throw new BadRequestException('Ese horario ya no está disponible.');
     }
     const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
@@ -427,7 +432,7 @@ export class BookingsService {
     await this.assertModifiable(booking, booking.professional, 'modificar');
 
     const newStartAt = new Date(input.newStartAt);
-    if (Number.isNaN(newStartAt.getTime()) || this.isPast(newStartAt)) {
+    if (Number.isNaN(newStartAt.getTime()) || isPast(newStartAt)) {
       throw new BadRequestException('La nueva fecha debe ser en el futuro.');
     }
 
@@ -577,7 +582,7 @@ export class BookingsService {
     await this.assertModifiable(booking, professional, 'modificar');
 
     const newStartAt = new Date(input.newStartAt);
-    if (Number.isNaN(newStartAt.getTime()) || this.isPast(newStartAt)) {
+    if (Number.isNaN(newStartAt.getTime()) || isPast(newStartAt)) {
       throw new BadRequestException('La nueva fecha debe ser en el futuro.');
     }
 
@@ -604,44 +609,6 @@ export class BookingsService {
     });
 
     return this.toAgendaBooking(updated, professional);
-  }
-
-  /**
-   * A booking's scheduled start has already happened. Both sides are absolute
-   * instants (UTC epoch millis under the hood), so this comparison is
-   * timezone-safe by construction — no wall-clock/zone conversion needed
-   * here. Zone conversion only matters when *interpreting* a wall-clock time
-   * (working hours, "today" in the professional's calendar), which is
-   * handled separately by zonedInstant/zonedDateParts.
-   */
-  private isPast(instant: Date): boolean {
-    return instant.getTime() <= Date.now();
-  }
-
-  private meetsCancellationWindow(
-    startAt: Date,
-    cancellationPolicyHours: number,
-  ): boolean {
-    const hoursUntilStart = (startAt.getTime() - Date.now()) / 3_600_000;
-    return hoursUntilStart >= cancellationPolicyHours;
-  }
-
-  /**
-   * Whether a booking can currently be cancelled or rescheduled: confirmed,
-   * its start time hasn't passed, and it's still outside the cancellation
-   * policy's minimum-notice window. Used both for the read-side `canCancel`/
-   * `canReschedule` flags and (via {@link assertModifiable}) as the
-   * server-side gate the mutating endpoints enforce.
-   */
-  private isModifiable(booking: Booking, professional: Professional): boolean {
-    return (
-      booking.status === 'CONFIRMED' &&
-      !this.isPast(booking.startAt) &&
-      this.meetsCancellationWindow(
-        booking.startAt,
-        professional.cancellationPolicyHours,
-      )
-    );
   }
 
   /**
@@ -675,7 +642,7 @@ export class BookingsService {
       throw new ConflictException('Esta reserva fue marcada como no asistida.');
     }
 
-    if (booking.status === 'EXPIRED' || this.isPast(booking.startAt)) {
+    if (booking.status === 'EXPIRED' || isPast(booking.startAt)) {
       if (booking.status === 'CONFIRMED') {
         await this.prisma.booking.update({
           where: { id: booking.id },
@@ -688,7 +655,7 @@ export class BookingsService {
     }
 
     if (
-      !this.meetsCancellationWindow(
+      !meetsCancellationWindow(
         booking.startAt,
         professional.cancellationPolicyHours,
       )
@@ -772,8 +739,8 @@ export class BookingsService {
       status: booking.status,
       cancellationToken: booking.cancellationToken,
       cancellationPolicyHours: professional.cancellationPolicyHours,
-      canCancel: this.isModifiable(booking, professional),
-      canReschedule: this.isModifiable(booking, professional),
+      canCancel: isModifiable(booking, professional),
+      canReschedule: isModifiable(booking, professional),
     };
   }
 
@@ -793,7 +760,7 @@ export class BookingsService {
       endAt: booking.endAt.toISOString(),
       status: booking.status,
       cancellationPolicyHours: professional.cancellationPolicyHours,
-      canReschedule: this.isModifiable(booking, professional),
+      canReschedule: isModifiable(booking, professional),
       createdAt: booking.createdAt.toISOString(),
       cancelledAt: booking.cancelledAt?.toISOString() ?? null,
       cancelledBy: booking.cancelledBy ?? null,
