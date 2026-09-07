@@ -12,6 +12,7 @@ import {
   type ProfessionalProfile,
 } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { checkSlugAvailability, uploadImage } from './api';
 import { useProfile } from './hooks/useProfile';
 import { useUpdateProfile } from './hooks/useUpdateProfile';
@@ -848,8 +849,12 @@ function ImageDropzone({
         style={{ border: '1px solid var(--color-border)', height: boxHeight }}
       >
         <img
-          src={value}
+          src={cloudinaryImageUrl(value, {
+            width: aspect === 'square' ? 320 : 900,
+          })}
           alt=""
+          loading="lazy"
+          decoding="async"
           className="w-full h-full"
           style={{ objectFit: aspect === 'square' ? 'contain' : 'cover' }}
         />

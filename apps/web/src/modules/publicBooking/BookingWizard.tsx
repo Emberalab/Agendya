@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { isApiError } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { formatCOP, formatDuration } from '../services/format';
 import { Toggle } from '../services/components/Toggle';
 import { Calendar } from './components/Calendar';
@@ -556,8 +557,12 @@ function BusinessCard({
       <div className="relative">
         {professional.coverImageUrl ? (
           <img
-            src={professional.coverImageUrl}
+            src={cloudinaryImageUrl(professional.coverImageUrl, { width: 1600 })}
             alt=""
+            width={1600}
+            height={600}
+            fetchPriority="high"
+            decoding="async"
             className="h-36 w-full object-cover sm:h-44"
           />
         ) : (
@@ -589,8 +594,11 @@ function BusinessCard({
         >
           {professional.logoUrl ? (
             <img
-              src={professional.logoUrl}
+              src={cloudinaryImageUrl(professional.logoUrl, { width: 168 })}
               alt={professional.businessName}
+              width={168}
+              height={168}
+              decoding="async"
               className="h-full w-full object-cover"
             />
           ) : (
