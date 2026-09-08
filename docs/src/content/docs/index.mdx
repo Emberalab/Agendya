@@ -1,0 +1,99 @@
+---
+title: Documentación de ingeniería de Agendya
+description: >-
+  Documentación de ingeniería completa de Agendya — la plataforma de reservas
+  online para barberías y peluquerías. Arquitectura, modelo de datos, referencia
+  de la API, funcionalidades, pruebas, seguridad, despliegue y guías de
+  contribución, todo derivado del código fuente.
+template: splash
+hero:
+  tagline: >-
+    La plataforma de reservas online para barberías y peluquerías. Una API
+    NestJS + Prisma, una web React + Vite y contratos Zod compartidos —
+    documentado a partir del código.
+  image:
+    file: ../../assets/agendya-logo.svg
+  actions:
+    - text: ¿Qué es Agendya?
+      link: /overview/what-is-agendya/
+      icon: right-arrow
+      variant: primary
+    - text: Poner la app en marcha
+      link: /getting-started/installation/
+      icon: rocket
+      variant: secondary
+    - text: Repositorio en GitHub
+      link: https://github.com/Emberalab/Agendya
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Empieza aquí
+
+<CardGrid>
+  <LinkCard
+    title="Resumen"
+    description="Propósito del producto, conjunto de funcionalidades y la arquitectura general de un vistazo."
+    href="/overview/what-is-agendya/"
+  />
+  <LinkCard
+    title="Primeros pasos"
+    description="Clonar, instalar, configurar variables de entorno, levantar Postgres, aplicar migraciones y arrancar ambas apps."
+    href="/getting-started/prerequisites/"
+  />
+  <LinkCard
+    title="Arquitectura"
+    description="Arquitectura del sistema, del frontend y del backend, flujo de datos y flujo de autenticación."
+    href="/architecture/system/"
+  />
+  <LinkCard
+    title="Base de datos"
+    description="Modelo entidad-relación, modelos de Prisma, índices y el ciclo de vida del estado de la reserva."
+    href="/database/er-model/"
+  />
+  <LinkCard
+    title="Referencia de la API"
+    description="Cada endpoint REST: método, ruta, autenticación, forma de la petición y la respuesta, códigos de error."
+    href="/api/reference/"
+  />
+  <LinkCard
+    title="Funcionalidades"
+    description="Cómo funcionan la autenticación, los servicios, el horario, la disponibilidad, las citas y las notificaciones."
+    href="/features/authentication/"
+  />
+</CardGrid>
+
+## Qué contiene
+
+<CardGrid>
+  <Card title="Backend" icon="seti:nestjs">
+    NestJS 11, modular. Autenticación (JWT + Google OAuth), profesionales,
+    servicios, horarios, disponibilidad, reservas, subidas de imágenes.
+    Prisma 7 sobre PostgreSQL, validación con Zod, tareas cron de
+    `@nestjs/schedule` para recordatorios y expiración.
+  </Card>
+  <Card title="Frontend" icon="seti:react">
+    React 19 + Vite + TypeScript, React Router 7 con división de código por
+    ruta, TanStack Query para el estado del servidor, Zustand para
+    autenticación/tema, React Hook Form + Zod, Tailwind v4, Moon Design System.
+  </Card>
+  <Card title="Contratos compartidos" icon="seti:typescript">
+    `@agendya/types` contiene los esquemas Zod de los payloads de autenticación,
+    profesional, servicio, horario y reserva — consumidos por ambas apps para
+    que el formato de transmisión no pueda divergir.
+  </Card>
+  <Card title="Controles de calidad" icon="approve-check">
+    Jest unitario + e2e (API), Vitest + Testing Library + MSW (web), Playwright
+    end-to-end. Lint, typecheck, migraciones, pruebas y build se ejecutan en CI
+    en cada push y PR a `main`.
+  </Card>
+</CardGrid>
+
+:::note[Fuente de la verdad]
+Cada página aquí se deriva del repositorio real — el esquema de Prisma, los
+controladores y servicios de NestJS, las rutas y hooks de React, los scripts de
+`package.json`, las suites de pruebas y el workflow de CI. Donde el código dejó
+algo genuinamente ambiguo se señala con un aviso `TODO` en lugar de suponerlo.
+:::
