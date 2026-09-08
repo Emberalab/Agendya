@@ -2,6 +2,20 @@
 
 Monorepo with an API ([apps/api](apps/api), NestJS + Prisma) and a web app ([apps/web](apps/web), React + Vite), managed as npm workspaces.
 
+## Documentation
+
+Full engineering documentation (architecture, data model, API reference, feature
+walkthroughs, testing, security, deployment, contribution guides) lives in
+[`docs/`](docs) as an Astro + Starlight site. It is **bilingual** — Spanish at
+`/` (default) and English at `/en/`, switchable from the header.
+
+```bash
+npm run docs          # dev server at http://localhost:4321
+npm run docs:build    # production build
+```
+
+See [docs/README.md](docs/README.md) for how to write and deploy it.
+
 ## Prerequisites
 
 - Node.js 24 (see [.nvmrc](.nvmrc) — run `nvm use` if you use nvm)
