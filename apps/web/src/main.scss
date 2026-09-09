@@ -409,6 +409,39 @@ label:has(.moon-checkbox) span {
   }
 }
 
+/* Notification row exit — a modern-mobile "swipe away": the content slides left
+   and fades while the row's own height collapses so the neighbours close the
+   gap. Both run together (~220ms); React keeps the row mounted until the inner
+   `transitionend` fires (see NotificationItem). `overflow: hidden` keeps the
+   horizontal travel inside the row — it can never widen the panel. */
+.notif-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.2s ease;
+}
+.notif-row > .notif-row-inner {
+  min-height: 0;
+  overflow: hidden;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+.notif-row[data-exiting='true'] {
+  grid-template-rows: 0fr;
+}
+.notif-row[data-exiting='true'] > .notif-row-inner {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-row,
+  .notif-row > .notif-row-inner {
+    transition: none !important;
+  }
+}
+
 /* Horizontally-scrollable chip strips (mobile KPI chips) — no visible scrollbar */
 .chip-scroll::-webkit-scrollbar { display: none; }
 

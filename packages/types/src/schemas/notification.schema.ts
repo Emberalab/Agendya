@@ -68,3 +68,16 @@ export const markAllReadResponseSchema = z.object({
   updated: z.number().int().nonnegative(),
 });
 export type MarkAllReadResponse = z.infer<typeof markAllReadResponseSchema>;
+
+/**
+ * `DELETE /notifications/:id` and `DELETE /notifications/read` — how many rows
+ * were removed. `0` when the id was unknown, not owned by the caller, or still
+ * unread (only read notifications are deletable), so both endpoints are
+ * idempotent and never leak another professional's data via a 404.
+ */
+export const deleteNotificationsResponseSchema = z.object({
+  deleted: z.number().int().nonnegative(),
+});
+export type DeleteNotificationsResponse = z.infer<
+  typeof deleteNotificationsResponseSchema
+>;
