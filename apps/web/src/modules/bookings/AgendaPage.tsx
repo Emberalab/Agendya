@@ -1,8 +1,10 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { AgendaBooking, BookingStatus } from '@agendya/types';
 import { addDays, endOfMonth, endOfWeek, format, isToday, isTomorrow, startOfMonth, startOfWeek } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { FormGroup, Input, Select } from '@moondesignsystem/react';
+import { AGENDA_FOCUS_BOOKING_PARAM, AGENDA_FOCUS_DATE_PARAM } from '../notifications/navigation';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { AppointmentDrawer } from './AppointmentDrawer';
 import { CalendarGridView } from './CalendarGridView';
@@ -335,6 +337,43 @@ export function AgendaPage() {
   const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
 
   const { data: bookings, isLoading } = useAgenda(from, to);
+
+  // Deep link from a notification: ?booking=<id>&date=<yyyy-mm-dd>. Open that
+  // booking's detail drawer regardless of the active view (list or calendar).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusBookingId = searchParams.get(AGENDA_FOCUS_BOOKING_PARAM);
+  const focusDate = searchParams.get(AGENDA_FOCUS_DATE_PARAM);
+
+  // Widen — never shrink — the range so the target day is fetched. Pad ±1 day
+  // to absorb the UTC-vs-professional-timezone date skew in `date`.
+  useEffect(() => {
+    if (!focusBookingId || !focusDate) return;
+    const focus = new Date(`${focusDate}T00:00:00`);
+    if (Number.isNaN(focus.getTime())) return;
+    const lo = toDateOnly(addDays(focus, -1));
+    const hi = toDateOnly(addDays(focus, 1));
+    setFrom((prev) => (lo < prev ? lo : prev));
+    setTo((prev) => (hi > prev ? hi : prev));
+  }, [focusBookingId, focusDate]);
+
+  // Once the widened range covers the target day and has loaded, open the
+  // booking and drop the params so a refresh or Back doesn't reopen it.
+  const focusInRange = !focusDate || (focusDate >= from && focusDate <= to);
+  useEffect(() => {
+    if (!focusBookingId || !focusInRange || isLoading) return;
+    const match = (bookings ?? []).find((b) => b.id === focusBookingId);
+    if (match) setSelectedForDetail(match);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete(AGENDA_FOCUS_BOOKING_PARAM);
+        next.delete(AGENDA_FOCUS_DATE_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [focusBookingId, focusInRange, isLoading, bookings, setSearchParams]);
+
   const cancelBooking = useCancelBooking();
   const completeBooking = useCompleteBooking();
   const rescheduleBooking = useRescheduleBooking();

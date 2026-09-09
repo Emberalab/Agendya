@@ -2,8 +2,10 @@ import { useAuthStore } from '../../modules/auth/authStore';
 
 // Falls back to whatever host the page was loaded from (e.g. a LAN IP when the
 // frontend is opened from another device via `vite --host`), so the API stays
-// reachable without hardcoding a machine-specific address.
-const apiBaseUrl =
+// reachable without hardcoding a machine-specific address. Exported so the
+// real-time SSE client (`shared/realtime/realtimeClient.ts`) resolves the same
+// origin without duplicating this logic.
+export const apiBaseUrl =
   import.meta.env.VITE_API_URL || `http://${window.location.hostname}:4000`;
 
 type QueryValue = string | number | boolean | undefined | null;

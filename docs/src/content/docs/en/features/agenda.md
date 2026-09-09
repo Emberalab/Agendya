@@ -27,6 +27,7 @@ validates both dates.
 {
   "id": "uuid", "serviceId": "uuid", "serviceName": "…", "durationMinutes": 30,
   "customerName": "…", "customerEmail": "…", "customerPhone": "…",
+  "customerNote": "… | null",            // note the customer left when booking
   "startAt": "…", "endAt": "…",
   "status": "CONFIRMED",
   "cancellationPolicyHours": 24,

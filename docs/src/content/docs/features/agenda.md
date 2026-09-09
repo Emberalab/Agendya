@@ -27,6 +27,7 @@ ambas fechas.
 {
   "id": "uuid", "serviceId": "uuid", "serviceName": "…", "durationMinutes": 30,
   "customerName": "…", "customerEmail": "…", "customerPhone": "…",
+  "customerNote": "… | null",            // observaciones que dejó el cliente al reservar
   "startAt": "…", "endAt": "…",
   "status": "CONFIRMED",
   "cancellationPolicyHours": 24,

@@ -49,6 +49,13 @@ para ellos.
 | `@@index([status, startAt])` | Barridos cron globales — consultas de ventana de `RemindersScheduler` y el `updateMany` de `ExpirationScheduler`, sin filtro por profesional |
 | `@@index([serviceId])` | Columna FK (Postgres **no** indexa las FK automáticamente) — protege el camino `SetNull` y las búsquedas de "reservas de este servicio" de un escaneo completo |
 
+### Notification
+
+| Índice | Sirve a |
+| --- | --- |
+| `@@index([professionalId, createdAt(sort: Desc)])` | El único listado del centro de notificaciones — `WHERE professionalId = ? ORDER BY createdAt DESC`, paginado por keyset sobre `(createdAt, id)`. Descendente para que el `ORDER BY` sea un escaneo hacia adelante |
+| `@@index([professionalId, readAt])` | Badge de sin leer — `WHERE professionalId = ? AND readAt IS NULL`. Prisma no tiene índices parciales declarativos; este compuesto acota igualmente el conteo a las filas de un profesional |
+
 ## Restricciones que viven en el código, no en la BD
 
 Algunos invariantes los impone la capa de aplicación en lugar de una

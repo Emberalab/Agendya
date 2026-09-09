@@ -31,6 +31,7 @@ boots.
 | `CLOUDINARY_URL` | *(empty)* | No | `POST /upload/image` returns `503 Service Unavailable` |
 | `PORT` | `4000` | No (defaults `4000`) | API listen port |
 | `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | CORS allow-origin, OAuth success redirect base, cancel-link base in emails |
+| `REALTIME_HEARTBEAT_MS` | `25000` | No (defaults `25000`) | Milliseconds between `event: ping` frames on the `GET /realtime/stream` SSE stream. Lower it if a reverse proxy drops idle connections sooner |
 
 ### Test-only
 

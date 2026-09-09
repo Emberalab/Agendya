@@ -14,6 +14,7 @@ erDiagram
   Professional ||--o{ WorkingHour : "tiene"
   Professional ||--o{ ScheduleException : "tiene"
   Professional ||--o{ Booking : "recibe"
+  Professional ||--o{ Notification : "recibe avisos"
   Service ||--o{ Booking : "reservado como (nullable)"
 
   Professional {
@@ -95,6 +96,17 @@ erDiagram
     datetime createdAt
     datetime updatedAt
   }
+
+  Notification {
+    string id PK
+    string professionalId FK
+    enum type "NotificationType"
+    string title
+    string body
+    json data "{ bookingId, customerName, serviceName, startAt }"
+    datetime readAt "nullable — null = sin leer"
+    datetime createdAt
+  }
 ```
 
 ## Relaciones y reglas de cascada
@@ -105,6 +117,7 @@ erDiagram
 | `WorkingHour.professional` | `Professional` | muchos a uno | `Cascade` |
 | `ScheduleException.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Booking.professional` | `Professional` | muchos a uno | `Cascade` |
+| `Notification.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Booking.service` | `Service` | muchos a uno, **opcional** | `SetNull` — al borrar un servicio se conservan sus reservas; `serviceId` pasa a `null`, y `serviceNameSnapshot` / `durationMinutesSnapshot` preservan lo que se reservó |
 
 ## Enums
@@ -114,6 +127,7 @@ erDiagram
 | `Weekday` | `SUNDAY`, `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY` |
 | `BookingStatus` | `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, `EXPIRED` |
 | `Plan` | `BASIC`, `PRO` |
+| `NotificationType` | `APPOINTMENT_CREATED` (único emitido hoy; el enum se ampliará) |
 
 ## Notas de diseño
 

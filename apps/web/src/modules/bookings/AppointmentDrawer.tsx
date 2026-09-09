@@ -301,9 +301,18 @@ export function AppointmentDrawer({
           </span>
         </div>
         <div className="flex justify-between items-baseline gap-3">
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>Observaciones</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-primary)', textAlign: 'right' }}>
-            Sin observaciones
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)', flexShrink: 0 }}>Observaciones</span>
+          <span
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '14px',
+              color: booking.customerNote ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              textAlign: 'right',
+              whiteSpace: 'pre-wrap',
+              maxWidth: '60%',
+            }}
+          >
+            {booking.customerNote?.trim() || 'Sin observaciones'}
           </span>
         </div>
 
