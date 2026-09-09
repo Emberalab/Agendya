@@ -42,6 +42,7 @@ describe('NotificationsService', () => {
       findFirst: jest.Mock;
       count: jest.Mock;
       updateMany: jest.Mock;
+      deleteMany: jest.Mock;
     };
   };
   let realtime: { emitNotificationCreated: jest.Mock };
@@ -54,6 +55,7 @@ describe('NotificationsService', () => {
         findFirst: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
     realtime = { emitNotificationCreated: jest.fn() };
@@ -223,6 +225,39 @@ describe('NotificationsService', () => {
       expect(prisma.notification.updateMany).toHaveBeenCalledWith({
         where: { professionalId: 'prof-1', readAt: null },
         data: { readAt: expect.any(Date) as unknown },
+      });
+    });
+  });
+
+  describe('deleteRead (single)', () => {
+    it('scopes the delete to the owner and to already-read rows', async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.deleteRead('prof-1', 'n-9')).resolves.toEqual({
+        deleted: 1,
+      });
+      expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+        where: { id: 'n-9', professionalId: 'prof-1', readAt: { not: null } },
+      });
+    });
+
+    it('reports 0 (not an error) when nothing matched — unknown, not owned, or unread', async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 0 });
+      await expect(service.deleteRead('prof-1', 'n-x')).resolves.toEqual({
+        deleted: 0,
+      });
+    });
+  });
+
+  describe('deleteAllRead (bulk)', () => {
+    it("deletes only this professional's read rows and returns the count", async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 4 });
+
+      await expect(service.deleteAllRead('prof-1')).resolves.toEqual({
+        deleted: 4,
+      });
+      expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+        where: { professionalId: 'prof-1', readAt: { not: null } },
       });
     });
   });

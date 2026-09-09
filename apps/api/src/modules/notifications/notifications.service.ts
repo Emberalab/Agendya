@@ -173,6 +173,35 @@ export class NotificationsService {
     return { updated: count };
   }
 
+  /**
+   * Deletes one of the professional's own notifications — and only if it has
+   * already been read. Scoped by `professionalId` in the `where` clause, so a
+   * professional can never remove another's row. Idempotent: `{ deleted: 0 }`
+   * when the id is unknown, not owned, or still unread (rather than a 404 that
+   * would confirm the row exists for someone else).
+   */
+  async deleteRead(
+    professionalId: string,
+    id: string,
+  ): Promise<{ deleted: number }> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { id, professionalId, readAt: { not: null } },
+    });
+    return { deleted: count };
+  }
+
+  /**
+   * Deletes every *read* notification for this professional in one statement.
+   * Unread rows are never touched. Served by the `(professionalId, readAt)`
+   * index.
+   */
+  async deleteAllRead(professionalId: string): Promise<{ deleted: number }> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { professionalId, readAt: { not: null } },
+    });
+    return { deleted: count };
+  }
+
   private toDto(row: NotificationRow): Notification {
     return {
       id: row.id,

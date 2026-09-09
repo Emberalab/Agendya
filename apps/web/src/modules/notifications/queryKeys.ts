@@ -49,3 +49,68 @@ export function prependNotification(
     pages: [{ ...first, items: [notification, ...first.items] }, ...rest],
   };
 }
+
+/**
+ * Drops one notification from whatever page holds it. `page.nextCursor` is left
+ * untouched — it is the keyset cursor of that page's last row and stays valid
+ * for "load more" even after an earlier row is removed.
+ */
+export function removeNotification(
+  data: NotificationListData | undefined,
+  id: string,
+): NotificationListData | undefined {
+  if (!data) return data;
+  return {
+    ...data,
+    pages: data.pages.map((page) => ({
+      ...page,
+      items: page.items.filter((n) => n.id !== id),
+    })),
+  };
+}
+
+/** Drops every read (`readAt !== null`) notification from every page. */
+export function removeReadNotifications(
+  data: NotificationListData | undefined,
+): NotificationListData | undefined {
+  if (!data) return data;
+  return {
+    ...data,
+    pages: data.pages.map((page) => ({
+      ...page,
+      items: page.items.filter((n) => n.readAt === null),
+    })),
+  };
+}
+
+/**
+ * Re-inserts a notification (used to undo an optimistic delete) into `pageIndex`,
+ * then re-sorts that page by `(createdAt, id)` desc so it lands in the right
+ * place even if a real-time notification arrived during the undo window.
+ */
+export function restoreNotification(
+  data: NotificationListData | undefined,
+  notification: Notification,
+  pageIndex: number,
+): NotificationListData | undefined {
+  if (!data || !data.pages[pageIndex]) return data;
+  const already = data.pages.some((page) =>
+    page.items.some((n) => n.id === notification.id),
+  );
+  if (already) return data;
+  return {
+    ...data,
+    pages: data.pages.map((page, index) =>
+      index === pageIndex
+        ? {
+            ...page,
+            items: [...page.items, notification].sort((a, b) =>
+              a.createdAt === b.createdAt
+                ? b.id.localeCompare(a.id)
+                : b.createdAt.localeCompare(a.createdAt),
+            ),
+          }
+        : page,
+    ),
+  };
+}

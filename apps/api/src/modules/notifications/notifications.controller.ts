@@ -1,5 +1,6 @@
 import {
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -45,5 +46,16 @@ export class NotificationsController {
   @Patch(':id/read')
   markRead(@CurrentUser() user: Professional, @Param('id') id: string) {
     return this.notifications.markRead(user.id, id);
+  }
+
+  // Literal `read` segment declared before `:id` so it wins the route match.
+  @Delete('read')
+  deleteAllRead(@CurrentUser() user: Professional) {
+    return this.notifications.deleteAllRead(user.id);
+  }
+
+  @Delete(':id')
+  deleteRead(@CurrentUser() user: Professional, @Param('id') id: string) {
+    return this.notifications.deleteRead(user.id, id);
   }
 }
