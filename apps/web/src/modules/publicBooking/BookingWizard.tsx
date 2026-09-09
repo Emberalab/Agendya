@@ -10,6 +10,7 @@ import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { formatCOP, formatDuration } from '../services/format';
 import { Toggle } from '../services/components/Toggle';
 import { Calendar } from './components/Calendar';
+import { MobileStickyCta } from './components/MobileStickyCta';
 import { loadSavedCustomer, persistCustomer } from './customerStore';
 import { useAvailability } from './hooks/useAvailability';
 import { useCreateBooking } from './hooks/useCreateBooking';
@@ -335,8 +336,25 @@ export function BookingWizard({
     setStepIndex(STEPS.findIndex((s) => s.id === step));
   };
 
+  // Single source of truth for the primary action's label — shared by the
+  // in-flow summary CTA and the mobile sticky CTA.
+  const ctaLabel =
+    currentStep === 'confirm'
+      ? isEdit
+        ? activeMutation.isPending
+          ? 'Guardando…'
+          : 'Guardar cambios'
+        : activeMutation.isPending
+          ? 'Reservando…'
+          : 'Confirmar reserva'
+      : 'Continuar →';
+
+  // The real, in-flow CTA button (inside <Summary>). The mobile sticky bar
+  // observes it and slides away whenever it is on screen.
+  const primaryCtaRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 lg:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-32 lg:py-10">
       <button
         type="button"
         onClick={goBack}
@@ -441,22 +459,20 @@ export function BookingWizard({
             modalityLabel={modalityLabel}
             slotLabel={slotLabel}
             customerName={customer.customerName || null}
-            ctaLabel={
-              currentStep === 'confirm'
-                ? isEdit
-                  ? activeMutation.isPending
-                    ? 'Guardando…'
-                    : 'Guardar cambios'
-                  : activeMutation.isPending
-                    ? 'Reservando…'
-                    : 'Confirmar reserva'
-                : 'Continuar →'
-            }
+            ctaLabel={ctaLabel}
             ctaDisabled={!canContinue}
             onCta={goNext}
+            ctaRef={primaryCtaRef}
           />
         </aside>
       </div>
+
+      <MobileStickyCta
+        label={ctaLabel}
+        disabled={!canContinue}
+        onClick={goNext}
+        anchorRef={primaryCtaRef}
+      />
     </div>
   );
 }
@@ -1627,6 +1643,7 @@ function Summary({
   ctaLabel,
   ctaDisabled,
   onCta,
+  ctaRef,
 }: {
   serviceName: string | null;
   modalityLabel: string | null;
@@ -1635,6 +1652,8 @@ function Summary({
   ctaLabel: string;
   ctaDisabled: boolean;
   onCta: () => void;
+  /** Set by the wizard so the mobile sticky CTA can observe this button. */
+  ctaRef?: React.Ref<HTMLButtonElement>;
 }) {
   const rows: [string, string, boolean][] = [
     ['SERVICIO', serviceName ?? 'No seleccionado', serviceName != null],
@@ -1694,6 +1713,7 @@ function Summary({
       </dl>
 
       <button
+        ref={ctaRef}
         type="button"
         onClick={onCta}
         disabled={ctaDisabled}
