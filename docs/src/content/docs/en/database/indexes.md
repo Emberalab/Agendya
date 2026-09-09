@@ -48,6 +48,13 @@ serves equality and sort, so **no secondary `@@index` is added** for them.
 | `@@index([status, startAt])` | Global cron sweeps — `RemindersScheduler` window queries and `ExpirationScheduler`'s `updateMany`, with no professional filter |
 | `@@index([serviceId])` | FK column (Postgres does **not** auto-index FKs) — guards the `SetNull` path and "bookings for this service" lookups from a full scan |
 
+### Notification
+
+| Index | Serves |
+| --- | --- |
+| `@@index([professionalId, createdAt(sort: Desc)])` | The notification centre's only list query — `WHERE professionalId = ? ORDER BY createdAt DESC`, keyset-paginated over `(createdAt, id)`. Descending so the `ORDER BY` is a forward index scan |
+| `@@index([professionalId, readAt])` | Unread badge — `WHERE professionalId = ? AND readAt IS NULL`. Prisma has no declarative partial index; this composite still bounds the count to one professional's rows |
+
 ## Constraint enforcement that lives in code, not the DB
 
 Some invariants are enforced by the application layer rather than a DB

@@ -80,6 +80,50 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 | `POST` | `/public/bookings/:token/cancel` | token · 10/60s | — | `PublicBooking` (`CANCELLED`, `cancelledBy: "customer"`) |
 | `POST` | `/public/bookings/:token/reschedule` | token · 10/60s | `{ newStartAt }` | `PublicBooking` |
 
+## Notifications — `modules/notifications` (all JWT)
+
+The professional's persistent feed (see
+[Notifications](/en/features/notifications/#notification-centre)). Everything is
+scoped to `req.user.id` server-side; a client-supplied id is never trusted.
+
+| Method | Path | Query / Body | Response |
+| --- | --- | --- | --- |
+| `GET` | `/notifications` | `cursor?`, `limit` (1–50, default 20) — `notificationListQuerySchema` | `{ items: Notification[], nextCursor: string \| null }` — keyset over `(createdAt, id)` desc |
+| `GET` | `/notifications/unread-count` | — | `{ count }` |
+| `PATCH` | `/notifications/read-all` | — | `{ updated }` (rows marked) |
+| `PATCH` | `/notifications/:id/read` | — | `Notification` — `404` if not yours; idempotent |
+
+`Notification` (`notificationSchema`): `{ id, type, title, body, data: {
+bookingId, customerName, serviceName, startAt }, readAt: string \| null,
+createdAt }`. `type` is only `APPOINTMENT_CREATED` today. `markRead` /
+`markAllRead` filter by `professionalId` in the `updateMany` `where`, so a
+professional cannot touch another's notification.
+
+## Real-time — `modules/realtime`
+
+| Method | Path | Auth | Body | Response |
+| --- | --- | --- | --- | --- |
+| `GET` | `/realtime/stream` | JWT | — | `text/event-stream` (SSE) scoped to the authenticated professional |
+
+One-way event stream (server → client) — a **delivery channel** for the
+notification feed, not the source of truth. The web client opens it with `fetch`
+(not `EventSource`) so it can send the `Authorization: Bearer` header, so the
+connection uses the **same `JwtAuthGuard`** as every other protected route. The
+recipient is always `req.user.id`: there is no channel name the client can pass,
+so a professional cannot receive another professional's events. `event: ping`
+frames every ~25s (`REALTIME_HEARTBEAT_MS`) keep the connection warm. Events are
+**ephemeral** — nothing is persisted here; a disconnected client recovers
+everything via `GET /notifications`.
+
+Events (`realtimeEventSchema` in `@agendya/types`):
+
+| `type` | Trigger | `data` |
+| --- | --- | --- |
+| `notification.created` | A `Notification` row was just created (e.g. after a confirmed public booking) | `{ type, notification: Notification }` — the same shape `GET /notifications` returns |
+
+No customer contact details, no `cancellationToken`, no bare `professionalId`
+(the notification is already scoped to the authenticated stream).
+
 ## Upload — `infra/upload`
 
 | Method | Path | Auth | Body | Response |

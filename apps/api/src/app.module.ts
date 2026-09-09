@@ -8,7 +8,9 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ProfessionalsModule } from './modules/professionals/professionals.module';
+import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { ServicesModule } from './modules/services/services.module';
 import { UploadModule } from './infra/upload/upload.module';
@@ -20,6 +22,8 @@ import configuration from './config/configuration';
     ScheduleModule.forRoot(),
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
     DatabaseModule,
+    RealtimeModule,
+    NotificationsModule,
     AuthModule,
     ProfessionalsModule,
     ServicesModule,

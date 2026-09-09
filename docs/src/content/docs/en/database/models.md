@@ -99,3 +99,27 @@ A customer appointment.
 The enum keeps `PENDING` (and `NO_SHOW`) but no current code path creates a
 `PENDING` booking or sets `NO_SHOW`. New bookings are `CONFIRMED` immediately.
 :::
+
+## Notification
+
+An entry in a professional's persistent **notification centre** (see
+[Notifications](/en/features/notifications/#notification-centre)). The row is the
+source of truth; SSE and a future Web Push are delivery channels.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `type` | `NotificationType` | Today only `APPOINTMENT_CREATED`. The enum reserves `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` for later |
+| `title` / `body` | `String` | Ready-to-render strings (es-CO). Also usable as a Web Push payload |
+| `data` | `Json` | `{ bookingId, customerName, serviceName, startAt }` — `bookingId` is the navigation reference; the other fields avoid a join and are point-in-time |
+| `readAt` | `DateTime?` | `null` while unread |
+| `createdAt` | `DateTime @default(now())` | |
+
+`customerEmail` / `customerPhone` / `customerAddress` / `customerNote` and the
+`cancellationToken` are not copied in.
+
+:::note[Retention]
+No automatic deletion. Future strategy: a daily `@Cron` removing read rows older
+than ~90 days, plus a per-professional cap. See
+[Notifications › Retention](/en/features/notifications/#retention).
+:::

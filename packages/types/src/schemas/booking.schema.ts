@@ -72,6 +72,7 @@ export const agendaBookingSchema = z.object({
   customerName: z.string(),
   customerEmail: z.string(),
   customerPhone: z.string(),
+  customerNote: z.string().nullable(),
   startAt: z.string(),
   endAt: z.string(),
   status: bookingStatusSchema,

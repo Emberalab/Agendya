@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from './bookings.service';
 
 const PROFESSIONAL = {
@@ -64,6 +65,7 @@ describe('BookingsService', () => {
     create: jest.Mock;
     update: jest.Mock;
   };
+  let notificationsService: { notifyAppointmentCreated: jest.Mock };
 
   beforeEach(async () => {
     txBooking = {
@@ -105,11 +107,16 @@ describe('BookingsService', () => {
         .mockResolvedValue(undefined),
     };
 
+    notificationsService = {
+      notifyAppointmentCreated: jest.fn().mockResolvedValue(undefined),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         BookingsService,
         { provide: PrismaService, useValue: prisma },
         { provide: MailService, useValue: mailService },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -314,6 +321,86 @@ describe('BookingsService', () => {
       await expect(
         service.createPublicBooking('maria-belleza', CREATE_INPUT),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it("emits appointment.created to the booking's professional with only display fields", async () => {
+      txBooking.create.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        atHome: false,
+        customerAddress: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        cancellationToken: 'token-abc',
+      });
+
+      await service.createPublicBooking('maria-belleza', CREATE_INPUT);
+
+      expect(
+        notificationsService.notifyAppointmentCreated,
+      ).toHaveBeenCalledTimes(1);
+      const [professionalArg, bookingArg] = notificationsService
+        .notifyAppointmentCreated.mock.calls[0] as [
+        { id: string },
+        { id: string },
+      ];
+      expect(professionalArg.id).toBe('prof-1');
+      expect(bookingArg.id).toBe('booking-1');
+    });
+
+    it('does not record a notification when the booking transaction fails', async () => {
+      prisma.$transaction.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('could not serialize access', {
+          code: 'P2034',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        service.createPublicBooking('maria-belleza', CREATE_INPUT),
+      ).rejects.toThrow(ConflictException);
+      expect(
+        notificationsService.notifyAppointmentCreated,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still returns the booking when notification delivery rejects', async () => {
+      txBooking.create.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        atHome: false,
+        customerAddress: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        cancellationToken: 'token-abc',
+      });
+      notificationsService.notifyAppointmentCreated.mockRejectedValue(
+        new Error('stream boom'),
+      );
+
+      const result = await service.createPublicBooking(
+        'maria-belleza',
+        CREATE_INPUT,
+      );
+
+      expect(result.id).toBe('booking-1');
+      expect(mailService.sendBookingConfirmation).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -577,6 +664,35 @@ describe('BookingsService', () => {
         },
         orderBy: { startAt: 'asc' },
       });
+    });
+
+    it('exposes the customer note on each agenda booking', async () => {
+      prisma.booking.findMany.mockResolvedValue([
+        {
+          id: 'booking-1',
+          serviceId: 'service-1',
+          serviceNameSnapshot: 'Corte de cabello',
+          durationMinutesSnapshot: 30,
+          customerName: 'Ana',
+          customerEmail: 'ana@example.com',
+          customerPhone: '+57 300 1234567',
+          customerNote: 'Llego 5 minutos tarde',
+          startAt: new Date('2026-08-03T14:00:00.000Z'),
+          endAt: new Date('2026-08-03T14:30:00.000Z'),
+          status: 'CONFIRMED',
+          createdAt: new Date('2026-07-30T10:00:00.000Z'),
+          cancelledAt: null,
+          cancelledBy: null,
+        },
+      ]);
+
+      const [booking] = await service.listAgenda(
+        'prof-1',
+        '2026-08-03',
+        '2026-08-03',
+      );
+
+      expect(booking.customerNote).toBe('Llego 5 minutos tarde');
     });
   });
 

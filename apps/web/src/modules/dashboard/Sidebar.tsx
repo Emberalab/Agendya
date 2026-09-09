@@ -5,6 +5,7 @@ import Group from '../../imports/LogoGroup';
 import { NAV_ITEMS } from './navItems';
 import { NavIcon } from './NavIcon';
 import { ThemeToggle } from '../../shared/theme/ThemeToggle';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -42,7 +43,7 @@ export function Sidebar() {
           </button>
 
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center mt-2 mb-3"
+            className="w-9 h-9 rounded-full flex items-center justify-center mt-2 mb-1"
             style={{ backgroundColor: 'var(--color-brand-primary)' }}
           >
             <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', color: 'var(--color-text-on-brand)' }}>
@@ -66,6 +67,10 @@ export function Sidebar() {
               </NavLink>
             ))}
           </nav>
+
+					<div className="mb-2">
+            <NotificationBell />
+          </div>
 
           <div className="flex-1 flex flex-col items-center justify-end gap-3 pb-2">
             <ThemeToggle />
@@ -189,6 +194,10 @@ export function Sidebar() {
                 </NavLink>
               ))}
             </nav>
+
+            <div className="px-3 mt-1">
+              <NotificationBell variant="row" />
+            </div>
           </div>
 
           <div className="px-3">

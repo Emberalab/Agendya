@@ -37,6 +37,17 @@ enum Plan {
   PRO
 }
 
+// In-app notification feed for a professional. Persisted so the dashboard's
+// notification centre survives page reloads, offline periods, and missed
+// real-time events. Real-time (SSE) delivery is a separate, best-effort channel
+// layered on top; a future Web Push channel would be another. This row is the
+// source of truth for all of them.
+enum NotificationType {
+  APPOINTMENT_CREATED
+  // Reserved for later — only APPOINTMENT_CREATED is emitted today:
+  // APPOINTMENT_CANCELLED, APPOINTMENT_RESCHEDULED, APPOINTMENT_REMINDER, SYSTEM
+}
+
 model Professional {
   id                      String   @id @default(uuid())
   email                   String   @unique
@@ -61,6 +72,7 @@ model Professional {
   workingHours       WorkingHour[]
   scheduleExceptions ScheduleException[]
   bookings           Booking[]
+  notifications      Notification[]
 
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
@@ -150,4 +162,32 @@ model Booking {
   // FK column: Postgres does not auto-index it. Guards the SetNull path and any
   // "bookings for this service" lookup from a full table scan.
   @@index([serviceId])
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  professionalId String
+  professional   Professional     @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  // Rendered, ready-to-display strings — the source of truth for the in-app
+  // feed and (later) a Web Push payload. Spanish-only, like the rest of the app.
+  title          String
+  body           String
+  // Minimal navigation/display metadata, e.g.
+  // { bookingId, customerName, serviceName, startAt }. Deliberately NOT a copy
+  // of the whole booking — `bookingId` is the reference; the few extra fields
+  // let the feed render without a join and are point-in-time by design (an
+  // "appointment created" entry keeps reading as it did when it fired).
+  data           Json
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  // The only list query: `WHERE professionalId = ? ORDER BY createdAt DESC`
+  // (keyset-paginated on (createdAt, id)). Descending so the ORDER BY is a
+  // forward index scan.
+  @@index([professionalId, createdAt(sort: Desc)])
+  // Unread badge: `WHERE professionalId = ? AND readAt IS NULL`. Prisma has no
+  // declarative partial index; this composite still bounds the count/scan to
+  // one professional's rows.
+  @@index([professionalId, readAt])
 }

@@ -81,6 +81,49 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 | `POST` | `/public/bookings/:token/cancel` | token · 10/60s | — | `PublicBooking` (`CANCELLED`, `cancelledBy: "customer"`) |
 | `POST` | `/public/bookings/:token/reschedule` | token · 10/60s | `{ newStartAt }` | `PublicBooking` |
 
+## Notifications — `modules/notifications` (todos JWT)
+
+Feed persistente del profesional (ver [Notificaciones](/features/notifications/#centro-de-notificaciones)).
+Todo se acota a `req.user.id` en el servidor; nunca se confía en un id del cliente.
+
+| Método | Ruta | Query / Cuerpo | Respuesta |
+| --- | --- | --- | --- |
+| `GET` | `/notifications` | `cursor?`, `limit` (1–50, def. 20) — `notificationListQuerySchema` | `{ items: Notification[], nextCursor: string \| null }` — keyset sobre `(createdAt, id)` desc |
+| `GET` | `/notifications/unread-count` | — | `{ count }` |
+| `PATCH` | `/notifications/read-all` | — | `{ updated }` (nº marcadas) |
+| `PATCH` | `/notifications/:id/read` | — | `Notification` — `404` si no es propia; idempotente |
+
+`Notification` (`notificationSchema`): `{ id, type, title, body, data: { bookingId,
+customerName, serviceName, startAt }, readAt: string \| null, createdAt }`.
+`type` hoy solo `APPOINTMENT_CREATED`. `markRead` / `markAllRead` filtran por
+`professionalId` en el `where` del `updateMany`, así que un profesional no puede
+tocar la notificación de otro.
+
+## Real-time — `modules/realtime`
+
+| Método | Ruta | Auth | Cuerpo | Respuesta |
+| --- | --- | --- | --- | --- |
+| `GET` | `/realtime/stream` | JWT | — | `text/event-stream` (SSE) acotado al profesional autenticado |
+
+Stream unidireccional de eventos (servidor → cliente) — un **canal de entrega**
+para el feed de notificaciones, no la fuente de verdad. El cliente web lo abre
+con `fetch` (no `EventSource`) para enviar el header `Authorization: Bearer`, así
+que la conexión usa el **mismo `JwtAuthGuard`** que el resto de las rutas
+protegidas. El destinatario es siempre `req.user.id`: no hay nombre de canal que
+el cliente pueda pasar, por lo que un profesional no puede recibir los eventos de
+otro. Frames `event: ping` cada ~25 s (`REALTIME_HEARTBEAT_MS`) mantienen viva la
+conexión. Los eventos son **efímeros** — nada se persiste aquí; un cliente
+desconectado recupera todo por `GET /notifications`.
+
+Eventos (`realtimeEventSchema` en `@agendya/types`):
+
+| `type` | Disparador | `data` |
+| --- | --- | --- |
+| `notification.created` | Fila `Notification` recién creada (p. ej. tras una reserva pública confirmada) | `{ type, notification: Notification }` — la misma forma que devuelve `GET /notifications` |
+
+Sin datos de contacto del cliente, sin `cancellationToken`, sin `professionalId`
+suelto (la notificación ya está acotada al stream autenticado).
+
 ## Upload — `infra/upload`
 
 | Método | Ruta | Auth | Cuerpo | Respuesta |
