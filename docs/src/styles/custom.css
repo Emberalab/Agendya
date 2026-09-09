@@ -1,0 +1,78 @@
+/* Agendya documentation theme.
+   Brand accent mirrors the app's default `brandColor` (#4F46E5, indigo-600)
+   from apps/api/prisma/schema.prisma and the Moon design tokens used in
+   apps/web. Both light and dark palettes are defined so the docs follow the
+   reader's Starlight theme toggle. */
+
+:root {
+  /* Indigo accent ramp */
+  --sl-color-accent-low: #24244a;
+  --sl-color-accent: #4f46e5;
+  --sl-color-accent-high: #c7d2fe;
+
+  --sl-color-white: #f8fafc;
+  --sl-color-gray-1: #eef1f6;
+  --sl-color-gray-2: #c3c8d3;
+  --sl-color-gray-3: #8b93a4;
+  --sl-color-gray-4: #58607242;
+  --sl-color-gray-5: #2b2f3d;
+  --sl-color-gray-6: #1c1f2b;
+  --sl-color-black: #12141c;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #dfe1fb;
+  --sl-color-accent: #4f46e5;
+  --sl-color-accent-high: #292a63;
+
+  --sl-color-white: #17181f;
+  --sl-color-gray-1: #22242d;
+  --sl-color-gray-2: #363945;
+  --sl-color-gray-3: #5a6072;
+  --sl-color-gray-4: #8e94a3;
+  --sl-color-gray-5: #c3c7d1;
+  --sl-color-gray-6: #eceef2;
+  --sl-color-gray-7: #f5f6f9;
+  --sl-color-black: #ffffff;
+}
+
+/* Slightly tighter, product-doc feel */
+.sl-markdown-content {
+  --sl-text-code: 0.9em;
+}
+
+.sl-markdown-content h2 {
+  border-top: 1px solid var(--sl-color-gray-5);
+  padding-top: 1.5rem;
+  margin-top: 2.5rem;
+}
+
+/* Mermaid diagrams: center, add breathing room, and keep them from bleeding
+   past the content column on small screens. astro-mermaid renders into
+   <pre class="mermaid"> then swaps in an <svg>. */
+.mermaid {
+  display: flex;
+  justify-content: center;
+  margin: 1.75rem 0;
+  overflow-x: auto;
+}
+
+.mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* Route/verb tables in the API reference read better full-bleed */
+.sl-markdown-content table {
+  display: table;
+  width: 100%;
+}
+
+.sl-markdown-content table code {
+  white-space: nowrap;
+}
+
+/* Hero on the landing page */
+.hero > img {
+  filter: drop-shadow(0 12px 32px rgb(79 70 229 / 0.25));
+}

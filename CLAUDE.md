@@ -18,6 +18,7 @@ npm workspaces monorepo:
 - `apps/web` — React + Vite frontend
 - `packages/types` (`@agendya/types`) — shared Zod schemas/TS types consumed by both apps
 - `infra/docker-compose.yml` — local Postgres container used by the README setup flow (this is the one to use; a duplicate `docker-compose.yml` also sits at the repo root with different container naming — treat it as stale and confirm before relying on it)
+- `docs/` — engineering documentation site (Astro + Starlight + Mermaid). **Not** an npm workspace (own `package.json`/lockfile) so its toolchain stays isolated. **Bilingual** via Starlight i18n: Spanish is the default locale (`docs/src/content/docs/**`, served at `/`), English lives in `docs/src/content/docs/en/**` (served at `/en/`) — every page is mirrored in both, and a new page must be added to both trees plus the single `sidebar` in `docs/astro.config.mjs` (Spanish `label` + `translations: { en }`). Spanish pages use `/…` internal links, English pages use `/en/…`. Run with `npm run docs` (or `docs:build`). Deployed to GitHub Pages by `.github/workflows/docs.yml`. Keep both languages in sync when changing architecture, the schema, API routes, or env config; mark genuinely unclear behaviour as `TODO` rather than inventing it. See `docs/README.md`.
 
 ## `apps/web/Agendya-main` is NOT the live app
 

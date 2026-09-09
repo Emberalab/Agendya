@@ -16,6 +16,7 @@ import type {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   dateOnlyUtc,
   weekdayFromDateString,
@@ -33,6 +34,7 @@ export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async createPublicBooking(
@@ -72,6 +74,16 @@ export class BookingsService {
       startAt,
       endAt,
     });
+
+    // The booking is now durably persisted (the serializable transaction above
+    // has committed). Only now do we record the notification — a professional
+    // is never notified about a booking that failed to persist. This persists
+    // the notification row and then delivers it over SSE. It already swallows
+    // its own errors; the extra `.catch` keeps a persisted booking safe even
+    // if that ever regresses.
+    await this.notifications
+      .notifyAppointmentCreated(professional, booking)
+      .catch(() => undefined);
 
     await this.mailService.sendBookingConfirmation({
       to: booking.customerEmail,
@@ -756,6 +768,7 @@ export class BookingsService {
       customerName: booking.customerName,
       customerEmail: booking.customerEmail,
       customerPhone: booking.customerPhone,
+      customerNote: booking.customerNote,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       status: booking.status,

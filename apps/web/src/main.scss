@@ -391,6 +391,24 @@ label:has(.moon-checkbox) span {
   50% { opacity: 0.45; }
 }
 
+/* Notification centre (and any right-side drawer) open transitions */
+@keyframes agendya-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes agendya-slide-in-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='agendya-slide-in-right'],
+  [style*='agendya-fade-in'] {
+    animation: none !important;
+  }
+}
+
 /* Horizontally-scrollable chip strips (mobile KPI chips) — no visible scrollbar */
 .chip-scroll::-webkit-scrollbar { display: none; }
 

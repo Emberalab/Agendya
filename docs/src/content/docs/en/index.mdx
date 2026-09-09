@@ -1,0 +1,98 @@
+---
+title: Agendya Engineering Docs
+description: >-
+  Full engineering documentation for Agendya — the online booking platform for
+  barbers and hairstylists. Architecture, data model, API reference, features,
+  testing, security, deployment and contribution guides, all derived from the
+  source code.
+template: splash
+hero:
+  tagline: >-
+    The online booking platform for barbers and hairstylists. A NestJS + Prisma
+    API, a React + Vite web app, and shared Zod contracts — documented from the
+    code up.
+  image:
+    file: ../../../assets/agendya-logo.svg
+  actions:
+    - text: What is Agendya?
+      link: /en/overview/what-is-agendya/
+      icon: right-arrow
+      variant: primary
+    - text: Get the app running
+      link: /en/getting-started/installation/
+      icon: rocket
+      variant: secondary
+    - text: GitHub repository
+      link: https://github.com/Emberalab/Agendya
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Start here
+
+<CardGrid>
+  <LinkCard
+    title="Overview"
+    description="Product purpose, feature set, and the high-level architecture at a glance."
+    href="/en/overview/what-is-agendya/"
+  />
+  <LinkCard
+    title="Getting Started"
+    description="Clone, install, configure environment variables, run Postgres, apply migrations, boot both apps."
+    href="/en/getting-started/prerequisites/"
+  />
+  <LinkCard
+    title="Architecture"
+    description="System, frontend and backend architecture, data flow, and the authentication flow."
+    href="/en/architecture/system/"
+  />
+  <LinkCard
+    title="Database"
+    description="Entity-relationship model, Prisma models, indexes, and the booking status lifecycle."
+    href="/en/database/er-model/"
+  />
+  <LinkCard
+    title="API Reference"
+    description="Every REST endpoint: method, path, auth, request and response shapes, error codes."
+    href="/en/api/reference/"
+  />
+  <LinkCard
+    title="Features"
+    description="How authentication, services, working hours, availability, appointments and notifications work."
+    href="/en/features/authentication/"
+  />
+</CardGrid>
+
+## What's inside
+
+<CardGrid>
+  <Card title="Backend" icon="seti:nestjs">
+    NestJS 11, modular. Auth (JWT + Google OAuth), professionals, services,
+    schedules, availability, bookings, uploads. Prisma 7 on PostgreSQL, Zod
+    validation, `@nestjs/schedule` cron jobs for reminders and expiration.
+  </Card>
+  <Card title="Frontend" icon="seti:react">
+    React 19 + Vite + TypeScript, React Router 7 with route-level code
+    splitting, TanStack Query for server state, Zustand for auth/theme,
+    React Hook Form + Zod, Tailwind v4, Moon Design System.
+  </Card>
+  <Card title="Shared contracts" icon="seti:typescript">
+    `@agendya/types` holds the Zod schemas for auth, professional, service,
+    schedule and booking payloads — consumed by both apps so the wire format
+    can't drift.
+  </Card>
+  <Card title="Quality gates" icon="approve-check">
+    Jest unit + e2e (API), Vitest + Testing Library + MSW (web), Playwright
+    end-to-end. Lint, typecheck, migrate, test and build all run in CI on
+    every push and PR to `main`.
+  </Card>
+</CardGrid>
+
+:::note[Source of truth]
+Every page here is derived from the actual repository — the Prisma schema,
+NestJS controllers and services, React routes and hooks, `package.json`
+scripts, test suites and the CI workflow. Where the code left something
+genuinely ambiguous it is called out with a `TODO` aside rather than guessed.
+:::

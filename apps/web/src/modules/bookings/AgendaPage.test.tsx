@@ -1,4 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -7,13 +8,15 @@ import { AgendaPage } from './AgendaPage';
 
 vi.mock('./api');
 
-function renderPage() {
+function renderPage(path = '/dashboard/agenda') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <AgendaPage />
+      <MemoryRouter initialEntries={[path]}>
+        <AgendaPage />
+      </MemoryRouter>
     </QueryClientProvider>,
   );
 }
@@ -28,6 +31,7 @@ const BOOKING = {
   customerName: 'Ana',
   customerEmail: 'ana@example.com',
   customerPhone: '+57 300 1234567',
+  customerNote: null,
   startAt: '2099-08-03T14:00:00.000Z',
   endAt: '2099-08-03T14:30:00.000Z',
   status: 'CONFIRMED' as const,
@@ -80,6 +84,31 @@ describe('AgendaPage', () => {
 
     const drawer = await screen.findByText('Detalle de la cita');
     expect(within(drawer.closest('div')!).getByText('Detalle de la cita')).toBeInTheDocument();
+    expect(screen.getByText('ana@example.com')).toBeInTheDocument();
+  });
+
+  it('shows the customer note in the detail drawer when the booking has one', async () => {
+    vi.mocked(api.listAgenda).mockResolvedValue([
+      { ...BOOKING, customerNote: 'Vengo con mi hijo, corte para los dos' },
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click((await screen.findAllByRole('button', { name: 'Ver detalle' }))[0]);
+
+    expect(
+      await screen.findByText('Vengo con mi hijo, corte para los dos'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('Sin observaciones')).not.toBeInTheDocument();
+  });
+
+  it('opens the detail drawer for the booking named in a notification deep link', async () => {
+    vi.mocked(api.listAgenda).mockResolvedValue([BOOKING]);
+
+    renderPage('/dashboard/agenda?booking=booking-1&date=2099-08-03');
+
+    expect(await screen.findByText('Detalle de la cita')).toBeInTheDocument();
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
   });
 

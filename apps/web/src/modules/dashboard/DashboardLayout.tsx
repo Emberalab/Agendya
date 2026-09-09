@@ -5,10 +5,18 @@ import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '../../shared/theme/ThemeToggle';
 import { NAV_ITEMS } from './navItems';
 import { NavIcon } from './NavIcon';
+import { ToastHost } from '../../shared/notifications/ToastHost';
+import { Announcer } from '../../shared/a11y/announcer';
+import { NotificationBell } from '../notifications/NotificationBell';
+import { useNotificationsRealtime } from '../notifications/hooks/useNotificationsRealtime';
 
 export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
   const initial = user?.businessName?.charAt(0).toUpperCase() ?? '?';
+
+  // Single mount point for the real-time connection: toasts, the notification
+  // centre cache, and the unread badge all update from here.
+  useNotificationsRealtime();
 
   return (
     <div className="flex min-h-screen" style={{ fontFamily: 'var(--font-body)', backgroundColor: 'var(--color-surface-soft)' }}>
@@ -32,7 +40,8 @@ export function DashboardLayout() {
               agendya
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <NotificationBell />
             <ThemeToggle />
             <div
               className="w-9 h-9 rounded-full flex items-center justify-center"
@@ -75,6 +84,9 @@ export function DashboardLayout() {
           </NavLink>
         ))}
       </nav>
+
+      <ToastHost />
+      <Announcer />
     </div>
   );
 }
