@@ -1,12 +1,29 @@
 import { useAuthStore } from '../../modules/auth/authStore';
 
-// Falls back to whatever host the page was loaded from (e.g. a LAN IP when the
-// frontend is opened from another device via `vite --host`), so the API stays
-// reachable without hardcoding a machine-specific address. Exported so the
-// real-time SSE client (`shared/realtime/realtimeClient.ts`) resolves the same
-// origin without duplicating this logic.
-export const apiBaseUrl =
-  import.meta.env.VITE_API_URL || `http://${window.location.hostname}:4000`;
+// Base URL for the REST API and the SSE stream. Exported so the real-time SSE
+// client (`shared/realtime/realtimeClient.ts`) resolves the same target without
+// duplicating this logic. Resolution order:
+//  1. `VITE_API_URL` — point at a fixed backend (staging, or a second tunnel
+//     dedicated to the API).
+//  2. localhost / 127.0.0.1 — talk straight to the Nest dev server on :4000.
+//  3. anything else (a LAN IP, or a `trycloudflare.com` / ngrok tunnel used to
+//     test the PWA on a phone) — go same-origin under `/api`, which the Vite
+//     dev server proxies to :4000 (see `vite.config.ts` -> `server.proxy`).
+//     This inherits the page's scheme, so an HTTPS tunnel no longer trips a
+//     mixed-content block, and the tunnel hostname — which changes on every
+//     run — never has to be configured anywhere.
+export const apiBaseUrl = resolveApiBaseUrl();
+
+function resolveApiBaseUrl(): string {
+  const explicit = import.meta.env.VITE_API_URL;
+  if (explicit) return explicit.replace(/\/$/, '');
+
+  const { hostname, origin } = window.location;
+  if (hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'http://localhost:4000';
+  }
+  return `${origin}/api`;
+}
 
 type QueryValue = string | number | boolean | undefined | null;
 
@@ -38,7 +55,9 @@ export function isApiError(error: unknown): error is ApiError {
 }
 
 function buildUrl(path: string, params?: RequestOptions['params']): string {
-  const url = new URL(path, apiBaseUrl);
+  // Concatenate rather than `new URL(path, apiBaseUrl)`: `path` is always
+  // absolute (`/auth/login`), which would drop any base path like `/api`.
+  const url = new URL(`${apiBaseUrl}${path}`);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
       if (value !== undefined && value !== null) {

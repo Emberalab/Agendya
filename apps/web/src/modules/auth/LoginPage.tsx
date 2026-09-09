@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Button, Checkbox, FormGroup, Input } from '@moondesignsystem/react';
 import Group from '../../imports/Group11';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { apiBaseUrl } from '../../shared/api/apiClient';
 import { useLogin } from './hooks/useLogin';
 
 const HERO_PHOTO =
@@ -29,7 +30,7 @@ export function LoginPage() {
   });
 
   const handleGoogleLogin = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/auth/google`;
+    window.location.href = `${apiBaseUrl}/auth/google`;
   };
 
   return (

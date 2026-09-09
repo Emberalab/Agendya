@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from './authStore';
+import { apiBaseUrl } from '../../shared/api/apiClient';
 
 export function GoogleCallbackPage() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export function GoogleCallbackPage() {
       setSession({ accessToken: token, user });
 
       // Fetch full user info
-      fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/auth/me`, {
+      fetch(`${apiBaseUrl}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
         .then((res) => res.json())

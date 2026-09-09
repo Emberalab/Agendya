@@ -7,6 +7,16 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- vite-plugin-pwa injects <link rel="manifest"> automatically at build
+         time; these three tags are the part it does NOT add for us: iOS only
+         treats the site as an installable/standalone app with the explicit
+         apple-mobile-web-app-* tags below (its own manifest support is
+         partial), and theme-color colors the browser/status bar chrome. Keep
+         this in sync with `theme_color` in vite.config.ts. -->
+    <meta name="theme-color" content="#4F46E5" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Agendya" />
     <title>agendya</title>
     <meta
       name="description"
