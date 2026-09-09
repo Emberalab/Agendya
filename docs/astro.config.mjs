@@ -3,12 +3,49 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 import mermaid from 'astro-mermaid';
 
+const BASE = '/Agendya/';
+
+/**
+ * Prefix `base` onto root-absolute `href` / `src` values written directly in
+ * Markdown content (e.g. `[x](/api/reference/)`). Astro/Starlight rebase their
+ * own navigation and imported assets, but NOT links authored in page content —
+ * on the GitHub Pages project site (served under `/Agendya/`) those would 404.
+ * This keeps the repo convention of `/…` (es) and `/en/…` (en) internal links.
+ */
+function rehypeBaseLinks() {
+  const prefix = BASE.replace(/\/$/, '');
+  /** @param {any} node */
+  const walk = (node) => {
+    if (node.type === 'element' && node.properties) {
+      for (const attr of ['href', 'src']) {
+        const value = node.properties[attr];
+        if (
+          typeof value === 'string' &&
+          value[0] === '/' &&
+          value[1] !== '/' &&
+          !value.startsWith(BASE)
+        ) {
+          node.properties[attr] = prefix + value;
+        }
+      }
+    }
+    node.children?.forEach(walk);
+  };
+  /** @param {any} tree */
+  return (tree) => walk(tree);
+}
+
 // https://astro.build/config
 export default defineConfig({
-  // TODO: set to the deployed docs URL once hosting is chosen (GitHub Pages,
-  // Cloudflare Pages, Netlify...). For a GitHub Pages *project* site also set
-  // `base: '/Agendya/'` and pass it through in CI.
+  // Deployed to GitHub Pages as a *project* site at
+  // https://emberalab.github.io/Agendya/ — both `site` and `base` are required
+  // so generated asset/link URLs carry the `/Agendya/` prefix.
   site: 'https://emberalab.github.io',
+  base: BASE,
+
+  markdown: {
+    rehypePlugins: [rehypeBaseLinks],
+  },
 
   integrations: [
     // Must come BEFORE starlight so the ```mermaid fences are transformed
