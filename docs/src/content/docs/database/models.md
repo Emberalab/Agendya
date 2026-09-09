@@ -104,7 +104,7 @@ crea una reserva `PENDING` ni establece `NO_SHOW`. Las reservas nuevas son
 
 Entrada del **centro de notificaciones** persistente de un profesional (ver
 [Notificaciones](/features/notifications/#centro-de-notificaciones)). La fila es
-la fuente de verdad; SSE y un futuro Web Push son canales de entrega.
+la fuente de verdad; SSE y Web Push son canales de entrega.
 
 | Campo | Tipo | Notas |
 | --- | --- | --- |
@@ -123,3 +123,24 @@ No hay borrado automático. Estrategia futura: un `@Cron` diario que elimine las
 leídas con más de ~90 días, más un tope por profesional. Ver
 [Notificaciones › Retención](/features/notifications/#retención).
 :::
+
+## PushSubscription
+
+Una suscripción de **Web Push** del navegador para un profesional (ver
+[Notificaciones › Web Push](/features/notifications/#web-push)). El dashboard,
+tras conceder permiso, envía el `PushSubscription` del navegador; hay una fila
+por dispositivo/navegador.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `endpoint` | `String @unique` | URL del servicio de push. Única globalmente — el mismo navegador re-suscribiéndose devuelve el mismo endpoint, así que un `upsert` mantiene una fila por dispositivo |
+| `p256dh` / `auth` | `String` | Material de cifrado de `PushSubscription.toJSON().keys`, necesario para firmar cada payload |
+| `userAgent` | `String?` | Procedencia best-effort para la UI de ajustes; no se usa para entregar |
+| `createdAt` | `DateTime @default(now())` | |
+| `lastActiveAt` | `DateTime @default(now())` | Se refresca en cada envío exitoso; habilita una poda futura de endpoints obsoletos |
+
+Índice: `@@index([professionalId])` — la entrega carga todas las suscripciones de
+un profesional. Web Push es un canal de entrega best-effort de la fila
+`Notification`, nunca la fuente de verdad: un push que falla (o un dispositivo
+offline) deja la fila legible desde `GET /notifications`.

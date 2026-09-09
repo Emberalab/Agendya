@@ -15,4 +15,15 @@ export default () => ({
   resendApiKey: process.env.RESEND_API_KEY,
   cloudinaryUrl: process.env.CLOUDINARY_URL,
   webUrl: process.env.WEB_URL ?? 'http://localhost:5173',
+  // Web Push (VAPID). All three must be set for push delivery to be active;
+  // with any missing, the push endpoints report "disabled" and the notification
+  // feed simply falls back to SSE + the persisted row. Generate a keypair with
+  // `npx web-push generate-vapid-keys`.
+  webPush: {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY,
+    // `mailto:` (or https) contact the push service can reach if a payload
+    // misbehaves — required by the Web Push spec.
+    subject: process.env.VAPID_SUBJECT ?? 'mailto:soporte@agendya.app',
+  },
 });

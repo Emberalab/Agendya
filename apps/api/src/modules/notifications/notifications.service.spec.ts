@@ -4,6 +4,7 @@ import type { Booking } from '@prisma/client';
 import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
 import { NotificationsService } from './notifications.service';
+import { PushSubscriptionsService } from './push-subscriptions.service';
 
 const PROFESSIONAL = { id: 'prof-1', timezone: 'America/Bogota' };
 
@@ -45,6 +46,7 @@ describe('NotificationsService', () => {
     };
   };
   let realtime: { emitNotificationCreated: jest.Mock };
+  let push: { sendToProfessional: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -57,12 +59,14 @@ describe('NotificationsService', () => {
       },
     };
     realtime = { emitNotificationCreated: jest.fn() };
+    push = { sendToProfessional: jest.fn().mockResolvedValue(undefined) };
 
     const moduleRef = await Test.createTestingModule({
       providers: [
         NotificationsService,
         { provide: PrismaService, useValue: prisma },
         { provide: RealtimeService, useValue: realtime },
+        { provide: PushSubscriptionsService, useValue: push },
       ],
     }).compile();
 
@@ -97,6 +101,14 @@ describe('NotificationsService', () => {
         .calls as [[string, { id: string; readAt: null }]];
       expect(professionalId).toBe('prof-1');
       expect(dto.readAt).toBeNull();
+
+      expect(push.sendToProfessional).toHaveBeenCalledTimes(1);
+      const [[pushProfId, message]] = push.sendToProfessional.mock.calls as [
+        [string, { title: string; bookingId: string; notificationId: string }],
+      ];
+      expect(pushProfId).toBe('prof-1');
+      expect(message.bookingId).toBe(BOOKING.id);
+      expect(message.notificationId).toBe(dto.id);
     });
 
     it('never throws or emits when the insert fails', async () => {
@@ -106,6 +118,17 @@ describe('NotificationsService', () => {
         service.notifyAppointmentCreated(PROFESSIONAL, BOOKING),
       ).resolves.toBeUndefined();
       expect(realtime.emitNotificationCreated).not.toHaveBeenCalled();
+      expect(push.sendToProfessional).not.toHaveBeenCalled();
+    });
+
+    it('still resolves when the push fan-out rejects', async () => {
+      prisma.notification.create.mockResolvedValue(row());
+      push.sendToProfessional.mockRejectedValue(new Error('push down'));
+
+      await expect(
+        service.notifyAppointmentCreated(PROFESSIONAL, BOOKING),
+      ).resolves.toBeUndefined();
+      expect(realtime.emitNotificationCreated).toHaveBeenCalledTimes(1);
     });
   });
 

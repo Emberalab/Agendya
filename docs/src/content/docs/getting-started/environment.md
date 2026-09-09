@@ -32,6 +32,9 @@ arranque.
 | `PORT` | `4000` | No (por defecto `4000`) | Puerto de escucha de la API |
 | `WEB_URL` | `http://localhost:5173` | No (por defecto localhost) | Origen permitido de CORS, base de la redirección de éxito de OAuth, base del enlace de cancelación en los correos |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (por defecto `25000`) | Milisegundos entre frames `event: ping` en el stream SSE `GET /realtime/stream`. Bájalo si un proxy inverso corta antes las conexiones inactivas |
+| `VAPID_PUBLIC_KEY` | *(vacío)* | No | Sin las tres claves VAPID, Web Push se desactiva: `GET /notifications/push/public-key` devuelve `null`, el dashboard oculta el interruptor y el feed sigue por SSE. Genera un par con `npx web-push generate-vapid-keys` |
+| `VAPID_PRIVATE_KEY` | *(vacío)* | No | Igual que arriba |
+| `VAPID_SUBJECT` | `mailto:soporte@agendya.app` | No (por defecto `mailto:`) | URI de contacto (`mailto:` o `https:`) que el servicio de push usa para avisar de un payload problemático |
 
 ### Solo para pruebas
 

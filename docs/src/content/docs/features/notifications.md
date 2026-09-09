@@ -8,8 +8,9 @@ Hay **dos tipos** de notificación en Agendya:
 1. **Correo al cliente** — siempre email, vía `MailService`
    (`infra/mail/mail.service.ts`) con **Resend**. Sin SMS.
 2. **Centro de notificaciones del profesional** — un feed **persistente** en el
-   dashboard con entrega en tiempo real (SSE) encima. Ver
-   [Centro de notificaciones](#centro-de-notificaciones).
+   dashboard con dos canales de entrega inmediata encima: **SSE** (mientras el
+   dashboard está abierto) y **Web Push** (aviso del sistema operativo aunque la
+   PWA esté cerrada). Ver [Centro de notificaciones](#centro-de-notificaciones).
 
 ## Catálogo de correos
 
@@ -36,8 +37,8 @@ Hay **dos tipos** de notificación en Agendya:
 ## Centro de notificaciones
 
 `modules/notifications` en la API y en la web. La fila `Notification` de la base
-de datos es la **fuente de verdad**; SSE es solo un canal de entrega inmediata y
-un futuro Web Push sería otro.
+de datos es la **fuente de verdad**; SSE y Web Push son canales de entrega
+inmediata encima de ella.
 
 ```mermaid
 flowchart LR
@@ -45,16 +46,20 @@ flowchart LR
   TX -->|commit OK| N["NotificationsService.notifyAppointmentCreated"]
   N --> DB[("INSERT Notification")]
   DB --> SSE["RealtimeService.emitNotificationCreated → stream del profesional"]
+  DB --> WP["PushSubscriptionsService.sendToProfessional → web-push a cada dispositivo"]
   SSE --> UI["dashboard: toast · campana +1 · fila en el centro · anuncio a lector de pantalla"]
+  WP --> SW["service worker: self.registration.showNotification → aviso del SO"]
   TX -.->|rollback| X["no se registra nada"]
   DB -.->|reconexión · recarga · offline| API["GET /notifications"]
 ```
 
 - **Orden garantizado:** la notificación se **persiste después del commit** de la
-  reserva y **antes** de emitir el evento. Si la reserva falla, no hay fila.
+  reserva y **antes** de emitir los eventos. Si la reserva falla, no hay fila.
 - **Best-effort:** `NotificationsService.notifyAppointmentCreated` traga sus
   errores y `BookingsService` además envuelve la llamada en `.catch()`; una
-  notificación fallida nunca rompe una reserva ya guardada.
+  notificación fallida nunca rompe una reserva ya guardada. El fan-out de Web
+  Push es *fire-and-forget* dentro de `create()` — se lanza después del `INSERT`
+  y del SSE, y `sendToProfessional` traga sus propios errores.
 - **Efímero vs. persistente:** el evento SSE es efímero, la fila no. Un
   profesional offline, con la pestaña cerrada o que se perdió el evento ve la
   notificación al abrir el dashboard: el badge y el feed se cargan desde la API.
@@ -92,9 +97,16 @@ Todos requieren JWT y se acotan a `req.user.id` en el servidor — ver
 | `GET` | `/notifications/unread-count` | `{ count }` |
 | `PATCH` | `/notifications/:id/read` | `Notification` — `404` si no es propia; idempotente |
 | `PATCH` | `/notifications/read-all` | `{ updated }` |
+| `GET` | `/notifications/push/public-key` | `{ publicKey: string \| null }` — `null` si el servidor no tiene claves VAPID |
+| `GET` | `/notifications/push/status` | `{ subscribed: boolean }` — si este profesional tiene algún dispositivo registrado |
+| `POST` | `/notifications/push/subscribe` | `204` — body = `PushSubscription.toJSON()` del navegador; upsert por `endpoint` |
+| `POST` | `/notifications/push/unsubscribe` | `204` — body = `{ endpoint }`; acotado a las filas del profesional |
 
 `markRead` / `markAllRead` usan `updateMany` con `professionalId` en el `where`,
 así que un profesional nunca puede marcar como leída la notificación de otro.
+`push/subscribe` y `push/unsubscribe` se acotan igual: el `endpoint` es único
+globalmente, pero `unsubscribe` filtra por `professionalId` y el `upsert`
+reasigna el dispositivo al profesional autenticado.
 
 ### Evento en tiempo real
 
@@ -137,13 +149,66 @@ Estrategia futura sugerida: un `@Cron` diario que borre
 por profesional (p. ej. conservar las 500 más recientes). Se apagaría con
 `DISABLE_SCHEDULED_JOBS` como los otros crons.
 
-### Web Push (futuro)
+### Web Push
 
-`NotificationsService.create()` es el único punto de escritura del feed. Añadir
-Web Push es una línea más ahí: tras el `INSERT`, si existe una `PushSubscription`
-para el profesional, enviar el push con `title` / `body` / `data` ya listos. La
-fila sigue siendo la fuente de verdad; SSE y push son canales de entrega, no
-reemplazos del centro.
+Aviso del sistema operativo en el dispositivo del profesional, aunque la PWA
+esté cerrada. Igual que SSE, es un **canal de entrega** de la fila
+`Notification`, nunca la fuente de verdad.
+
+**API** — `PushSubscriptionsService` (`modules/notifications/push-subscriptions.service.ts`):
+
+- Configura `web-push` con las claves VAPID (`VAPID_PUBLIC_KEY` /
+  `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`). **Sin las tres** → contrato de
+  degradación como `MailService`: `publicKey` es `null`, `sendToProfessional`
+  es un no-op y el feed sigue funcionando por SSE + fila.
+- `NotificationsService.create()` llama `sendToProfessional(professionalId,
+  { title, body, notificationId, bookingId, startAt })` (schema `pushMessageSchema`
+  en `@agendya/types`) tras el `INSERT` y el SSE, en *fire-and-forget*.
+- Entrega a cada fila `PushSubscription` del profesional con `Promise.allSettled`.
+  Un `404`/`410` del servicio de push → la fila se **poda**; otros errores se
+  registran y se tragan. En un envío exitoso se refresca `lastActiveAt`.
+
+**Modelo `PushSubscription`:**
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `id` | uuid | |
+| `professionalId` | uuid | FK → `Professional`, `onDelete: Cascade` |
+| `endpoint` | string | **`@unique`** global — el navegador que se re-suscribe devuelve el mismo endpoint, así que el `upsert` mantiene una fila por dispositivo |
+| `p256dh` / `auth` | string | material de cifrado de `PushSubscription.toJSON().keys` |
+| `userAgent` | string? | procedencia best-effort para la UI de ajustes; no se usa para entregar |
+| `createdAt` / `lastActiveAt` | `DateTime` | `lastActiveAt` se refresca en cada envío exitoso — habilita una poda futura de endpoints muertos |
+
+Índice: `@@index([professionalId])` — la entrega carga todas las suscripciones de
+un profesional.
+
+**Service worker** (`apps/web/src/sw.ts`, estrategia `injectManifest` de
+`vite-plugin-pwa`):
+
+- Precachea el shell de la SPA (`precacheAndRoute(self.__WB_MANIFEST)`) — el
+  motivo de pasar de `generateSW` a `injectManifest`.
+- `push` → `self.registration.showNotification(title, { body, icon, badge, tag:
+  'booking-<id>', data: { url } })`.
+- `notificationclick` → enfoca una pestaña del dashboard abierta y navega, o
+  abre una ventana nueva, hacia `/dashboard/agenda?booking=<id>&date=<día>`.
+
+**Frontend:**
+
+- `shared/push/pushManager.ts` — detección de soporte, permiso, y el baile de
+  `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` +
+  registro contra la API. `modules/notifications/push.ts` es la mitad REST.
+- `usePushNotifications` reconcilia tres fuentes — permiso del navegador,
+  suscripción local del `PushManager`, y si el servidor tiene claves VAPID — en
+  un pequeño estado que renderiza `PushNotificationToggle`, un banner en la
+  cabecera del centro de notificaciones. El banner **no se muestra** si el
+  navegador no soporta push o el servidor no tiene VAPID.
+- Al cerrar sesión (`Sidebar`), `disablePush()` quita la suscripción de este
+  navegador **antes** de borrar el token, para que los push de esa cuenta dejen
+  de llegar al dispositivo.
+
+**iOS:** Web Push solo funciona con la PWA **instalada en la pantalla de inicio**
+(iOS 16.4+); el permiso debe pedirse desde un gesto del usuario (el botón
+«Activar» del banner).
 
 ## Scheduler de recordatorios
 

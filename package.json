@@ -13,6 +13,7 @@
     "dev:api": "npm run start:dev --workspace apps/api",
     "dev:web": "npm run dev --workspace apps/web",
     "dev:web:host": "npm run dev --workspace apps/web -- --host",
+    "verify:pwa": "npm run verify:pwa --workspace apps/web",
     "docs": "npm --prefix docs run dev",
     "docs:build": "npm --prefix docs run build",
     "docs:preview": "npm --prefix docs run preview",

@@ -5,6 +5,7 @@ import type { Notification } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { NotificationItem } from './NotificationItem';
+import { PushNotificationToggle } from './PushNotificationToggle';
 import { routeForNotification } from './navigation';
 import { useNotificationList } from './hooks/useNotificationList';
 import { useMarkAllNotificationsRead } from './hooks/useMarkAllNotificationsRead';
@@ -140,6 +141,8 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
             </svg>
           </button>
         </header>
+
+        <PushNotificationToggle />
 
         <div className="flex-1 overflow-y-auto">
           {isLoading && <SkeletonList />}

@@ -40,9 +40,21 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // `injectManifest` (not the default `generateSW`) because the service
+      // worker carries hand-written logic — the Web Push `push` /
+      // `notificationclick` handlers in `src/sw.ts`. Workbox only injects the
+      // precache manifest into that file; it doesn't generate the worker.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       // Service worker updates itself in the background and takes over on
       // next navigation — no "new version available" prompt to build yet.
       registerType: 'autoUpdate',
+      injectManifest: {
+        // Default patterns already cover the SPA shell (js/css/html) and svg;
+        // add the PWA icon PNGs so the app opens fully offline.
+        globPatterns: ['**/*.{js,css,html,svg,png,ico,webmanifest}'],
+      },
       // Precache the SPA shell (HTML/JS/CSS) plus the icons themselves so
       // the app still opens (from cache) with no network, then hits the API
       // as usual for real data.
@@ -82,11 +94,6 @@ export default defineConfig({
             purpose: 'maskable',
           },
         ],
-      },
-      workbox: {
-        // Default globPatterns already cover js/css/html/svg/png; nothing
-        // custom needed for a plain SPA build.
-        cleanupOutdatedCaches: true,
       },
       // Lets `npm run dev` register a real service worker so installability
       // (Chrome's install icon, the manifest, DevTools > Application) can be

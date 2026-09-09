@@ -136,6 +136,11 @@ export default defineConfig({
               slug: 'getting-started/local-development',
             },
             {
+              label: 'PWA y desarrollo en red local',
+              translations: { en: 'PWA & local network development' },
+              slug: 'getting-started/pwa-and-local-network',
+            },
+            {
               label: 'Base de datos y Prisma',
               translations: { en: 'Database & Prisma' },
               slug: 'getting-started/database',

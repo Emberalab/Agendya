@@ -8,8 +8,9 @@ Agendya has **two kinds** of notification:
 1. **Email to the customer** — always email, via `MailService`
    (`infra/mail/mail.service.ts`) with **Resend**. No SMS.
 2. **The professional's notification centre** — a **persistent** dashboard feed
-   with real-time (SSE) delivery layered on top. See
-   [Notification centre](#notification-centre).
+   with two immediate delivery channels layered on top: **SSE** (while the
+   dashboard is open) and **Web Push** (an OS-level alert even when the PWA is
+   closed). See [Notification centre](#notification-centre).
 
 ## Email catalogue
 
@@ -36,8 +37,8 @@ Agendya has **two kinds** of notification:
 ## Notification centre
 
 `modules/notifications` on the API and the web. The `Notification` database row
-is the **source of truth**; SSE is only an immediate delivery channel and a
-future Web Push would be another.
+is the **source of truth**; SSE and Web Push are immediate delivery channels
+layered on top of it.
 
 ```mermaid
 flowchart LR
@@ -45,17 +46,21 @@ flowchart LR
   TX -->|commit OK| N["NotificationsService.notifyAppointmentCreated"]
   N --> DB[("INSERT Notification")]
   DB --> SSE["RealtimeService.emitNotificationCreated → professional's stream"]
+  DB --> WP["PushSubscriptionsService.sendToProfessional → web-push to each device"]
   SSE --> UI["dashboard: toast · bell +1 · row in the centre · screen-reader announce"]
+  WP --> SW["service worker: self.registration.showNotification → OS alert"]
   TX -.->|rollback| X["nothing recorded"]
   DB -.->|reconnect · reload · offline| API["GET /notifications"]
 ```
 
 - **Ordering guarantee:** the notification is **persisted after the booking
-  commits** and **before** the event is emitted. If the booking fails, there is
+  commits** and **before** the events are emitted. If the booking fails, there is
   no row.
 - **Best-effort:** `NotificationsService.notifyAppointmentCreated` swallows its
   own errors, and `BookingsService` also wraps the call in `.catch()`; a failed
-  notification never breaks an already-saved booking.
+  notification never breaks an already-saved booking. The Web Push fan-out is
+  fire-and-forget inside `create()` — dispatched after the `INSERT` and the SSE
+  emit, and `sendToProfessional` swallows its own errors.
 - **Ephemeral vs. persistent:** the SSE event is ephemeral, the row is not. A
   professional who was offline, had the tab closed, or missed the event sees the
   notification on their next dashboard load — the badge and feed load from the
@@ -94,9 +99,16 @@ All require JWT and are scoped to `req.user.id` server-side — see the
 | `GET` | `/notifications/unread-count` | `{ count }` |
 | `PATCH` | `/notifications/:id/read` | `Notification` — `404` if not yours; idempotent |
 | `PATCH` | `/notifications/read-all` | `{ updated }` |
+| `GET` | `/notifications/push/public-key` | `{ publicKey: string \| null }` — `null` when the server has no VAPID keys |
+| `GET` | `/notifications/push/status` | `{ subscribed: boolean }` — whether this professional has any device registered |
+| `POST` | `/notifications/push/subscribe` | `204` — body = the browser's `PushSubscription.toJSON()`; upsert by `endpoint` |
+| `POST` | `/notifications/push/unsubscribe` | `204` — body = `{ endpoint }`; scoped to the professional's rows |
 
 `markRead` / `markAllRead` use `updateMany` with `professionalId` in the `where`,
 so a professional can never mark another professional's notification read.
+`push/subscribe` and `push/unsubscribe` are scoped the same way: `endpoint` is
+globally unique, but `unsubscribe` filters by `professionalId` and the `upsert`
+reassigns the device to the authenticated professional.
 
 ### Real-time event
 
@@ -138,13 +150,67 @@ strategy: a daily `@Cron` deleting
 per professional (e.g. keep the 500 most recent). It would honour
 `DISABLE_SCHEDULED_JOBS` like the other crons.
 
-### Web Push (future)
+### Web Push
 
-`NotificationsService.create()` is the feed's single write path. Adding Web Push
-is one more line there: after the `INSERT`, if a `PushSubscription` exists for
-the professional, send the push with the `title` / `body` / `data` already
-prepared. The row stays the source of truth; SSE and push are delivery channels,
-not replacements for the centre.
+An OS-level alert on the professional's device, even when the PWA is closed. Like
+SSE, it is a **delivery channel** for the `Notification` row, never the source of
+truth.
+
+**API** — `PushSubscriptionsService` (`modules/notifications/push-subscriptions.service.ts`):
+
+- Configures `web-push` with the VAPID keys (`VAPID_PUBLIC_KEY` /
+  `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT`). **With any of the three missing** → the
+  same degradation contract as `MailService`: `publicKey` is `null`,
+  `sendToProfessional` is a no-op, and the feed keeps working over SSE + row.
+- `NotificationsService.create()` calls `sendToProfessional(professionalId,
+  { title, body, notificationId, bookingId, startAt })` (`pushMessageSchema` in
+  `@agendya/types`) after the `INSERT` and the SSE emit, fire-and-forget.
+- Delivers to every `PushSubscription` row for the professional via
+  `Promise.allSettled`. A `404`/`410` from the push service → the row is
+  **pruned**; other errors are logged and swallowed. A successful send refreshes
+  `lastActiveAt`.
+
+**`PushSubscription` model:**
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `id` | uuid | |
+| `professionalId` | uuid | FK → `Professional`, `onDelete: Cascade` |
+| `endpoint` | string | global **`@unique`** — a browser re-subscribing returns the same endpoint, so the `upsert` keeps one row per device |
+| `p256dh` / `auth` | string | encryption material from `PushSubscription.toJSON().keys` |
+| `userAgent` | string? | best-effort provenance for the settings UI; not used for delivery |
+| `createdAt` / `lastActiveAt` | `DateTime` | `lastActiveAt` is refreshed on each successful send — enables a future sweep of dead endpoints |
+
+Index: `@@index([professionalId])` — delivery loads every subscription for one
+professional.
+
+**Service worker** (`apps/web/src/sw.ts`, `vite-plugin-pwa` `injectManifest`
+strategy):
+
+- Precaches the SPA shell (`precacheAndRoute(self.__WB_MANIFEST)`) — the reason
+  for moving from `generateSW` to `injectManifest`.
+- `push` → `self.registration.showNotification(title, { body, icon, badge, tag:
+  'booking-<id>', data: { url } })`.
+- `notificationclick` → focuses an open dashboard tab and navigates it, or opens
+  a new window, to `/dashboard/agenda?booking=<id>&date=<day>`.
+
+**Frontend:**
+
+- `shared/push/pushManager.ts` — support detection, permission, and the
+  `pushManager.subscribe({ userVisibleOnly: true, applicationServerKey })` +
+  register-with-API dance. `modules/notifications/push.ts` is the REST half.
+- `usePushNotifications` reconciles three sources — the browser permission, the
+  local `PushManager` subscription, and whether the server even has VAPID keys —
+  into a small state that renders `PushNotificationToggle`, a banner in the
+  notification centre header. The banner is **hidden** when the browser can't do
+  push or the server has no VAPID keys.
+- On logout (`Sidebar`), `disablePush()` drops this browser's subscription
+  **before** the token is cleared, so pushes for that account stop reaching the
+  device.
+
+**iOS:** Web Push only works with the PWA **installed to the Home Screen** (iOS
+16.4+); permission must be requested from a user gesture (the banner's "Activar"
+button).
 
 ## Reminder scheduler
 

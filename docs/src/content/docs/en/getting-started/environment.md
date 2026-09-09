@@ -32,6 +32,9 @@ boots.
 | `PORT` | `4000` | No (defaults `4000`) | API listen port |
 | `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | CORS allow-origin, OAuth success redirect base, cancel-link base in emails |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (defaults `25000`) | Milliseconds between `event: ping` frames on the `GET /realtime/stream` SSE stream. Lower it if a reverse proxy drops idle connections sooner |
+| `VAPID_PUBLIC_KEY` | *(empty)* | No | With any of the three VAPID keys missing, Web Push is disabled: `GET /notifications/push/public-key` returns `null`, the dashboard hides the toggle, and the feed still delivers over SSE. Generate a pair with `npx web-push generate-vapid-keys` |
+| `VAPID_PRIVATE_KEY` | *(empty)* | No | Same as above |
+| `VAPID_SUBJECT` | `mailto:soporte@agendya.app` | No (defaults `mailto:`) | Contact URI (`mailto:` or `https:`) the push service uses to reach you about a bad payload |
 
 ### Test-only
 

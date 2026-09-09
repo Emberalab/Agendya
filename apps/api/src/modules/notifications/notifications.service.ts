@@ -13,17 +13,18 @@ import type {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { RealtimeService } from '../realtime/realtime.service';
+import { PushSubscriptionsService } from './push-subscriptions.service';
 
 /**
  * Owns the persistent in-app notification feed. The `Notification` row is the
  * single source of truth; every delivery channel hangs off {@link create}:
  *
  *   persist notification  ->  emit SSE (if the professional is online)
- *                         ->  (future) Web Push (if a subscription exists)
+ *                         ->  Web Push (to every registered device)
  *
- * A future push channel is one more line in `create()` — no schema or API
- * change. All reads and writes are scoped to a `professionalId` that callers
- * take from the authenticated request, never from client input.
+ * Both fan-outs hang off `create()` and are best-effort. All reads and writes
+ * are scoped to a `professionalId` that callers take from the authenticated
+ * request, never from client input.
  */
 @Injectable()
 export class NotificationsService {
@@ -32,6 +33,7 @@ export class NotificationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly realtime: RealtimeService,
+    private readonly pushSubscriptions: PushSubscriptionsService,
   ) {}
 
   /**
@@ -71,7 +73,7 @@ export class NotificationsService {
 
   /**
    * The single write path for the feed. Persists the row, then fans it out over
-   * SSE. Add further delivery channels (Web Push, email digest) here.
+   * SSE and Web Push. Add further delivery channels (email digest) here.
    */
   private async create(
     professionalId: string,
@@ -94,6 +96,24 @@ export class NotificationsService {
 
     const dto = this.toDto(row);
     this.realtime.emitNotificationCreated(professionalId, dto);
+    // Fire-and-forget: the row is committed and SSE has fired; a push failure
+    // must not affect the caller. `sendToProfessional` already swallows its own
+    // errors, the `.catch` is a belt-and-braces guard.
+    void this.pushSubscriptions
+      .sendToProfessional(professionalId, {
+        title: dto.title,
+        body: dto.body,
+        notificationId: dto.id,
+        bookingId: dto.data.bookingId,
+        startAt: dto.data.startAt,
+      })
+      .catch((error: unknown) => {
+        this.logger.warn(
+          `Web Push fan-out falló para la notificación ${dto.id}: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        );
+      });
     return dto;
   }
 
