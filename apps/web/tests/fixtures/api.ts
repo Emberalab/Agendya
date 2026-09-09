@@ -295,6 +295,21 @@ export class ApiMock {
       target.readAt = target.readAt ?? new Date().toISOString();
       return json(route, target);
     }
+    if (path === '/notifications/read' && method === 'DELETE') {
+      const before = this.notifications.length;
+      this.notifications = this.notifications.filter((n) => n.readAt === null);
+      return json(route, { deleted: before - this.notifications.length });
+    }
+    const notifDeleteMatch = path.match(/^\/notifications\/([^/]+)$/);
+    if (notifDeleteMatch && method === 'DELETE') {
+      const id = notifDeleteMatch[1];
+      const before = this.notifications.length;
+      // Server only removes the caller's already-read rows.
+      this.notifications = this.notifications.filter(
+        (n) => !(n.id === id && n.readAt !== null),
+      );
+      return json(route, { deleted: before - this.notifications.length });
+    }
 
     // --- Agenda (professional bookings) ---------------------------------
     if (path === '/bookings' && method === 'GET') {

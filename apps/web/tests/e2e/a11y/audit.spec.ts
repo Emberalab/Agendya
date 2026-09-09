@@ -152,5 +152,69 @@ for (const theme of ['light', 'dark'] as const) {
       ).toBeVisible();
       await expectNoViolations(page);
     });
+
+    test('notification centre — list, detail view, and delete-read dialog', async ({
+      page,
+      api,
+    }) => {
+      api.seedNotifications([
+        {
+          id: '00000000-0000-4000-8000-0000000000c1',
+          type: 'APPOINTMENT_CREATED',
+          title: 'Nueva cita',
+          body: 'Carla reservó Corte premium',
+          data: {
+            bookingId: '00000000-0000-4000-8000-0000000000d1',
+            customerName: 'Carla',
+            serviceName: 'Corte premium',
+            startAt: '2099-09-10T18:30:00.000Z',
+          },
+          readAt: null,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: '00000000-0000-4000-8000-0000000000c2',
+          type: 'APPOINTMENT_CREATED',
+          title: 'Cita leída',
+          body: 'Bruno reservó Barba',
+          data: {
+            bookingId: '00000000-0000-4000-8000-0000000000d2',
+            customerName: 'Bruno',
+            serviceName: 'Barba',
+            startAt: '2099-09-11T18:30:00.000Z',
+          },
+          readAt: '2099-01-01T00:00:00.000Z',
+          createdAt: '2099-01-01T00:00:00.000Z',
+        },
+      ]);
+
+      await page.goto('/dashboard/agenda');
+      await page
+        .getByRole('button', { name: /^Notificaciones/ })
+        .filter({ visible: true })
+        .first()
+        .click();
+      const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+      await expect(panel.getByText('Cita leída')).toBeVisible();
+
+      // Detail view (new): heading, ← control, facts list, primary CTA.
+      await panel.getByRole('button', { name: /Nueva cita\./ }).click();
+      await expect(
+        panel.getByRole('heading', { name: 'Detalle de la cita' }),
+      ).toBeVisible();
+      await expectNoViolations(page);
+      await panel
+        .getByRole('button', { name: 'Volver a notificaciones' })
+        .click();
+
+      // Bulk-delete confirmation dialog (new).
+      await panel.getByRole('button', { name: 'Eliminar leídas' }).click();
+      await expect(
+        page.getByRole('dialog', {
+          name: '¿Eliminar notificaciones leídas?',
+        }),
+      ).toBeVisible();
+      await expectNoViolations(page);
+    });
   });
 }

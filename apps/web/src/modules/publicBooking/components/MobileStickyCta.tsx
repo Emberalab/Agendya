@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useInViewport } from '../../../shared/hooks/useInViewport';
+import { prefersReducedMotion } from '../../../shared/a11y/prefersReducedMotion';
 
 interface MobileStickyCtaProps {
   /** Same label the in-flow CTA shows ("Continuar →", "Confirmar reserva", "Reservando…"). */
@@ -13,14 +14,6 @@ interface MobileStickyCtaProps {
    * sticky bar slides away, so the two are never visible together.
    */
   anchorRef: React.RefObject<HTMLButtonElement | null>;
-}
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.matchMedia === 'function' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  );
 }
 
 function isTextEntry(node: EventTarget | null): boolean {
