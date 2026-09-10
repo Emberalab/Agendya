@@ -51,10 +51,14 @@ export class NotificationsService {
         customerName: booking.customerName,
         serviceName: booking.serviceNameSnapshot,
         startAt: booking.startAt.toISOString(),
+        // Flag only — the address is never carried in the payload. The
+        // professional opens the appointment detail (authenticated agenda
+        // response) to see it.
+        ...(booking.atHome ? { atHome: true } : {}),
       };
       await this.create(professional.id, {
         type: 'APPOINTMENT_CREATED',
-        title: 'Nueva cita',
+        title: booking.atHome ? 'Nueva cita a domicilio' : 'Nueva cita',
         body: `${booking.customerName} reservó ${booking.serviceNameSnapshot} · ${this.formatWhen(
           booking.startAt,
           professional.timezone,

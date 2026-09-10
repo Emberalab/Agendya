@@ -1516,7 +1516,12 @@ function ConfirmStep({
   error: unknown;
   onEdit: (step: StepId) => void;
 }) {
-  const rows: { label: string; value: string; step: StepId }[] = [
+  const rows: {
+    label: string;
+    value: string;
+    step: StepId;
+    multiline?: boolean;
+  }[] = [
     { label: 'SERVICIO', value: serviceName, step: 'service' },
     { label: 'MODALIDAD', value: modalityLabel, step: 'modality' },
   ];
@@ -1545,6 +1550,7 @@ function ConfirmStep({
       label: 'OBSERVACIONES',
       value: customer.customerNote.trim(),
       step: 'details',
+      multiline: true,
     });
   }
 
@@ -1573,10 +1579,10 @@ function ConfirmStep({
           border: '1px solid var(--color-border)',
         }}
       >
-        {rows.map(({ label, value, step }, index) => (
+        {rows.map(({ label, value, step, multiline }, index) => (
           <div
             key={label}
-            className="flex items-center justify-between gap-4 px-4 py-3.5"
+            className="flex items-start justify-between gap-4 px-4 py-3.5"
             style={{
               borderTop: index === 0 ? 'none' : '1px solid var(--color-border)',
             }}
@@ -1589,7 +1595,9 @@ function ConfirmStep({
                 {label}
               </dt>
               <dd
-                className="mt-0.5"
+                className={`agendya-longtext mt-0.5${
+                  multiline ? ' agendya-longtext--multiline' : ''
+                }`}
                 style={{
                   fontSize: '14px',
                   fontWeight: 600,

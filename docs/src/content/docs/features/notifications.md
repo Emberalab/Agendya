@@ -66,8 +66,8 @@ flowchart LR
 | `id` | uuid | |
 | `professionalId` | uuid | FK → `Professional`, `onDelete: Cascade` |
 | `type` | `NotificationType` | hoy solo `APPOINTMENT_CREATED`; reservados `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` |
-| `title` / `body` | string | textos listos para mostrar (es-CO); también sirven para un futuro payload de Web Push |
-| `data` | `Json` | `{ bookingId, customerName, serviceName, startAt }` — `bookingId` es la referencia de navegación; el resto evita un join y es *point-in-time* |
+| `title` / `body` | string | textos listos para mostrar (es-CO); también sirven para un futuro payload de Web Push. A domicilio: `title` = `"Nueva cita a domicilio"` |
+| `data` | `Json` | `{ bookingId, customerName, serviceName, startAt, atHome? }` — `bookingId` es la referencia de navegación; el resto evita un join y es *point-in-time*. `atHome: true` solo se añade para una reserva a domicilio (bandera, nunca la dirección) |
 | `readAt` | `DateTime?` | `null` = sin leer |
 | `createdAt` | `DateTime` | |
 

@@ -214,6 +214,20 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-secondary);
 }
 
+/* Customer-authored free text shown inside cards, drawers and flex/grid rows —
+   observations/notes and home-service addresses. `anywhere` (not `break-word`)
+   so the string also reports a small min-content width and can't force a flex
+   item or the page to scroll horizontally; pair it with `min-width: 0` on the
+   flex/grid item. `--multiline` additionally keeps the customer's own line
+   breaks. Nothing is clipped — the full text stays readable. */
+.agendya-longtext {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.agendya-longtext--multiline {
+  white-space: pre-wrap;
+}
+
 /* Screen-reader-only content: visually hidden, still in the a11y tree.
    Standard "clip" technique — `display:none`/`visibility:hidden` would
    remove it from the tree instead of just hiding it visually. */

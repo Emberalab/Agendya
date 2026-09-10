@@ -221,6 +221,38 @@ describe('NotificationCenter', () => {
       );
       expect(onClose).toHaveBeenCalledTimes(1);
     });
+
+    it('flags a home-service notification and points to the agenda for the address', async () => {
+      vi.mocked(api.listNotifications).mockResolvedValue({
+        items: [
+          notif({
+            id: 'n1',
+            title: 'Nueva cita a domicilio',
+            readAt: null,
+            data: {
+              bookingId: 'b1',
+              customerName: 'Ana',
+              serviceName: 'Corte de cabello',
+              startAt: '2099-08-03T14:00:00.000Z',
+              atHome: true,
+            },
+          }),
+        ],
+        nextCursor: null,
+      });
+      const user = userEvent.setup();
+      renderCenter();
+
+      await user.click(
+        await screen.findByRole('button', { name: /Nueva cita a domicilio\./ }),
+      );
+
+      expect(screen.getByText('A domicilio')).toBeInTheDocument();
+      expect(screen.getByText(/Servicio a domicilio\./)).toBeInTheDocument();
+      expect(
+        screen.getByText(/ver la dirección del cliente/),
+      ).toBeInTheDocument();
+    });
   });
 
   describe('deletion', () => {
