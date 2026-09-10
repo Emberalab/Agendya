@@ -78,7 +78,7 @@ Returned by every `/public/...` booking endpoint:
 
 ## Customer self-service (token link)
 
-The confirmation email contains `{WEB_URL}/bookings/<cancellationToken>`
+The confirmation email contains `{PUBLIC_WEB_URL or WEB_URL}/bookings/<cancellationToken>`
 (`BookingCancelPage.tsx`). From there:
 
 | Action | API | Notes |

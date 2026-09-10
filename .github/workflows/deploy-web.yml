@@ -20,6 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://api.agendya.co' || 'https://agendya-dev.up.railway.app' }}
+      VITE_PUBLIC_SITE_URL: ${{ github.ref == 'refs/heads/main' && 'https://agendya.co' || 'https://app-dev.agendya.co' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -46,7 +47,9 @@ jobs:
           port: 21
           security: loose
           local-dir: ./apps/web/dist/
-          # FTP account home = Document Root of app.agendya.co or app-dev.agendya.co.
+          # FTP account home = Document Root of app.agendya.co / app-dev.
+          # Point apex agendya.co at the same folder as app.agendya.co in cPanel
+          # so one prod upload serves dashboard + public /:slug.
           server-dir: ./
           exclude: |
             **/.git*

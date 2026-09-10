@@ -9,8 +9,11 @@ description: Build de producción, migraciones, CI y lo que el repositorio espec
   `https://api.agendya.co`). El start command aplica `prisma migrate deploy`
   y `npm run start:prod`.
 - **Web:** GoDaddy/cPanel. `.github/workflows/deploy-web.yml` construye
-  `apps/web` con `VITE_API_URL` y sube `dist/` por FTPS: rama `dev` →
-  `https://app-dev.agendya.co`, rama `main` → `https://app.agendya.co`.
+  `apps/web` con `VITE_API_URL` / `VITE_PUBLIC_SITE_URL` y sube `dist/` por
+  FTPS: rama `dev` → `https://app-dev.agendya.co`, rama `main` →
+  `https://app.agendya.co`. En cPanel, el Document Root de `agendya.co` debe
+  ser **la misma carpeta** que `app.agendya.co` para que `/{slug}` público
+  viva en el apex.
 - **CI:** `.github/workflows/ci.yml` (lint, typecheck, test, build) en push
   y PR a `dev` y `main`. No despliega.
 :::
@@ -31,8 +34,8 @@ description: Build de producción, migraciones, CI y lo que el repositorio espec
 
 - Node.js 24.
 - Env: `DATABASE_URL`, `JWT_SECRET` (**fuerte, no el de ejemplo**), `WEB_URL`
-  (el origen real del frontend — impulsa CORS, la redirección de OAuth, los
-  enlaces de correo). Opcionales: `JWT_EXPIRES_IN`, `PORT`, `SLOT_GRID_MINUTES`,
+  (dashboard: CORS y OAuth), `PUBLIC_WEB_URL` (apex de reservas y enlaces de
+  cancelación). Opcionales: `JWT_EXPIRES_IN`, `PORT`, `SLOT_GRID_MINUTES`,
   `RESEND_API_KEY`, `CLOUDINARY_URL`, `GOOGLE_CLIENT_ID` /
   `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL`. Ver
   [Variables de entorno](/getting-started/environment/).
@@ -103,7 +106,5 @@ Astro y publica en **GitHub Pages** en los push a `main` que tocan `docs/**`.
 ## TODO — lo que sigue abierto
 
 - Política de backups del Postgres de Railway.
-- Apex `agendya.co` para reservas públicas (`/{slug}`) además de
-  `app.agendya.co` / `app-dev.agendya.co` (CORS hoy admite un solo `WEB_URL`).
 - Una sola instancia de API por environment (los crons no tienen lock
   distribuido).

@@ -12,6 +12,7 @@ import {
   type ProfessionalProfile,
 } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { publicBookingUrl } from '../../shared/config/publicSiteUrl';
 import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { checkSlugAvailability, uploadImage } from './api';
 import { useProfile } from './hooks/useProfile';
@@ -290,7 +291,7 @@ export function ProfilePage() {
                   disabled={!values.slug}
                   onClick={() =>
                     window.open(
-                      `${window.location.origin}/${values.slug}`,
+                      publicBookingUrl(values.slug),
                       '_blank',
                       'noopener,noreferrer',
                     )

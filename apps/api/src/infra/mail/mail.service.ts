@@ -133,7 +133,9 @@ export class MailService {
   }
 
   private cancelUrl(token: string): string {
-    const baseUrl = this.configService.get<string>('webUrl');
+    const publicWebUrl = this.configService.get<string>('publicWebUrl');
+    const webUrl = this.configService.get<string>('webUrl');
+    const baseUrl = (publicWebUrl || webUrl || '').replace(/\/+$/, '');
     return `${baseUrl}/bookings/${token}`;
   }
 
