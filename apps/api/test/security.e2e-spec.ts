@@ -71,15 +71,23 @@ describe('Security headers, CORS, and OAuth CSRF protection (e2e)', () => {
   // trust `req.user` from any completed Google handshake with no proof it
   // was the same browser that started this flow.
   it('rejects a Google OAuth callback with no state cookie', async () => {
-    await request(app.getHttpServer())
+    const res = await request(app.getHttpServer())
       .get('/auth/google/callback?code=fake&state=whatever')
-      .expect(403);
+      .redirects(0)
+      .expect(302);
+    expect(res.headers.location).toBe(
+      'http://localhost:5173/login?error=oauth',
+    );
   });
 
   it('rejects a Google OAuth callback whose state does not match the cookie', async () => {
-    await request(app.getHttpServer())
+    const res = await request(app.getHttpServer())
       .get('/auth/google/callback?code=fake&state=wrong-value')
       .set('Cookie', 'oauth_state=the-real-value')
-      .expect(403);
+      .redirects(0)
+      .expect(302);
+    expect(res.headers.location).toBe(
+      'http://localhost:5173/login?error=oauth',
+    );
   });
 });

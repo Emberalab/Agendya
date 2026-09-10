@@ -7,6 +7,7 @@ import {
   Post,
   Req,
   Res,
+  UseFilters,
   UseGuards,
 } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
@@ -21,6 +22,8 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { AuthService, type GoogleUser } from './auth.service';
+import { frontendWebUrl } from './frontend-web-url';
+import { GoogleOauthCallbackFilter } from './google-oauth-callback.filter';
 import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { GoogleOAuthStateGuard } from './guards/google-oauth-state.guard';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -60,8 +63,11 @@ export class AuthController {
   }
 
   @Get('google/callback')
+  @UseFilters(GoogleOauthCallbackFilter)
   @UseGuards(GoogleOAuthStateGuard, GoogleAuthGuard)
   async googleAuthCallback(@Req() req: Request, @Res() res: Response) {
+    const webUrl = frontendWebUrl();
+
     const authResponse = await this.authService.googleLogin(
       req.user as GoogleUser,
     );
@@ -73,10 +79,6 @@ export class AuthController {
     // via browser history and server/proxy logs. Trim any trailing slash from
     // WEB_URL so a value like "http://localhost:5173/" does not produce a
     // "//auth/callback" path that the frontend router fails to match.
-    const webUrl = (process.env.WEB_URL ?? 'http://localhost:5173').replace(
-      /\/+$/,
-      '',
-    );
     const redirectUrl = `${webUrl}/auth/callback#token=${authResponse.accessToken}`;
     res.redirect(redirectUrl);
   }

@@ -38,7 +38,7 @@ export class GoogleOAuthStateGuard implements CanActivate {
     const cookieState = readCookie(request, OAUTH_STATE_COOKIE);
     const queryState = request.query.state;
 
-    response.clearCookie(OAUTH_STATE_COOKIE);
+    response.clearCookie(OAUTH_STATE_COOKIE, { path: '/' });
 
     if (
       !cookieState ||

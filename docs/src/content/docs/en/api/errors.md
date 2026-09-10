@@ -48,7 +48,7 @@ else the fallback.
 | Email already registered | `409` `El correo ya está registrado.` |
 | Unknown email / wrong password | `401` `Credenciales inválidas.` |
 | Password login on a Google account | `401` `Esta cuenta usa autenticación con Google.` |
-| OAuth callback, missing/mismatched `state` | `403` `Solicitud de autenticación inválida.` |
+| OAuth callback, missing/mismatched `state` | `302` → `{WEB_URL}/login?error=oauth` (the API origin no longer renders the JSON `403`) |
 
 ### Professionals / slug
 
