@@ -28,6 +28,8 @@ validates both dates.
   "id": "uuid", "serviceId": "uuid", "serviceName": "…", "durationMinutes": 30,
   "customerName": "…", "customerEmail": "…", "customerPhone": "…",
   "customerNote": "… | null",            // note the customer left when booking
+  "atHome": false,                       // home-service modality
+  "customerAddress": "… | null",         // customer address — only when atHome; only its own professional sees it
   "startAt": "…", "endAt": "…",
   "status": "CONFIRMED",
   "cancellationPolicyHours": 24,

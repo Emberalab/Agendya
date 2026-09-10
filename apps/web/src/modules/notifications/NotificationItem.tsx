@@ -153,6 +153,7 @@ export function NotificationItem({
 								fontSize: '13px',
 								color: 'var(--color-text-secondary)',
 								lineHeight: 1.45,
+								overflowWrap: 'anywhere',
 							}}
 						>
 							{notification.body}

@@ -113,7 +113,7 @@ export function BookingConfirmedView({
                 {label}
               </dt>
               <dd
-                className="mt-0.5"
+                className="agendya-longtext mt-0.5"
                 style={{
                   fontSize: '15px',
                   fontWeight: 600,

@@ -28,6 +28,8 @@ ambas fechas.
   "id": "uuid", "serviceId": "uuid", "serviceName": "…", "durationMinutes": 30,
   "customerName": "…", "customerEmail": "…", "customerPhone": "…",
   "customerNote": "… | null",            // observaciones que dejó el cliente al reservar
+  "atHome": false,                       // modalidad a domicilio
+  "customerAddress": "… | null",         // dirección del cliente — solo si atHome; solo la ve su profesional
   "startAt": "…", "endAt": "…",
   "status": "CONFIRMED",
   "cancellationPolicyHours": 24,

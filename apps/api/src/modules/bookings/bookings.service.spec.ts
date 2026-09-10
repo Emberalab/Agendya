@@ -694,6 +694,53 @@ describe('BookingsService', () => {
 
       expect(booking.customerNote).toBe('Llego 5 minutos tarde');
     });
+
+    it('exposes atHome + the address for a home-service booking, and null for the rest', async () => {
+      const base = {
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      };
+      prisma.booking.findMany.mockResolvedValue([
+        {
+          ...base,
+          id: 'home-1',
+          atHome: true,
+          customerAddress: 'Calle 10 #43C-20 (Ref.: portón negro)',
+        },
+        // A non-home row that somehow still has an address column set: it must
+        // never be handed out.
+        {
+          ...base,
+          id: 'store-1',
+          atHome: false,
+          customerAddress: 'dato viejo que no debe salir',
+        },
+      ]);
+
+      const [home, store] = await service.listAgenda(
+        'prof-1',
+        '2026-08-03',
+        '2026-08-03',
+      );
+
+      expect(home.atHome).toBe(true);
+      expect(home.customerAddress).toBe(
+        'Calle 10 #43C-20 (Ref.: portón negro)',
+      );
+      expect(store.atHome).toBe(false);
+      expect(store.customerAddress).toBeNull();
+    });
   });
 
   describe('cancelByProfessional', () => {

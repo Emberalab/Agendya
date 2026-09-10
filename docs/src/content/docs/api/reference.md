@@ -94,10 +94,13 @@ Todo se acota a `req.user.id` en el servidor; nunca se confía en un id del clie
 | `PATCH` | `/notifications/:id/read` | — | `Notification` — `404` si no es propia; idempotente |
 
 `Notification` (`notificationSchema`): `{ id, type, title, body, data: { bookingId,
-customerName, serviceName, startAt }, readAt: string \| null, createdAt }`.
-`type` hoy solo `APPOINTMENT_CREATED`. `markRead` / `markAllRead` filtran por
-`professionalId` en el `where` del `updateMany`, así que un profesional no puede
-tocar la notificación de otro.
+customerName, serviceName, startAt, atHome? }, readAt: string \| null, createdAt }`.
+`type` hoy solo `APPOINTMENT_CREATED`; para una reserva a domicilio el `title` es
+`"Nueva cita a domicilio"` y `data.atHome` es `true`. La dirección del cliente
+**nunca** viaja en el payload (ni en el frame SSE) — el profesional abre el
+detalle de la cita, cuyo `AgendaBooking` sí trae `customerAddress`. `markRead` /
+`markAllRead` filtran por `professionalId` en el `where` del `updateMany`, así que
+un profesional no puede tocar la notificación de otro.
 
 ## Real-time — `modules/realtime`
 

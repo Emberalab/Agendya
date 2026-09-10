@@ -123,6 +123,49 @@ function InfoRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   );
 }
 
+/**
+ * Home-service ("a domicilio") address, shown only when `booking.atHome`. The
+ * address is a single free-text string the customer supplied; it is rendered
+ * verbatim with hard wrapping so a long line can never overflow the card or the
+ * drawer. When it is missing we say so plainly rather than showing a fake value.
+ */
+function HomeAddressSection({ address }: { address: string | null }) {
+  return (
+    <>
+      <p
+        className="px-1"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: 'var(--color-text-muted)' }}
+      >
+        DOMICILIO
+      </p>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+        <div className="flex items-start gap-2.5">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ color: 'var(--color-text-brand)', flexShrink: 0, marginTop: '1px' }}>
+            <path d="M8 1.6c-2.4 0-4.4 2-4.4 4.4 0 3.1 4.4 8 4.4 8s4.4-4.9 4.4-8c0-2.4-2-4.4-4.4-4.4Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+            <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+          <div className="min-w-0">
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              Servicio a domicilio
+            </p>
+            <p
+              className="agendya-longtext agendya-longtext--multiline mt-1"
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px',
+                color: address ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                lineHeight: '1.5',
+              }}
+            >
+              {address?.trim() || 'El cliente no registró una dirección.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function AppointmentDrawer({
   booking,
   onClose,
@@ -280,6 +323,9 @@ export function AppointmentDrawer({
         </div>
       </div>
 
+      {/* Home-service address — only for "a domicilio" bookings. */}
+      {booking.atHome && <HomeAddressSection address={booking.customerAddress} />}
+
       {/* Appointment info */}
       <p
         className="px-1"
@@ -300,20 +346,19 @@ export function AppointmentDrawer({
             Reserva desde enlace público
           </span>
         </div>
-        <div className="flex justify-between items-baseline gap-3">
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)', flexShrink: 0 }}>Observaciones</span>
-          <span
+        <div className="flex flex-col gap-1">
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>Observaciones</span>
+          <p
+            className="agendya-longtext agendya-longtext--multiline"
             style={{
               fontFamily: 'var(--font-body)',
               fontSize: '14px',
-              color: booking.customerNote ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
-              textAlign: 'right',
-              whiteSpace: 'pre-wrap',
-              maxWidth: '60%',
+              color: booking.customerNote?.trim() ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              lineHeight: '1.5',
             }}
           >
             {booking.customerNote?.trim() || 'Sin observaciones'}
-          </span>
+          </p>
         </div>
 
         <div
