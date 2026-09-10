@@ -3,12 +3,16 @@ title: Deployment
 description: Production build, migrations, CI, and what the repository does and does not specify about hosting.
 ---
 
-:::caution[No CD / hosting config in the repo]
-As of Phase 1 the repository contains **no** deployment manifests — no
-`Dockerfile`, no `vercel.json` / `render.yaml` / `fly.toml` / `Procfile`, and
-no deploy job in CI. `.github/workflows/ci.yml` runs **CI only** (lint,
-typecheck, test, build). Everything below about *where* things run is marked
-`TODO` and must be decided by the team.
+:::note[Where each piece runs]
+- **API:** Railway (`agendya-api`), environments `dev` (branch `dev` →
+  `https://agendya-dev.up.railway.app`) and `production` (branch `main` →
+  `https://api.agendya.co`). The start command runs `prisma migrate deploy`
+  then `npm run start:prod`.
+- **Web:** GoDaddy/cPanel. `.github/workflows/deploy-web.yml` builds
+  `apps/web` with `VITE_API_URL` and uploads `dist/` over FTPS: branch `dev`
+  → `https://app-dev.agendya.co`, branch `main` → `https://app.agendya.co`.
+- **CI:** `.github/workflows/ci.yml` (lint, typecheck, test, build) on push
+  and PR to `dev` and `main`. It does not deploy.
 :::
 
 ## What the repo defines
@@ -64,7 +68,7 @@ flowchart LR
 
 ## CI (what actually runs today)
 
-`.github/workflows/ci.yml`, on push and PR to `main`:
+`.github/workflows/ci.yml`, on push and PR to `dev` and `main`:
 
 ```mermaid
 flowchart LR
@@ -95,13 +99,10 @@ Astro and publishes to **GitHub Pages** on pushes to `main` that touch `docs/**`
   for a project site) — currently `https://emberalab.github.io` with a `TODO`.
 - Local: `cd docs && npm run build && npm run preview`.
 
-## TODO — decisions the team still owns
+## TODO — still open
 
-- API host (container platform vs. PaaS) and how the single-instance cron
-  constraint is honoured.
-- Managed PostgreSQL provider + backup policy.
-- Web static host / CDN and the build-time `VITE_API_URL` per environment.
-- Secret storage for `JWT_SECRET`, `RESEND_API_KEY`, `CLOUDINARY_URL`, Google
-  OAuth.
-- Google OAuth: register the production `GOOGLE_CALLBACK_URL`.
-- A staging environment and a promote-to-prod flow.
+- Backup policy for Railway Postgres.
+- Apex `agendya.co` for public booking (`/{slug}`) in addition to
+  `app.agendya.co` / `app-dev.agendya.co` (CORS currently allows a single
+  `WEB_URL`).
+- Exactly one API instance per environment (crons have no distributed lock).
