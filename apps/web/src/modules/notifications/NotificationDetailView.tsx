@@ -40,6 +40,9 @@ export function NotificationDetailView({
     ['Servicio', data.serviceName || '—'],
     ['Fecha y hora', when],
   ];
+  if (data.atHome) {
+    rows.push(['Modalidad', 'A domicilio']);
+  }
 
   return (
     <div className="px-4 py-4">
@@ -56,6 +59,7 @@ export function NotificationDetailView({
         </span>
         <div className="min-w-0">
           <p
+            className="agendya-longtext"
             style={{
               fontFamily: 'var(--font-body)',
               fontSize: '15px',
@@ -66,7 +70,7 @@ export function NotificationDetailView({
             {notification.title}
           </p>
           <p
-            className="mt-0.5"
+            className="agendya-longtext mt-0.5"
             style={{
               fontFamily: 'var(--font-body)',
               fontSize: '13px',
@@ -109,7 +113,7 @@ export function NotificationDetailView({
               {label}
             </dt>
             <dd
-              className="mt-0.5"
+              className="agendya-longtext mt-0.5"
               style={{
                 fontFamily: 'var(--font-body)',
                 fontSize: '14px',
@@ -122,6 +126,43 @@ export function NotificationDetailView({
           </div>
         ))}
       </dl>
+
+      {data.atHome && (
+        <div
+          className="mt-3 flex items-start gap-2.5 rounded-xl p-3"
+          style={{ backgroundColor: 'var(--color-brand-tint)' }}
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 16 16"
+            fill="none"
+            aria-hidden="true"
+            style={{ color: 'var(--color-text-brand)', flexShrink: 0, marginTop: '1px' }}
+          >
+            <path
+              d="M8 1.6c-2.4 0-4.4 2-4.4 4.4 0 3.1 4.4 8 4.4 8s4.4-4.9 4.4-8c0-2.4-2-4.4-4.4-4.4Z"
+              stroke="currentColor"
+              strokeWidth="1.3"
+              strokeLinejoin="round"
+            />
+            <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+          <p
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '12px',
+              color: 'var(--color-text-secondary)',
+              lineHeight: 1.5,
+            }}
+          >
+            <strong style={{ color: 'var(--color-text-primary)' }}>
+              Servicio a domicilio.
+            </strong>{' '}
+            Abre la cita en la agenda para ver la dirección del cliente.
+          </p>
+        </div>
+      )}
 
       <button
         type="button"

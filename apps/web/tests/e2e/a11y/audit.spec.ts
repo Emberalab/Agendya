@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from '../../fixtures/test';
 import { STORAGE_STATE } from '../../utils/auth-state';
-import { PUBLIC_SLUG } from '../../fixtures/data';
+import { PUBLIC_SLUG, makeHomeServiceAgendaBooking } from '../../fixtures/data';
 
 /**
  * WCAG 2.2 AA automated audit. Runs axe-core against the rendered page (real
@@ -142,6 +142,28 @@ for (const theme of ['light', 'dark'] as const) {
       await expect(
         page.getByRole('dialog', { name: 'Detalle de la cita' }),
       ).toBeVisible();
+      await expectNoViolations(page);
+    });
+
+    test('agenda page — appointment detail drawer for a home-service booking', async ({
+      page,
+      api,
+    }) => {
+      api.setAgenda([
+        makeHomeServiceAgendaBooking({
+          customerAddress:
+            'Calle 10 #43C-20, Apartamento 502 Torre 1, Barrio El Poblado (Ref.: portón negro junto a la panadería)',
+        }),
+      ]);
+      await page.goto('/dashboard/agenda');
+      await page
+        .getByRole('button', { name: 'Ver detalle' })
+        .first()
+        .click();
+      await expect(
+        page.getByRole('dialog', { name: 'Detalle de la cita' }),
+      ).toBeVisible();
+      await expect(page.getByText('DOMICILIO', { exact: true })).toBeVisible();
       await expectNoViolations(page);
     });
 

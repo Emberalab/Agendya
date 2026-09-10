@@ -50,6 +50,7 @@ describe('Notifications (e2e)', () => {
   let tokenB: string;
   let slugA: string;
   let serviceIdA: string;
+  let serviceIdHomeA: string;
 
   const day = futureDate(14);
   const authA = () => ({ Authorization: `Bearer ${tokenA}` });
@@ -64,6 +65,26 @@ describe('Notifications (e2e)', () => {
         customerName,
         customerEmail: 'cliente@example.com',
         customerPhone: '+57 300 1234567',
+      })
+      .expect(201);
+    return (res.body as { id: string }).id;
+  }
+
+  async function bookHome(
+    hhmm: string,
+    customerName: string,
+    customerAddress: string,
+  ): Promise<string> {
+    const res = await request(app.getHttpServer())
+      .post(`/public/professionals/${slugA}/bookings`)
+      .send({
+        serviceIds: serviceIdHomeA,
+        startAt: `${day.dateStr}T${hhmm}:00.000Z`,
+        customerName,
+        customerEmail: 'cliente@example.com',
+        customerPhone: '+57 300 1234567',
+        atHome: true,
+        customerAddress,
       })
       .expect(201);
     return (res.body as { id: string }).id;
@@ -101,6 +122,19 @@ describe('Notifications (e2e)', () => {
         priceCents: 2000000,
       });
     serviceIdA = (svc.body as { id: string }).id;
+
+    const homeSvc = await request(app.getHttpServer())
+      .post('/services')
+      .set(authA())
+      .send({
+        name: 'Corte a domicilio',
+        durationMinutes: 30,
+        priceCents: 2000000,
+        homeServiceEnabled: true,
+        homeDurationMinutes: 45,
+        homePriceCents: 2500000,
+      });
+    serviceIdHomeA = (homeSvc.body as { id: string }).id;
 
     await request(app.getHttpServer())
       .put('/schedules/working-hours')
@@ -351,5 +385,49 @@ describe('Notifications (e2e)', () => {
       .set(authB())
       .expect(200);
     expect((listB.body as { items: NotificationBody[] }).items).toHaveLength(0);
+  });
+
+  it('flags an at-home booking in the notification, but never carries the address in the payload', async () => {
+    const address =
+      'Calle 10 #43C-20, Apto 502 (Ref.: portón negro junto a la panadería)';
+    const bookingId = await bookHome('13:00', 'Valentina Home', address);
+
+    const list = await request(app.getHttpServer())
+      .get('/notifications')
+      .set(authA())
+      .expect(200);
+    const newest = (list.body as { items: NotificationBody[] }).items[0];
+
+    expect(newest.title).toBe('Nueva cita a domicilio');
+    expect(newest.data.bookingId).toBe(bookingId);
+    expect((newest.data as { atHome?: boolean }).atHome).toBe(true);
+
+    // The address must not leak through the feed row, anywhere in it.
+    expect(JSON.stringify(newest)).not.toContain('Calle 10');
+    expect(JSON.stringify(newest)).not.toContain('portón negro');
+
+    // …but it IS on the authenticated agenda response for the owner.
+    const agenda = await request(app.getHttpServer())
+      .get(`/bookings?from=${day.dateStr}&to=${day.dateStr}`)
+      .set(authA())
+      .expect(200);
+    const row = (
+      agenda.body as Array<{
+        id: string;
+        atHome: boolean;
+        customerAddress: string | null;
+      }>
+    ).find((b) => b.id === bookingId);
+    expect(row?.atHome).toBe(true);
+    expect(row?.customerAddress).toBe(address);
+
+    // A different professional cannot see it at all.
+    const agendaB = await request(app.getHttpServer())
+      .get(`/bookings?from=${day.dateStr}&to=${day.dateStr}`)
+      .set(authB())
+      .expect(200);
+    expect(
+      (agendaB.body as Array<{ id: string }>).some((b) => b.id === bookingId),
+    ).toBe(false);
   });
 });

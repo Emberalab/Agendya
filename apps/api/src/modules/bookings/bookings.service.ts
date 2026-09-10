@@ -769,6 +769,9 @@ export class BookingsService {
       customerEmail: booking.customerEmail,
       customerPhone: booking.customerPhone,
       customerNote: booking.customerNote,
+      atHome: booking.atHome,
+      // Only ever populated for an at-home booking; the column is null otherwise.
+      customerAddress: booking.atHome ? booking.customerAddress : null,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       status: booking.status,

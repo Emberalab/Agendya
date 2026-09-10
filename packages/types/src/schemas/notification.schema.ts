@@ -27,6 +27,14 @@ export const notificationDataSchema = z.object({
   serviceName: z.string(),
   /** ISO-8601 UTC instant of the appointment start. */
   startAt: z.string(),
+  /**
+   * Present and `true` only for a home-service ("a domicilio") booking, so the
+   * feed can flag it. Deliberately just the flag — the customer's address is
+   * **never** put in the notification payload (it rides only on the
+   * authenticated agenda response); the professional opens the appointment
+   * detail to see it. Absent on older rows.
+   */
+  atHome: z.boolean().optional(),
 });
 export type NotificationData = z.infer<typeof notificationDataSchema>;
 

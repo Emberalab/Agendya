@@ -32,6 +32,8 @@ const BOOKING = {
   customerEmail: 'ana@example.com',
   customerPhone: '+57 300 1234567',
   customerNote: null,
+  atHome: false,
+  customerAddress: null,
   startAt: '2099-08-03T14:00:00.000Z',
   endAt: '2099-08-03T14:30:00.000Z',
   status: 'CONFIRMED' as const,
@@ -40,6 +42,15 @@ const BOOKING = {
   createdAt: '2026-07-30T10:00:00.000Z',
   cancelledAt: null,
   cancelledBy: null,
+};
+
+// A home-service booking whose address is the long, accent-bearing, comma-and-
+// "(Ref.: …)" string the public wizard's `composeAddress` produces.
+const HOME_BOOKING = {
+  ...BOOKING,
+  atHome: true,
+  customerAddress:
+    'Calle 10 #43C-20, Apartamento 502 Torre 1, Barrio El Poblado (Ref.: portón negro junto a la panadería, timbre 502)',
 };
 
 describe('AgendaPage', () => {
@@ -101,6 +112,74 @@ describe('AgendaPage', () => {
       await screen.findByText('Vengo con mi hijo, corte para los dos'),
     ).toBeInTheDocument();
     expect(screen.queryByText('Sin observaciones')).not.toBeInTheDocument();
+  });
+
+  it('wraps a very long observation instead of letting it overflow', async () => {
+    const wall = 'a'.repeat(400);
+    vi.mocked(api.listAgenda).mockResolvedValue([
+      {
+        ...BOOKING,
+        customerNote: `${wall} https://ejemplo.com/${'x'.repeat(120)}`,
+      },
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Ver detalle' }))[0],
+    );
+
+    const note = await screen.findByText(new RegExp(wall));
+    // The wrap utility is what keeps it inside the card (jsdom has no layout,
+    // so we assert the mechanism rather than pixels — the e2e checks overflow).
+    expect(note).toHaveClass('agendya-longtext');
+  });
+
+  it('shows the home-service address only for an "a domicilio" booking', async () => {
+    vi.mocked(api.listAgenda).mockResolvedValue([HOME_BOOKING]);
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Ver detalle' }))[0],
+    );
+
+    expect(await screen.findByText('DOMICILIO')).toBeInTheDocument();
+    expect(screen.getByText('Servicio a domicilio')).toBeInTheDocument();
+    const address = screen.getByText(/Calle 10 #43C-20, Apartamento 502/);
+    expect(address).toBeInTheDocument();
+    expect(address).toHaveClass('agendya-longtext');
+  });
+
+  it('does not show any address block for a non-home booking', async () => {
+    vi.mocked(api.listAgenda).mockResolvedValue([BOOKING]);
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Ver detalle' }))[0],
+    );
+
+    await screen.findByText('Detalle de la cita');
+    expect(screen.queryByText('DOMICILIO')).not.toBeInTheDocument();
+    expect(screen.queryByText('Servicio a domicilio')).not.toBeInTheDocument();
+  });
+
+  it('names the address plainly when an at-home booking has none stored', async () => {
+    vi.mocked(api.listAgenda).mockResolvedValue([
+      { ...HOME_BOOKING, customerAddress: null },
+    ]);
+
+    const user = userEvent.setup();
+    renderPage();
+    await user.click(
+      (await screen.findAllByRole('button', { name: 'Ver detalle' }))[0],
+    );
+
+    expect(await screen.findByText('DOMICILIO')).toBeInTheDocument();
+    expect(
+      screen.getByText('El cliente no registró una dirección.'),
+    ).toBeInTheDocument();
   });
 
   it('opens the detail drawer for the booking named in a notification deep link', async () => {

@@ -73,6 +73,14 @@ export const agendaBookingSchema = z.object({
   customerEmail: z.string(),
   customerPhone: z.string(),
   customerNote: z.string().nullable(),
+  // Home-service ("a domicilio") modality + the address the customer gave for
+  // it. `customerAddress` is a single free-text string (the public wizard
+  // composes its street / unit / neighbourhood / reference fields into one) and
+  // is only ever non-null when `atHome` is true. Only the professional who owns
+  // the booking receives these — `listAgenda` scopes every row to the
+  // authenticated professional.
+  atHome: z.boolean(),
+  customerAddress: z.string().nullable(),
   startAt: z.string(),
   endAt: z.string(),
   status: bookingStatusSchema,

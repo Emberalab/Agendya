@@ -109,6 +109,31 @@ describe('NotificationsService', () => {
       ).resolves.toBeUndefined();
       expect(realtime.emitNotificationCreated).not.toHaveBeenCalled();
     });
+
+    it('flags an at-home booking in the title and data, without the address', async () => {
+      prisma.notification.create.mockResolvedValue(row());
+
+      await service.notifyAppointmentCreated(PROFESSIONAL, {
+        ...BOOKING,
+        atHome: true,
+        customerAddress: 'Calle 10 #43C-20 (Ref.: portón negro)',
+      });
+
+      const [[createArg]] = prisma.notification.create.mock.calls as [
+        [{ data: Record<string, unknown> }],
+      ];
+      expect(createArg.data.title).toBe('Nueva cita a domicilio');
+      expect(createArg.data.data).toEqual({
+        bookingId: BOOKING.id,
+        customerName: 'Ana',
+        serviceName: 'Corte de cabello',
+        startAt: '2026-08-03T14:00:00.000Z',
+        atHome: true,
+      });
+      // The address never rides along in the payload.
+      expect(JSON.stringify(createArg.data)).not.toContain('Calle 10');
+      expect(JSON.stringify(createArg.data)).not.toContain('portón negro');
+    });
   });
 
   describe('list', () => {

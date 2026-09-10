@@ -145,6 +145,8 @@ export function makeAgendaBookings(): AgendaBooking[] {
       customerEmail: 'ana@example.com',
       customerPhone: '+57 300 1234567',
       customerNote: 'Alergia a un tinte, por favor usar sin amoniaco.',
+      atHome: false,
+      customerAddress: null,
       startAt: first.start,
       endAt: first.end,
       status: 'CONFIRMED',
@@ -163,6 +165,8 @@ export function makeAgendaBookings(): AgendaBooking[] {
       customerEmail: 'bruno@example.com',
       customerPhone: '+57 301 7654321',
       customerNote: null,
+      atHome: false,
+      customerAddress: null,
       startAt: second.start,
       endAt: second.end,
       status: 'PENDING',
@@ -173,6 +177,40 @@ export function makeAgendaBookings(): AgendaBooking[] {
       cancelledBy: null,
     },
   ];
+}
+
+/**
+ * A single CONFIRMED home-service ("a domicilio") booking whose address is a
+ * long, comma-joined, accent-bearing string with a `(Ref.: …)` suffix — the
+ * shape the public wizard's `composeAddress` produces, and a good stress test
+ * for wrapping in the professional's appointment detail.
+ */
+export function makeHomeServiceAgendaBooking(
+  overrides: Partial<AgendaBooking> = {},
+): AgendaBooking {
+  const { start, end } = bookingAt(3, 11);
+  return {
+    id: '00000000-0000-4000-8000-0000000000c9',
+    serviceId: '00000000-0000-4000-8000-0000000000a9',
+    serviceName: 'Corte a domicilio',
+    durationMinutes: 45,
+    customerName: 'Valentina Ríos',
+    customerEmail: 'valentina@example.com',
+    customerPhone: '+57 305 9876543',
+    customerNote: null,
+    atHome: true,
+    customerAddress:
+      'Calle 10 #43C-20, Apartamento 502 Torre 1, Barrio El Poblado (Ref.: portón negro junto a la panadería, timbre 502)',
+    startAt: start,
+    endAt: end,
+    status: 'CONFIRMED',
+    cancellationPolicyHours: 24,
+    canReschedule: true,
+    createdAt: ISO,
+    cancelledAt: null,
+    cancelledBy: null,
+    ...overrides,
+  };
 }
 
 export const PUBLIC_SLUG = 'maria-belleza';
