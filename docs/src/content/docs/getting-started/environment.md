@@ -53,7 +53,7 @@ fuerte y único antes de cualquier despliegue real.
 | --- | --- | --- |
 | `VITE_API_URL` | *(sin definir)* → `http://<host-de-la-página>:4000` | URL base que el navegador llama para la API. Déjala sin definir para localhost **y** para pruebas por LAN (`npm run dev:web:host`); defínela solo para apuntar a otro backend (p. ej. staging). |
 | `VITE_PUBLIC_SITE_URL` | *(sin definir)* → `window.location.origin` | Origen de la página pública (`/{slug}`). En prod: `https://agendya.co`. En `app-dev`: `https://app-dev.agendya.co`. |
-| `VITE_WAITLIST_URL` | `https://launch.agendya.co/api/waitlist.php` | POST del formulario de cupo cuando el registro está cerrado |
+| `VITE_WAITLIST_URL` | *(sin definir)* | POST del formulario de cupo. En hosted: secret de Actions `VITE_WAITLIST_URL`. Sin ella el envío no sale |
 
 `apiClient` la resuelve así:
 

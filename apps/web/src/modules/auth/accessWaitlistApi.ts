@@ -1,6 +1,8 @@
+const configured = import.meta.env.VITE_WAITLIST_URL;
 export const WAITLIST_ENDPOINT =
-  import.meta.env.VITE_WAITLIST_URL ||
-  'https://launch.agendya.co/api/waitlist.php';
+  typeof configured === 'string' && configured.length > 0
+    ? configured
+    : undefined;
 
 export interface AccessWaitlistPayload {
   name: string;
@@ -13,6 +15,10 @@ export interface AccessWaitlistPayload {
 export async function submitAccessWaitlist(
   data: AccessWaitlistPayload,
 ): Promise<{ success: boolean }> {
+  if (!WAITLIST_ENDPOINT) {
+    return { success: false };
+  }
+
   const response = await fetch(WAITLIST_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

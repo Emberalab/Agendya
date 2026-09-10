@@ -21,6 +21,7 @@ jobs:
     env:
       VITE_API_URL: ${{ github.ref == 'refs/heads/main' && 'https://api.agendya.co' || 'https://agendya-dev.up.railway.app' }}
       VITE_PUBLIC_SITE_URL: ${{ github.ref == 'refs/heads/main' && 'https://agendya.co' || 'https://app-dev.agendya.co' }}
+      VITE_WAITLIST_URL: ${{ secrets.VITE_WAITLIST_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
