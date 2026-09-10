@@ -5,7 +5,7 @@ import {
   ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
-import type { Request, Response } from 'express';
+import type { Response } from 'express';
 import { frontendWebUrl } from './frontend-web-url';
 import { WAITLIST_REQUIRED_CODE } from './professional-allowlist';
 
@@ -17,11 +17,11 @@ export class GoogleOauthCallbackFilter implements ExceptionFilter {
   ): void {
     const http = host.switchToHttp();
     const response = http.getResponse<Response>();
-    const request = http.getRequest<Request>();
+    const request = http.getRequest<{ user?: unknown }>();
     const webUrl = frontendWebUrl();
 
     if (isWaitlistForbidden(exception)) {
-      const email = googleEmailFromRequest(request);
+      const email = googleEmailFromRequest(request.user);
       const params = new URLSearchParams({ waitlist: '1' });
       if (email) {
         params.set('email', email);
@@ -46,9 +46,10 @@ function isWaitlistForbidden(
   );
 }
 
-function googleEmailFromRequest(request: Request): string | undefined {
-  const user = request.user as { email?: unknown } | undefined;
-  return typeof user?.email === 'string' && user.email.includes('@')
-    ? user.email
-    : undefined;
+function googleEmailFromRequest(user: unknown): string | undefined {
+  if (typeof user !== 'object' || user === null || !('email' in user)) {
+    return undefined;
+  }
+  const email = user.email;
+  return typeof email === 'string' && email.includes('@') ? email : undefined;
 }
