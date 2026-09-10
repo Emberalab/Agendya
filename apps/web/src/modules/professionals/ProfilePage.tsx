@@ -272,7 +272,7 @@ export function ProfilePage() {
                     color: 'var(--color-text-muted)',
                   }}
                 >
-                  agendya.com/
+                  agendya.co/
                 </span>
                 <input
                   id="slug"
