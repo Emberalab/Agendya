@@ -33,7 +33,7 @@ describe('GoogleOAuthStateGuard', () => {
       `${OAUTH_STATE_COOKIE}=abc123`,
     );
     expect(guard.canActivate(context)).toBe(true);
-    expect(clearCookie).toHaveBeenCalledWith(OAUTH_STATE_COOKIE);
+    expect(clearCookie).toHaveBeenCalledWith(OAUTH_STATE_COOKIE, { path: '/' });
   });
 
   it('rejects a mismatched state (forged/replayed callback)', () => {

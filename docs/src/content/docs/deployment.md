@@ -9,7 +9,7 @@ description: Build de producción, migraciones, CI y lo que el repositorio espec
   `https://api.agendya.co`). El start command aplica `prisma migrate deploy`
   y `npm run start:prod`.
 - **Web:** GoDaddy/cPanel. `.github/workflows/deploy-web.yml` construye
-  `apps/web` con `VITE_API_URL` / `VITE_PUBLIC_SITE_URL` y sube `dist/` por
+  `apps/web` con `VITE_API_URL` / `VITE_PUBLIC_SITE_URL` / `VITE_WAITLIST_URL` y sube `dist/` por
   FTPS: rama `dev` → `https://app-dev.agendya.co`, rama `main` →
   `https://app.agendya.co`. En cPanel, el Document Root de `agendya.co` debe
   ser **la misma carpeta** que `app.agendya.co` para que `/{slug}` público

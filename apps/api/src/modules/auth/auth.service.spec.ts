@@ -1,4 +1,8 @@
-import { ConflictException, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -84,7 +88,26 @@ describe('AuthService', () => {
       });
     });
 
-    it('throws a conflict when the email is already registered', async () => {
+    it('rejects emails outside the professional allowlist', async () => {
+      const previous = process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+      process.env.PROFESSIONAL_EMAIL_ALLOWLIST = 'hjose0650@gmail.com';
+
+      await expect(
+        authService.register({
+          email: 'intruso@gmail.com',
+          password: 'supersecret',
+          businessName: 'Intruso',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+
+      if (previous === undefined) {
+        delete process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+      } else {
+        process.env.PROFESSIONAL_EMAIL_ALLOWLIST = previous;
+      }
+    });
+
+    it('throws ConflictException if the email is already registered', async () => {
       prisma.professional.findUnique.mockResolvedValue({ id: 'existing' });
 
       await expect(
