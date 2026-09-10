@@ -48,7 +48,7 @@ no el fallback.
 | Email ya registrado | `409` `El correo ya está registrado.` |
 | Email desconocido / contraseña incorrecta | `401` `Credenciales inválidas.` |
 | Login por contraseña en una cuenta de Google | `401` `Esta cuenta usa autenticación con Google.` |
-| Callback de OAuth, `state` faltante/no coincide | `403` `Solicitud de autenticación inválida.` |
+| Callback de OAuth, `state` faltante/no coincide | `302` → `{WEB_URL}/login?error=oauth` (ya no se muestra el JSON `403` en el origen de la API) |
 
 ### Profesionales / slug
 

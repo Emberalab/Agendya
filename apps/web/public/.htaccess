@@ -40,4 +40,5 @@ DirectoryIndex index.html
   AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml \
     application/javascript application/json application/xml \
     image/svg+xml font/ttf font/otf
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://img1.wsimg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://agendya-dev.up.railway.app https://agendya-api.up.railway.app https://api.agendya.co https://launch.agendya.co https://csp.secureserver.net; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
 </IfModule>

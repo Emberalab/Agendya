@@ -32,6 +32,7 @@ arranque.
 | `PORT` | `4000` | No (por defecto `4000`) | Puerto de escucha de la API |
 | `WEB_URL` | `http://localhost:5173` | No (por defecto localhost) | Origen de CORS del dashboard, redirección de OAuth |
 | `PUBLIC_WEB_URL` | *(vacío)* | No | Origen público (`https://agendya.co`): CORS extra y base de los enlaces de cancelación. Si falta, se usa `WEB_URL` |
+| `PROFESSIONAL_EMAIL_ALLOWLIST` | *(vacío = abierto en local)* | No | Correos que pueden registrar/entrar como profesional. En Railway `production`/`dev` hay listas por defecto; esta variable las pisa. Vacía = abierto |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (por defecto `25000`) | Milisegundos entre frames `event: ping` en el stream SSE `GET /realtime/stream`. Bájalo si un proxy inverso corta antes las conexiones inactivas |
 
 ### Solo para pruebas
@@ -52,6 +53,7 @@ fuerte y único antes de cualquier despliegue real.
 | --- | --- | --- |
 | `VITE_API_URL` | *(sin definir)* → `http://<host-de-la-página>:4000` | URL base que el navegador llama para la API. Déjala sin definir para localhost **y** para pruebas por LAN (`npm run dev:web:host`); defínela solo para apuntar a otro backend (p. ej. staging). |
 | `VITE_PUBLIC_SITE_URL` | *(sin definir)* → `window.location.origin` | Origen de la página pública (`/{slug}`). En prod: `https://agendya.co`. En `app-dev`: `https://app-dev.agendya.co`. |
+| `VITE_WAITLIST_URL` | *(sin definir)* | POST del formulario de cupo. En hosted: secret de Actions `VITE_WAITLIST_URL`. Sin ella el envío no sale |
 
 `apiClient` la resuelve así:
 

@@ -32,7 +32,7 @@ unfinished work, not a documented feature.
 | `POST` | `/auth/login` | none · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
 | `GET` | `/auth/google` | none | — | 302 to Google (+ sets `oauth_state` cookie) |
-| `GET` | `/auth/google/callback` | `state` cookie + Google | `?code&state` | 302 to `{WEB_URL}/auth/callback#token=<JWT>` |
+| `GET` | `/auth/google/callback` | `state` cookie + Google | `?code&state` | 302 to `{WEB_URL}/auth/callback#token=<JWT>` · waitlist: `/register?waitlist=1` · invalid `state`: `/login?error=oauth` |
 
 `user` shape: `{ id, email, businessName, slug }`.
 
@@ -48,6 +48,16 @@ unfinished work, not a documented feature.
   `"First Last"`.
 - `isActive = false` disables an account: `JwtStrategy.validate` rejects its
   tokens with `401`.
+
+## Closed beta (waitlist)
+
+On Railway (`RAILWAY_ENVIRONMENT_NAME` = `production` or `dev`) only these emails
+may register or log in as a professional: `hjose0650@gmail.com`,
+`afz.0228@gmail.com`, `jorgeemherrera@gmail.com`. Anyone else gets
+`403 { code: "WAITLIST_REQUIRED" }` and the web app shows the same waitlist form
+as [launch.agendya.co](https://launch.agendya.co). Local and CI leave signup
+open. `PROFESSIONAL_EMAIL_ALLOWLIST` overrides the arrays; empty = open. Public
+`/:slug` booking is unchanged.
 
 ## Session lifecycle (web)
 

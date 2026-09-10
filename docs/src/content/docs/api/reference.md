@@ -19,11 +19,11 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 
 | Método | Ruta | Auth | Cuerpo / Query | Respuesta |
 | --- | --- | --- | --- | --- |
-| `POST` | `/auth/register` | ninguna · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` |
-| `POST` | `/auth/login` | ninguna · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` |
+| `POST` | `/auth/register` | ninguna · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `403 { code: "WAITLIST_REQUIRED" }` en Railway si el correo no está en la lista de prueba |
+| `POST` | `/auth/login` | ninguna · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · mismo `403` de lista de espera |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
 | `GET` | `/auth/google` | ninguna | — | `302` → Google (pone la cookie `oauth_state`) |
-| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` |
+| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · correo no permitido: `{WEB_URL}/register?waitlist=1` · `state` inválido: `{WEB_URL}/login?error=oauth` |
 
 `user` = `{ id, email, businessName, slug }`.
 

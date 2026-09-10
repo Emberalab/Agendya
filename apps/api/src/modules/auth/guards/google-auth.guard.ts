@@ -18,8 +18,14 @@ import {
  */
 @Injectable()
 export class GoogleAuthGuard extends AuthGuard('google') {
-  getAuthenticateOptions(context: ExecutionContext): { state: string } {
+  getAuthenticateOptions(context: ExecutionContext): { state?: string } {
     const request = context.switchToHttp().getRequest<Request>();
+    // This guard also runs on the callback. Minting a new state there would
+    // overwrite the cookie the callback still needs to compare.
+    if (typeof request.query.code === 'string') {
+      return {};
+    }
+
     const response = context.switchToHttp().getResponse<Response>();
     const state = randomBytes(24).toString('hex');
 
@@ -27,6 +33,7 @@ export class GoogleAuthGuard extends AuthGuard('google') {
       httpOnly: true,
       sameSite: 'lax',
       secure: request.protocol === 'https',
+      path: '/',
       maxAge: OAUTH_STATE_COOKIE_MAX_AGE_MS,
     });
 
