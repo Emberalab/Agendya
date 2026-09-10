@@ -78,7 +78,7 @@ Devuelto por cada endpoint de reserva `/public/...`:
 
 ## Autoservicio del cliente (enlace con token)
 
-El correo de confirmación contiene `{WEB_URL}/bookings/<cancellationToken>`
+El correo de confirmación contiene `{PUBLIC_WEB_URL o WEB_URL}/bookings/<cancellationToken>`
 (`BookingCancelPage.tsx`). Desde ahí:
 
 | Acción | API | Notas |

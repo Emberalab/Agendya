@@ -58,7 +58,8 @@ queda encendida):
 
 Función de origen a medida (`bootstrap.ts` + `common/utils/cors.util.ts`):
 
-- **Permitido:** `WEB_URL` exacto, o cualquier origen `http(s)` cuyo host sea
+- **Permitido:** `WEB_URL` exacto, y `PUBLIC_WEB_URL` si está definido; o
+  cualquier origen `http(s)` cuyo host sea
   `localhost` / `127.0.0.1` / `10/8` / `172.16–31` / `192.168/16` (para
   `npm run dev:web:host`).
 - **Rechazado:** cualquier otro `Origin` cross-origin — no se refleja (test de

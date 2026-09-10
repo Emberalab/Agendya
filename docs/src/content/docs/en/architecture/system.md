@@ -83,7 +83,7 @@ flowchart LR
 | Concern | Where |
 | --- | --- |
 | Security headers | `helmet()` in `bootstrap.ts` (full CSP — JSON API, no HTML) |
-| CORS | Custom origin function in `bootstrap.ts` + `common/utils/cors.util.ts` (configured `WEB_URL` + any localhost/private-network origin) |
+| CORS | Custom origin function in `bootstrap.ts` + `common/utils/cors.util.ts` (configured `WEB_URL` + `PUBLIC_WEB_URL` + any localhost/private-network origin) |
 | Rate limiting | `@nestjs/throttler` global guard; per-route overrides via `@Throttle` |
 | Input validation | `ZodValidationPipe` with `@agendya/types` schemas, per route |
 | Auth | `passport-jwt` (`JwtStrategy` re-loads the professional and checks `isActive`) |

@@ -30,7 +30,8 @@ arranque.
 | `RESEND_API_KEY` | *(vacío)* | No | Los correos se registran en consola en lugar de enviarse |
 | `CLOUDINARY_URL` | *(vacío)* | No | `POST /upload/image` devuelve `503 Service Unavailable` |
 | `PORT` | `4000` | No (por defecto `4000`) | Puerto de escucha de la API |
-| `WEB_URL` | `http://localhost:5173` | No (por defecto localhost) | Origen permitido de CORS, base de la redirección de éxito de OAuth, base del enlace de cancelación en los correos |
+| `WEB_URL` | `http://localhost:5173` | No (por defecto localhost) | Origen de CORS del dashboard, redirección de OAuth |
+| `PUBLIC_WEB_URL` | *(vacío)* | No | Origen público (`https://agendya.co`): CORS extra y base de los enlaces de cancelación. Si falta, se usa `WEB_URL` |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (por defecto `25000`) | Milisegundos entre frames `event: ping` en el stream SSE `GET /realtime/stream`. Bájalo si un proxy inverso corta antes las conexiones inactivas |
 
 ### Solo para pruebas
@@ -50,6 +51,7 @@ fuerte y único antes de cualquier despliegue real.
 | Variable | Por defecto | Efecto |
 | --- | --- | --- |
 | `VITE_API_URL` | *(sin definir)* → `http://<host-de-la-página>:4000` | URL base que el navegador llama para la API. Déjala sin definir para localhost **y** para pruebas por LAN (`npm run dev:web:host`); defínela solo para apuntar a otro backend (p. ej. staging). |
+| `VITE_PUBLIC_SITE_URL` | *(sin definir)* → `window.location.origin` | Origen de la página pública (`/{slug}`). En prod: `https://agendya.co`. En `app-dev`: `https://app-dev.agendya.co`. |
 
 `apiClient` la resuelve así:
 

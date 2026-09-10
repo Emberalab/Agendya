@@ -53,7 +53,8 @@ server-rendered HTML, so the restrictive default CSP stays on):
 
 Custom origin function (`bootstrap.ts` + `common/utils/cors.util.ts`):
 
-- **Allowed:** exact `WEB_URL`, or any `http(s)` origin whose host is
+- **Allowed:** exact `WEB_URL`, plus `PUBLIC_WEB_URL` when set; or any
+  `http(s)` origin whose host is
   `localhost` / `127.0.0.1` / `10/8` / `172.16–31` / `192.168/16` (for
   `npm run dev:web:host`).
 - **Rejected:** any other cross-origin `Origin` — not reflected (regression

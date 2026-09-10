@@ -39,7 +39,7 @@ description: Problemas habituales del desarrollo local y sus soluciones.
 
 | Síntoma | Causa | Solución |
 | --- | --- | --- |
-| Navegador: *"blocked by CORS policy"* | El origen del frontend ≠ `WEB_URL` y no es una IP privada/localhost | Pon `WEB_URL` al origen exacto del frontend; para pruebas por LAN usa `npm run dev:web:host` (las IP privadas se permiten automáticamente) |
+| Navegador: *"blocked by CORS policy"* | El origen del frontend ≠ `WEB_URL` / `PUBLIC_WEB_URL` y no es una IP privada/localhost | Pon `WEB_URL` (dashboard) y `PUBLIC_WEB_URL` (apex) a los orígenes exactos; para pruebas por LAN usa `npm run dev:web:host` (las IP privadas se permiten automáticamente) |
 | Las llamadas a la API van al host equivocado | `VITE_API_URL` sin definir y la página abierta desde un host raro | Define `VITE_API_URL` explícitamente, o abre la app desde `localhost` / la IP de LAN donde también está la API |
 
 ## Build y pruebas

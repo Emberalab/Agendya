@@ -31,6 +31,30 @@ describe('isAllowedOrigin', () => {
     expect(isAllowedOrigin('https://8.8.8.8', WEB_URL)).toBe(false);
   });
 
+  it('allows any of several configured frontend origins', () => {
+    expect(
+      isAllowedOrigin('https://app.agendya.co', [
+        'https://app.agendya.co',
+        'https://agendya.co',
+      ]),
+    ).toBe(true);
+    expect(
+      isAllowedOrigin('https://agendya.co', [
+        'https://app.agendya.co',
+        'https://agendya.co',
+      ]),
+    ).toBe(true);
+  });
+
+  it('still rejects a public origin that is not in the allow-list', () => {
+    expect(
+      isAllowedOrigin('https://evil-attacker.example', [
+        'https://app.agendya.co',
+        'https://agendya.co',
+      ]),
+    ).toBe(false);
+  });
+
   it('rejects a malformed origin', () => {
     expect(isAllowedOrigin('not-a-url', WEB_URL)).toBe(false);
   });

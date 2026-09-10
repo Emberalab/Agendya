@@ -85,7 +85,8 @@ date-range query params instead.
 
 ## CORS
 
-Allowed origins: the configured `WEB_URL` exactly, plus any `http(s)` origin on
+Allowed origins: `WEB_URL` and, when set, `PUBLIC_WEB_URL` (exact), plus any
+`http(s)` origin on
 `localhost` / a private-network IP (`127.0.0.1`, `10/8`, `172.16/12`,
 `192.168/16`) — the latter for `npm run dev:web:host`. `credentials` is
 `false` (no cookie auth). An arbitrary cross-origin `Origin` is **not**

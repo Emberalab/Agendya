@@ -1,0 +1,24 @@
+# GoDaddy cPanel (Apache). Vite copies this file into dist/.
+# Do not use `Options`: on this shared host it often returns 500.
+DirectoryIndex index.html
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
+
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# The hosting account injects a CSP (Firebase/Calendly/GoDaddy) that does not
+# include the Railway API. Multiple CSP headers are AND-ed by the browser, so
+# we must unset the inherited one and set ours.
+<IfModule mod_headers.c>
+  Header unset Content-Security-Policy
+  Header always unset Content-Security-Policy
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' https: data: blob:; connect-src 'self' https://agendya-dev.up.railway.app https://agendya-api.up.railway.app https://api.agendya.co; frame-ancestors 'self'; base-uri 'self'; object-src 'none'"
+</IfModule>

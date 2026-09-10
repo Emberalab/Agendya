@@ -30,7 +30,8 @@ boots.
 | `RESEND_API_KEY` | *(empty)* | No | Emails are logged to the console instead of sent |
 | `CLOUDINARY_URL` | *(empty)* | No | `POST /upload/image` returns `503 Service Unavailable` |
 | `PORT` | `4000` | No (defaults `4000`) | API listen port |
-| `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | CORS allow-origin, OAuth success redirect base, cancel-link base in emails |
+| `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | Dashboard CORS origin, OAuth success redirect base |
+| `PUBLIC_WEB_URL` | *(empty)* | No | Public booking origin (`https://agendya.co`): extra CORS origin and cancel-link base. Falls back to `WEB_URL` |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (defaults `25000`) | Milliseconds between `event: ping` frames on the `GET /realtime/stream` SSE stream. Lower it if a reverse proxy drops idle connections sooner |
 
 ### Test-only
@@ -50,6 +51,7 @@ unique secret before any real deployment.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `VITE_API_URL` | *(unset)* → `http://<page-host>:4000` | Base URL the browser calls for the API. Leave unset for localhost **and** LAN testing (`npm run dev:web:host`); set it only to target a different backend (e.g. staging). |
+| `VITE_PUBLIC_SITE_URL` | *(unset)* → `window.location.origin` | Public page origin (`/{slug}`). Prod: `https://agendya.co`. Hosted-dev: `https://app-dev.agendya.co`. |
 
 `apiClient` resolves it as:
 

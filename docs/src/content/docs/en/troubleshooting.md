@@ -39,7 +39,7 @@ description: Common local-development problems and their fixes.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Browser: *"blocked by CORS policy"* | Frontend origin ≠ `WEB_URL` and not a private/localhost IP | Set `WEB_URL` to the exact frontend origin; for LAN testing use `npm run dev:web:host` (private IPs are allowed automatically) |
+| Browser: *"blocked by CORS policy"* | Frontend origin ≠ `WEB_URL` / `PUBLIC_WEB_URL` and not a private/localhost IP | Set `WEB_URL` (dashboard) and `PUBLIC_WEB_URL` (apex) to the exact origins; for LAN testing use `npm run dev:web:host` (private IPs are allowed automatically) |
 | API calls go to the wrong host | `VITE_API_URL` unset and page opened from an odd host | Set `VITE_API_URL` explicitly, or open the app from `localhost` / the LAN IP the API is also on |
 
 ## Build & test

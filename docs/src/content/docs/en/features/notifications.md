@@ -24,7 +24,7 @@ Agendya has **two kinds** of notification:
 - **From:** `Agendya <reservas@agendya.app>` (hard-coded).
 - **Dates:** `Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle:
   'short', timeZone })` in the professional's timezone.
-- **Cancel link:** `{WEB_URL}/bookings/<cancellationToken>`.
+- **Cancel link:** `{PUBLIC_WEB_URL or WEB_URL}/bookings/<cancellationToken>`.
 - **XSS:** every interpolated value (`customerName`, `businessName`,
   `serviceName`, …) passes through `escapeHtml` — the booking form is public
   and the professional receives some of those values in their inbox.

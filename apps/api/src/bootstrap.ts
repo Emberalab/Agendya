@@ -1,7 +1,7 @@
 import { INestApplication, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import helmet from 'helmet';
-import { isAllowedOrigin } from './common/utils/cors.util';
+import { configuredOrigins, isAllowedOrigin } from './common/utils/cors.util';
 
 // Ships in .env.example for local setup convenience. Flagged rather than
 // silently trusted so a deployment that copied .env.example verbatim finds
@@ -34,24 +34,23 @@ export function configureApp(app: INestApplication): void {
   app.use(helmet());
 
   const configService = app.get(ConfigService);
-  const webUrl = (configService.get<string>('webUrl') ?? '').replace(
-    /\/+$/,
-    '',
+  const allowedOrigins = configuredOrigins(
+    configService.get<string>('webUrl'),
+    configService.get<string>('publicWebUrl'),
   );
 
-  // Restrict cross-origin requests to the configured frontend, plus any
-  // localhost/private-network origin on the Vite dev port — the latter keeps
-  // the documented `npm run dev:web:host` LAN-testing flow working (the page
-  // is then loaded from a LAN IP, not `webUrl`). No cookies are used for API
-  // auth (the JWT travels in the Authorization header), so `credentials`
-  // stays at its default `false`.
+  // Restrict cross-origin requests to the configured frontends (dashboard
+  // `WEB_URL` and optional public site `PUBLIC_WEB_URL`), plus any
+  // localhost/private-network origin — the latter keeps `npm run dev:web:host`
+  // working. No cookies are used for API auth (JWT in Authorization), so
+  // `credentials` stays at its default `false`.
   app.enableCors({
     origin: (
       origin: string | undefined,
       callback: (err: Error | null, allow?: boolean) => void,
     ) => {
       // No Origin header (curl, server-to-server, same-origin) — allow.
-      if (!origin || isAllowedOrigin(origin, webUrl)) {
+      if (!origin || isAllowedOrigin(origin, allowedOrigins)) {
         callback(null, true);
         return;
       }
