@@ -39,6 +39,32 @@ test('saves an edited business name', async ({ page, api }) => {
   expect(patch?.body).toMatchObject({ businessName: 'Barbería E2E Renovada' });
 });
 
+// Regression: the sidebar avatar's initial/name read from the auth store's
+// cached `user`, which used to be set only at login — a saved profile change
+// never reached it, so the initial (and the name under it) stayed on
+// whatever was true when the session started until the next login. A Google
+// sign-up starts with an empty `businessName` (filled in later from the
+// Profile page), so for that account the avatar just stayed blank forever.
+test('updates the sidebar avatar and name right after saving the business name — no reload needed', async ({
+  page,
+}) => {
+  await page.goto('/dashboard/profile');
+
+  const sidebar = page.getByRole('complementary');
+  await expect(sidebar.getByText('Barbería E2E', { exact: true })).toBeVisible();
+  await expect(sidebar.getByText('B', { exact: true })).toBeVisible();
+
+  await page.getByPlaceholder(/Mi Barbería/).fill('Estudio Renovado');
+  await page.getByRole('button', { name: 'Guardar cambios' }).click();
+  await expect(page.getByText('Cambios guardados.')).toBeVisible();
+
+  await expect(sidebar.getByText('Estudio Renovado', { exact: true })).toBeVisible();
+  await expect(sidebar.getByText('E', { exact: true })).toBeVisible();
+  await expect(
+    sidebar.getByText('Barbería E2E', { exact: true }),
+  ).not.toBeVisible();
+});
+
 test('shows the server error when the update is rejected', async ({
   page,
   api,
