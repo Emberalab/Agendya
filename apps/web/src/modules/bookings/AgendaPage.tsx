@@ -353,7 +353,7 @@ export function AgendaPage() {
   const [selectedForReschedule, setSelectedForReschedule] = useState<AgendaBooking | null>(null);
   const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
 
-  const { data: bookings, isLoading } = useAgenda(from, to);
+  const { data: bookings, isLoading, isFetching, refetch: refetchAgenda } = useAgenda(from, to);
 
   // Deep link from a notification: ?booking=<id>&date=<yyyy-mm-dd>. Open that
   // booking's detail drawer regardless of the active view (list or calendar).
@@ -373,12 +373,35 @@ export function AgendaPage() {
     setTo((prev) => (hi > prev ? hi : prev));
   }, [focusBookingId, focusDate]);
 
-  // Once the widened range covers the target day and has loaded, open the
-  // booking and drop the params so a refresh or Back doesn't reopen it.
+  // If the agenda was already open when the notification arrived, `bookings`
+  // can be a snapshot from *before* the booking existed — the realtime
+  // bridge invalidates the query (see useNotificationsRealtime.ts), but that
+  // background refetch isn't guaranteed to have landed by the time the
+  // customer clicks through (still `isLoading: false`, since the range was
+  // already loaded once — only a first-ever fetch sets that). Without this,
+  // the lookup below ran once against that stale snapshot, found nothing,
+  // and gave up for good — clearing the deep link so a second click (which
+  // this component staying mounted stops from re-fetching too) worked only
+  // because *something else* happened to refresh the cache in the meantime.
+  // Force exactly one fresh fetch per booking id before concluding it's
+  // genuinely not there.
+  const forcedRefetchFor = useRef<string | null>(null);
+
+  // Once the widened range covers the target day and any fetch (including a
+  // forced one, below) has settled, open the booking and drop the params so
+  // a refresh or Back doesn't reopen it.
   const focusInRange = !focusDate || (focusDate >= from && focusDate <= to);
   useEffect(() => {
-    if (!focusBookingId || !focusInRange || isLoading) return;
+    if (!focusBookingId || !focusInRange || isLoading || isFetching) return;
+
     const match = (bookings ?? []).find((b) => b.id === focusBookingId);
+    if (!match && forcedRefetchFor.current !== focusBookingId) {
+      forcedRefetchFor.current = focusBookingId;
+      void refetchAgenda();
+      return;
+    }
+    forcedRefetchFor.current = null;
+
     if (match) setSelectedForDetail(match);
     setSearchParams(
       (prev) => {
@@ -389,7 +412,15 @@ export function AgendaPage() {
       },
       { replace: true },
     );
-  }, [focusBookingId, focusInRange, isLoading, bookings, setSearchParams]);
+  }, [
+    focusBookingId,
+    focusInRange,
+    isLoading,
+    isFetching,
+    bookings,
+    refetchAgenda,
+    setSearchParams,
+  ]);
 
   const cancelBooking = useCancelBooking();
   const completeBooking = useCompleteBooking();
