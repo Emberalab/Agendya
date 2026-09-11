@@ -5,6 +5,7 @@ import type {
   ProfessionalProfile,
   PublicBooking,
   Service,
+  WorkingHour,
 } from '@agendya/types';
 import {
   PUBLIC_SLUG,
@@ -99,6 +100,10 @@ export class ApiMock {
 
   setAgenda(bookings: AgendaBooking[]): void {
     this.agenda = bookings;
+  }
+
+  setWorkingHours(hours: WorkingHour[]): void {
+    this.workingHours = hours;
   }
 
   /**

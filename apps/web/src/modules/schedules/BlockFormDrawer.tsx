@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { minutesToTimeString, timeStringToMinutes } from './time.util';
-import { findOverlap, formatRange, type Block } from './blocks';
+import { findOverlap, formatRange, newBlockId, type Block } from './blocks';
 
 interface BlockFormDrawerProps {
   /** The block being edited, or null when adding a new one. */
@@ -11,7 +11,7 @@ interface BlockFormDrawerProps {
   siblings: Block[];
   saving: boolean;
   onCancel: () => void;
-  onSave: (block: Block, applyToAllDays: boolean) => void;
+  onSave: (block: Block) => void;
 }
 
 export function BlockFormDrawer({
@@ -27,12 +27,15 @@ export function BlockFormDrawer({
   const [endTime, setEndTime] = useState(
     initial ? minutesToTimeString(initial.endMinute) : '15:00',
   );
-  const [applyToAllDays, setApplyToAllDays] = useState(false);
+  // Stable for the life of this drawer instance: reuse the block's own id
+  // when editing, generate one exactly once (not on every keystroke) when
+  // creating.
+  const [blockId] = useState(() => initial?.id ?? newBlockId());
   const dialogRef = useFocusTrap<HTMLDivElement>(true, onCancel);
 
   const startMinute = timeStringToMinutes(startTime);
   const endMinute = timeStringToMinutes(endTime);
-  const candidate: Block = { startMinute, endMinute };
+  const candidate: Block = { id: blockId, startMinute, endMinute };
 
   const invalidRange = endMinute <= startMinute;
   const overlap = invalidRange ? null : findOverlap(candidate, siblings);
@@ -185,47 +188,6 @@ export function BlockFormDrawer({
               </div>
             </div>
           )}
-
-          <label
-            className="flex gap-3 rounded-xl p-4 cursor-pointer"
-            style={{ backgroundColor: 'var(--color-surface-soft)' }}
-          >
-            <input
-              type="checkbox"
-              checked={applyToAllDays}
-              onChange={(e) => setApplyToAllDays(e.target.checked)}
-              style={{
-                width: '18px',
-                height: '18px',
-                flexShrink: 0,
-                marginTop: '1px',
-                accentColor: 'var(--color-brand-primary)',
-              }}
-            />
-            <span>
-              <span
-                style={{
-                  display: 'block',
-                  fontWeight: 600,
-                  fontSize: '14px',
-                  color: 'var(--color-text-primary)',
-                  marginBottom: '2px',
-                }}
-              >
-                Aplicar a todos los días
-              </span>
-              <span
-                style={{
-                  fontSize: '13px',
-                  color: 'var(--color-text-secondary)',
-                  lineHeight: '1.5',
-                }}
-              >
-                Al activar esta opción, la configuración se aplicará
-                automáticamente a todos los días que tengas activos.
-              </span>
-            </span>
-          </label>
         </div>
 
         <div
@@ -248,7 +210,7 @@ export function BlockFormDrawer({
           <button
             type="button"
             disabled={!canSave}
-            onClick={() => onSave(candidate, applyToAllDays)}
+            onClick={() => onSave(candidate)}
             className="flex-1 py-3 rounded-xl text-sm font-semibold"
             style={{
               backgroundColor: canSave

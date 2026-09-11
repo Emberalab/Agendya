@@ -9,6 +9,7 @@ import {
   formatBlockDuration,
   formatRange,
   groupByDay,
+  serializeBlocks,
   toDaysPayload,
   type Block,
 } from './blocks';
@@ -17,7 +18,9 @@ import { useWorkingHours } from './hooks/useWorkingHours';
 import { WEEKDAY_LABELS, slugToWeekday } from './weekday';
 
 type DrawerState =
-  { mode: 'closed' } | { mode: 'create' } | { mode: 'edit'; index: number };
+  | { mode: 'closed' }
+  | { mode: 'create' }
+  | { mode: 'edit'; id: string };
 
 export function DaySchedulePage() {
   const { day } = useParams<{ day: string }>();
@@ -41,9 +44,15 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
   );
 
   const [blocks, setBlocks] = useState<Block[]>([]);
+  // Always visible on this page (not tucked inside the per-block modal, see
+  // BlockFormDrawer.tsx) precisely so the professional can *see* whether
+  // it's on before saving — a hidden, modal-scoped checkbox that silently
+  // resets every time this page remounts (e.g. after a save navigates away
+  // and they come back to add one more block) was the root cause of a block
+  // added in a later visit quietly never reaching the other days.
   const [applyToAll, setApplyToAll] = useState(false);
   const [drawer, setDrawer] = useState<DrawerState>({ mode: 'closed' });
-  const [confirmIndex, setConfirmIndex] = useState<number | null>(null);
+  const [confirmBlockId, setConfirmBlockId] = useState<string | null>(null);
 
   useEffect(() => {
     setBlocks(serverByDay[weekday]);
@@ -55,35 +64,42 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
   );
 
   const editingBlock =
-    drawer.mode === 'edit' ? (sortedBlocks[drawer.index] ?? null) : null;
+    drawer.mode === 'edit'
+      ? (sortedBlocks.find((b) => b.id === drawer.id) ?? null)
+      : null;
   const siblings =
     drawer.mode === 'edit'
-      ? sortedBlocks.filter((_, i) => i !== drawer.index)
+      ? sortedBlocks.filter((b) => b.id !== drawer.id)
       : sortedBlocks;
 
-  const handleDrawerSave = (block: Block, applyToAllDays: boolean) => {
-    setBlocks((current) => {
-      const sorted = [...current].sort((a, b) => a.startMinute - b.startMinute);
-      if (drawer.mode === 'edit') {
-        sorted[drawer.index] = block;
-        return sorted;
-      }
-      return [...sorted, block];
-    });
-    if (applyToAllDays) setApplyToAll(true);
+  // Blocks are matched by their stable `id` (see blocks.ts), never by
+  // position — `sortedBlocks` is re-derived (and re-ordered) on every render,
+  // so an index captured when a row's "editar"/"eliminar" was clicked could
+  // point at a different block, or nothing, by the time it was acted on.
+  const handleDrawerSave = (block: Block) => {
+    setBlocks((current) =>
+      drawer.mode === 'edit'
+        ? current.map((b) => (b.id === drawer.id ? block : b))
+        : [...current, block],
+    );
     setDrawer({ mode: 'closed' });
   };
 
-  const removeBlock = (index: number) => {
-    setBlocks((current) => {
-      const sorted = [...current].sort((a, b) => a.startMinute - b.startMinute);
-      return sorted.filter((_, i) => i !== index);
-    });
+  const removeBlock = (id: string) => {
+    setBlocks((current) => current.filter((b) => b.id !== id));
   };
+
+  const dirty =
+    serializeBlocks(sortedBlocks) !== serializeBlocks(serverByDay[weekday]) ||
+    applyToAll;
 
   const handleSave = () => {
     const nextByDay = { ...serverByDay, [weekday]: sortedBlocks };
-    if (applyToAll) {
+    // Only ever copy a day that actually has something to copy — an emptied
+    // "source" day (every block just deleted) must never wipe every other
+    // active day's schedule out from under it. Days that are off
+    // (`length === 0`) are left off; copying never turns a day on by itself.
+    if (applyToAll && sortedBlocks.length > 0) {
       for (const key of Object.keys(nextByDay) as Weekday[]) {
         if (key !== weekday && nextByDay[key].length > 0) {
           nextByDay[key] = sortedBlocks.map((b) => ({ ...b }));
@@ -210,7 +226,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
         ) : (
           sortedBlocks.map((block, index) => (
             <div
-              key={`${block.startMinute}-${block.endMinute}-${index}`}
+              key={block.id}
               className="flex items-center gap-2 px-4 py-4 sm:gap-3 sm:px-6"
               style={{
                 borderTop: index > 0 ? '1px solid var(--color-border)' : 'none',
@@ -260,7 +276,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
               <span className="flex-1" />
               <button
                 type="button"
-                onClick={() => setDrawer({ mode: 'edit', index })}
+                onClick={() => setDrawer({ mode: 'edit', id: block.id })}
                 aria-label={`Editar bloque ${formatRange(block)}`}
                 className="flex items-center justify-center w-8 h-8 rounded-lg"
                 style={{
@@ -281,7 +297,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
               </button>
               <button
                 type="button"
-                onClick={() => setConfirmIndex(index)}
+                onClick={() => setConfirmBlockId(block.id)}
                 aria-label={`Eliminar bloque ${formatRange(block)}`}
                 className="flex items-center justify-center w-8 h-8 rounded-lg"
                 style={{
@@ -306,45 +322,108 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
         )}
       </div>
 
-      {applyToAll && (
-        <p
-          className="mt-3"
-          style={{ fontSize: '12px', color: 'var(--color-text-brand)' }}
-        >
-          Al guardar, estos bloques se copiarán a todos los días activos.
-        </p>
-      )}
+      <label
+        className="flex gap-3 rounded-xl p-4 mt-4 cursor-pointer"
+        style={{
+          // Matches the codebase's established "active/selected" treatment
+          // (see Calendar.tsx, BookingWizard.tsx, ProfilePage.tsx drag-over)
+          // rather than the neutral --color-surface-soft, which reads at the
+          // same tone as the page background and made this control easy to
+          // miss entirely — see the reported "the checkbox disappeared" bug.
+          backgroundColor: applyToAll
+            ? 'var(--color-brand-surface)'
+            : 'var(--color-surface)',
+          border: `1px solid ${applyToAll ? 'var(--color-brand-primary)' : 'var(--color-border)'}`,
+          boxShadow: '0 1px 2px rgba(15,23,42,0.04)',
+          transition: 'background-color 0.15s ease, border-color 0.15s ease',
+        }}
+      >
+        <input
+          type="checkbox"
+          checked={applyToAll}
+          onChange={(e) => setApplyToAll(e.target.checked)}
+          style={{
+            width: '18px',
+            height: '18px',
+            flexShrink: 0,
+            marginTop: '1px',
+            accentColor: 'var(--color-brand-primary)',
+          }}
+        />
+        <span>
+          <span
+            style={{
+              display: 'block',
+              fontWeight: 600,
+              fontSize: '14px',
+              color: applyToAll
+                ? 'var(--color-text-brand)'
+                : 'var(--color-text-primary)',
+              marginBottom: '2px',
+            }}
+          >
+            Aplicar a todos los días activos
+          </span>
+          <span
+            style={{
+              fontSize: '13px',
+              color: 'var(--color-text-secondary)',
+              lineHeight: '1.5',
+            }}
+          >
+            Al guardar, estos bloques reemplazarán los de todos los días que
+            tengas activos. Los días desactivados no se ven afectados.
+          </span>
+        </span>
+      </label>
 
-      <div className="flex items-stretch gap-3 mt-5 sm:items-center sm:justify-between">
-        <button
-          type="button"
-          onClick={() => navigate('/dashboard/schedule')}
-          className="order-2 flex-1 rounded-xl text-sm font-semibold px-5 py-3 sm:order-1 sm:flex-none"
-          style={{
-            background: 'none',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-          }}
-        >
-          Volver a horario
-        </button>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={setWorkingHours.isPending}
-          className="order-1 flex-1 px-5 py-3 rounded-xl text-sm font-semibold sm:order-2 sm:flex-none"
-          style={{
-            backgroundColor: 'var(--color-brand-primary)',
-            color: '#fff',
-            border: '1px solid var(--color-brand-primary)',
-            lineHeight: 1.25,
-            cursor: setWorkingHours.isPending ? 'not-allowed' : 'pointer',
-            opacity: setWorkingHours.isPending ? 0.7 : 1,
-          }}
-        >
-          {setWorkingHours.isPending ? 'Guardando…' : 'Guardar configuración'}
-        </button>
+      <div className="flex flex-col gap-3 mt-5 sm:flex-row sm:items-center sm:justify-between">
+        <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+          {setWorkingHours.isSuccess && !dirty
+            ? 'Configuración guardada.'
+            : dirty
+              ? 'Tienes cambios sin guardar.'
+              : 'Los cambios se aplican de inmediato a tu página de reservas.'}
+        </p>
+        <div className="flex items-stretch gap-3">
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard/schedule')}
+            className="order-2 flex-1 rounded-xl text-sm font-semibold px-5 py-3 sm:order-1 sm:flex-none"
+            style={{
+              background: 'none',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            Volver a horario
+          </button>
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={!dirty || setWorkingHours.isPending}
+            className="order-1 flex-1 px-5 py-3 rounded-xl text-sm font-semibold sm:order-2 sm:flex-none"
+            style={{
+              backgroundColor:
+                !dirty || setWorkingHours.isPending
+                  ? 'var(--color-border)'
+                  : 'var(--color-brand-primary)',
+              color:
+                !dirty || setWorkingHours.isPending
+                  ? 'var(--color-text-muted)'
+                  : '#fff',
+              border: 'none',
+              lineHeight: 1.25,
+              cursor:
+                !dirty || setWorkingHours.isPending
+                  ? 'not-allowed'
+                  : 'pointer',
+            }}
+          >
+            {setWorkingHours.isPending ? 'Guardando…' : 'Guardar configuración'}
+          </button>
+        </div>
       </div>
 
       {drawer.mode !== 'closed' && (
@@ -357,16 +436,17 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
         />
       )}
 
-      {confirmIndex !== null && sortedBlocks[confirmIndex] && (
-        <ConfirmDeleteBlockDialog
-          block={sortedBlocks[confirmIndex]}
-          onCancel={() => setConfirmIndex(null)}
-          onConfirm={() => {
-            removeBlock(confirmIndex);
-            setConfirmIndex(null);
-          }}
-        />
-      )}
+      {confirmBlockId !== null &&
+        sortedBlocks.find((b) => b.id === confirmBlockId) && (
+          <ConfirmDeleteBlockDialog
+            block={sortedBlocks.find((b) => b.id === confirmBlockId)!}
+            onCancel={() => setConfirmBlockId(null)}
+            onConfirm={() => {
+              removeBlock(confirmBlockId);
+              setConfirmBlockId(null);
+            }}
+          />
+        )}
     </div>
   );
 }
