@@ -6,6 +6,7 @@ import { FormGroup, Input, Select } from '@moondesignsystem/react';
 import { formatEsShort, formatEsWeekdayLong } from './dateEs';
 import { AGENDA_FOCUS_BOOKING_PARAM, AGENDA_FOCUS_DATE_PARAM } from '../notifications/navigation';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { useAgendaViewStore } from './agendaViewStore';
 import { ContextMenu } from './ContextMenu';
 import { StatusBadge } from './statusBadge';
 import { useAgenda } from './hooks/useAgenda';
@@ -29,7 +30,6 @@ const RescheduleModal = lazy(() =>
   import('./RescheduleModal').then((m) => ({ default: m.RescheduleModal })),
 );
 
-type ViewMode = 'list' | 'calendar';
 type StatusFilter = 'all' | BookingStatus;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
@@ -345,7 +345,11 @@ export function AgendaPage() {
   const [to, setTo] = useState(inAWeek);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  // Lifted out of local state on purpose — see agendaViewStore.ts for why:
+  // this route fully unmounts on every navigation away from Agenda, and the
+  // selected view (Lista/Calendario) needs to survive that.
+  const viewMode = useAgendaViewStore((state) => state.viewMode);
+  const setViewMode = useAgendaViewStore((state) => state.setViewMode);
   const [selectedForReschedule, setSelectedForReschedule] = useState<AgendaBooking | null>(null);
   const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
 
