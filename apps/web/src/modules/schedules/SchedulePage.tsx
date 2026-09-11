@@ -20,7 +20,10 @@ export function SchedulePage() {
       </h1>
       <p
         className="text-[13px] lg:text-sm mb-6"
-        style={{ color: 'var(--color-text-secondary)' }}
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text-secondary)',
+        }}
       >
         Define los días y horarios en los que tus clientes podrán reservar citas
         contigo. Puedes modificar esta configuración cuando quieras.
