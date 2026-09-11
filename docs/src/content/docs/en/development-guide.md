@@ -53,7 +53,8 @@ User-facing strings (API error messages, UI copy, emails) are **Spanish
 - Branch off `main`. Branch names in this repo follow
   `AG-<ticket>-<slug>` (Linear-style).
 - CI runs on PRs to `main` (lint → typecheck → migrate → unit → api e2e →
-  build, plus the Playwright job). Keep it green.
+  build, plus the Playwright job). Keep it green: run `npm run verify` before
+  committing to catch the same failures locally.
 - Commit messages: end with
   `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>` when generated with
   Claude Code; PR descriptions end with the Claude Code footer.
@@ -68,7 +69,7 @@ flowchart LR
   B --> C["3 · apps/api<br/>controller binds ZodValidationPipe(schema)<br/>service implements the rule + ownership check"]
   C --> D["4 · apps/web<br/>module api.ts fn · hooks/ (useQuery/useMutation + invalidate)<br/>form uses zodResolver(schema)"]
   D --> E["5 · tests<br/>api *.spec.ts + test/*.e2e-spec.ts · web *.test.tsx"]
-  E --> F["6 · npm run lint && npm run typecheck && npm run test"]
+  E --> F["6 · npm run verify<br/>(lint → typecheck → test → build)"]
 ```
 
 Check `MVP-v1.md` first — if the feature belongs to `Fase-2/3/4-*.md`, it's out

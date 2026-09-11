@@ -2,10 +2,14 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { loginSchema, type LoginInput } from '@agendya/types';
 import { Controller, useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormGroup, Input } from '@moondesignsystem/react';
 import Group from '../../imports/Group11';
-import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import {
+  getApiErrorMessage,
+  isWaitlistRequiredError,
+} from '../../shared/api/getApiErrorMessage';
+import { AccessWaitlistForm } from './AccessWaitlistForm';
 import { useLogin } from './hooks/useLogin';
 
 const HERO_PHOTO =
@@ -19,8 +23,12 @@ export function LoginPage() {
   const {
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
+  const [searchParams] = useSearchParams();
+  const oauthFailed = searchParams.get('error') === 'oauth';
+  const showWaitlist = isWaitlistRequiredError(loginMutation.error);
 
   const onSubmit = handleSubmit((data) => {
     loginMutation.mutate(data, {
@@ -73,9 +81,22 @@ export function LoginPage() {
             Inicia sesión
           </h1>
           <p className="text-sm mb-7" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-            Bienvenido de vuelta. Ingresa tus datos para continuar.
+            {showWaitlist
+              ? 'Aún no abrimos cuentas para todo el mundo. Reserva tu cupo y te avisamos.'
+              : 'Bienvenido de vuelta. Ingresa tus datos para continuar.'}
           </p>
 
+          {oauthFailed && !showWaitlist && (
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
+              <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
+                No pudimos completar el acceso con Google. Vuelve a intentarlo.
+              </p>
+            </div>
+          )}
+
+          {showWaitlist ? (
+            <AccessWaitlistForm initialEmail={getValues('email') ?? ''} />
+          ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
             <Controller
               name="email"
@@ -187,7 +208,10 @@ export function LoginPage() {
               {loginMutation.isPending ? 'Ingresando...' : 'Iniciar sesión'}
             </Button>
           </form>
+          )}
 
+          {!showWaitlist && (
+          <>
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
             <span className="agendia-label text-xs uppercase">O continúa con</span>
@@ -235,6 +259,8 @@ export function LoginPage() {
               Continuar con Google
             </button>
           </div>
+          </>
+          )}
 
           <p
             className="text-sm text-center mt-6"

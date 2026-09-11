@@ -32,7 +32,7 @@ trabajo sin terminar, no una funcionalidad documentada.
 | `POST` | `/auth/login` | ninguna · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
 | `GET` | `/auth/google` | ninguna | — | 302 a Google (+ pone la cookie `oauth_state`) |
-| `GET` | `/auth/google/callback` | cookie `state` + Google | `?code&state` | 302 a `{WEB_URL}/auth/callback#token=<JWT>` |
+| `GET` | `/auth/google/callback` | cookie `state` + Google | `?code&state` | 302 a `{WEB_URL}/auth/callback#token=<JWT>` · lista de espera: `/register?waitlist=1` · `state` inválido: `/login?error=oauth` |
 
 Forma de `user`: `{ id, email, businessName, slug }`.
 
@@ -48,6 +48,16 @@ Forma de `user`: `{ id, email, businessName, slug }`.
   llamado `"Nombre Apellido"`.
 - `isActive = false` deshabilita una cuenta: `JwtStrategy.validate` rechaza sus
   tokens con `401`.
+
+## Periodo de prueba (lista de espera)
+
+En Railway (`RAILWAY_ENVIRONMENT_NAME` = `production` o `dev`) solo estos correos
+pueden registrar o iniciar sesión como profesional: `hjose0650@gmail.com`,
+`afz.0228@gmail.com`, `jorgeemherrera@gmail.com`. Cualquier otro recibe
+`403 { code: "WAITLIST_REQUIRED" }` y la web muestra el mismo formulario de
+cupo que [launch.agendya.co](https://launch.agendya.co). Local y CI no aplican
+la lista (signup abierto). `PROFESSIONAL_EMAIL_ALLOWLIST` la pisa; vacía = abierto.
+Las reservas públicas `/:slug` no se ven afectadas.
 
 ## Ciclo de vida de la sesión (web)
 

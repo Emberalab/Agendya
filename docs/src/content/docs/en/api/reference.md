@@ -18,11 +18,11 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 
 | Method | Path | Auth | Body / Query | Response |
 | --- | --- | --- | --- | --- |
-| `POST` | `/auth/register` | none · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` |
-| `POST` | `/auth/login` | none · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` |
+| `POST` | `/auth/register` | none · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `403 { code: "WAITLIST_REQUIRED" }` on Railway if the email is not on the closed-beta list |
+| `POST` | `/auth/login` | none · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · same waitlist `403` |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
 | `GET` | `/auth/google` | none | — | `302` → Google (sets `oauth_state` cookie) |
-| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` |
+| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · email not allowed: `{WEB_URL}/register?waitlist=1` · invalid `state`: `{WEB_URL}/login?error=oauth` |
 
 `user` = `{ id, email, businessName, slug }`.
 

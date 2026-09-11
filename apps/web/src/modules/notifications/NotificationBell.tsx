@@ -1,7 +1,16 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import { useUnreadCount } from './hooks/useUnreadCount';
-import { NotificationCenter } from './NotificationCenter';
 import { BellIcon } from './notificationIcons';
+
+// The panel opens on click and pulls in the notification list, its row/detail
+// views and the `date-fns` Spanish locale for relative timestamps. Splitting it
+// out keeps all of that off the dashboard shell's initial load — the bell,
+// badge and the realtime unread-count/toast bridge don't need it.
+const NotificationCenter = lazy(() =>
+  import('./NotificationCenter').then((m) => ({
+    default: m.NotificationCenter,
+  })),
+);
 
 /**
  * Dashboard notification trigger. `icon` (default) is the compact bell+badge
@@ -108,7 +117,11 @@ export function NotificationBell({
         </button>
       )}
 
-      {open && <NotificationCenter onClose={() => setOpen(false)} />}
+      {open && (
+        <Suspense fallback={null}>
+          <NotificationCenter onClose={() => setOpen(false)} />
+        </Suspense>
+      )}
     </>
   );
 }

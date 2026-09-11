@@ -1,20 +1,33 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { AgendaBooking, BookingStatus } from '@agendya/types';
 import { addDays, endOfMonth, endOfWeek, format, isToday, isTomorrow, startOfMonth, startOfWeek } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { FormGroup, Input, Select } from '@moondesignsystem/react';
+import { formatEsShort, formatEsWeekdayLong } from './dateEs';
 import { AGENDA_FOCUS_BOOKING_PARAM, AGENDA_FOCUS_DATE_PARAM } from '../notifications/navigation';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
-import { AppointmentDrawer } from './AppointmentDrawer';
-import { CalendarGridView } from './CalendarGridView';
 import { ContextMenu } from './ContextMenu';
-import { RescheduleModal } from './RescheduleModal';
 import { StatusBadge } from './statusBadge';
 import { useAgenda } from './hooks/useAgenda';
 import { useCancelBooking } from './hooks/useCancelBooking';
 import { useCompleteBooking } from './hooks/useCompleteBooking';
 import { useRescheduleBooking } from './hooks/useRescheduleBooking';
+
+// The list view is the default and above-the-fold render. The calendar grid
+// (only shown after toggling to "Calendario") and the detail/reschedule
+// overlays (only shown on a row click) are split out so they — and the
+// `date-fns` Spanish locale that the drawer pulls in — stay off the agenda's
+// initial load. Each renders conditionally already; a null fallback is fine
+// because they're an explicit user action away and never affect layout.
+const CalendarGridView = lazy(() =>
+  import('./CalendarGridView').then((m) => ({ default: m.CalendarGridView })),
+);
+const AppointmentDrawer = lazy(() =>
+  import('./AppointmentDrawer').then((m) => ({ default: m.AppointmentDrawer })),
+);
+const RescheduleModal = lazy(() =>
+  import('./RescheduleModal').then((m) => ({ default: m.RescheduleModal })),
+);
 
 type ViewMode = 'list' | 'calendar';
 type StatusFilter = 'all' | BookingStatus;
@@ -446,7 +459,7 @@ export function AgendaPage() {
     }
     return Array.from(map.entries()).map(([key, items]) => {
       const date = new Date(`${key}T00:00:00`);
-      const weekdayDate = format(date, "EEEE d 'de' MMMM", { locale: es }).toUpperCase();
+      const weekdayDate = formatEsWeekdayLong(date).toUpperCase();
       const suffix = `${items.length} ${items.length === 1 ? 'CITA' : 'CITAS'}`;
       const prefix = isToday(date) ? 'HOY · ' : isTomorrow(date) ? 'MAÑANA · ' : '';
       return { key, label: `${prefix}${weekdayDate} · ${suffix}`, bookings: items };
@@ -510,7 +523,7 @@ export function AgendaPage() {
         <StatCard
           label="Citas hoy"
           value={todayBookings?.length ?? 0}
-          sub={format(now, 'EEE, d MMM', { locale: es }).replace('.', '')}
+          sub={formatEsShort(now)}
           icon={
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
               <rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
@@ -836,29 +849,35 @@ export function AgendaPage() {
         )}
 
         {!isLoading && viewMode === 'calendar' && (
-          <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
+          <Suspense fallback={null}>
+            <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
+          </Suspense>
         )}
       </div>
 
       {selectedForDetail && (
-        <AppointmentDrawer
-          booking={selectedForDetail}
-          onClose={() => setSelectedForDetail(null)}
-          onReschedule={openReschedule}
-          onComplete={handleComplete}
-          completePending={completeBooking.isPending}
-          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
-        />
+        <Suspense fallback={null}>
+          <AppointmentDrawer
+            booking={selectedForDetail}
+            onClose={() => setSelectedForDetail(null)}
+            onReschedule={openReschedule}
+            onComplete={handleComplete}
+            completePending={completeBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
       )}
 
       {selectedForReschedule && (
-        <RescheduleModal
-          booking={selectedForReschedule}
-          onClose={() => setSelectedForReschedule(null)}
-          onConfirm={handleReschedule}
-          isLoading={rescheduleBooking.isPending}
-          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
-        />
+        <Suspense fallback={null}>
+          <RescheduleModal
+            booking={selectedForReschedule}
+            onClose={() => setSelectedForReschedule(null)}
+            onConfirm={handleReschedule}
+            isLoading={rescheduleBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
       )}
     </div>
   );

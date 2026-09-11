@@ -55,7 +55,10 @@ describe('NotificationBell', () => {
 
     await user.click(button);
 
-    expect(screen.getByRole('dialog', { name: 'Notificaciones' })).toBeInTheDocument();
+    // NotificationCenter is lazy-loaded, so it resolves a microtask after click.
+    expect(
+      await screen.findByRole('dialog', { name: 'Notificaciones' }),
+    ).toBeInTheDocument();
     expect(button).toHaveAttribute('aria-expanded', 'true');
   });
 
@@ -64,14 +67,16 @@ describe('NotificationBell', () => {
     render(<NotificationBell />);
     await user.tab();
     await user.keyboard('{Enter}');
-    expect(screen.getByRole('dialog', { name: 'Notificaciones' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('dialog', { name: 'Notificaciones' }),
+    ).toBeInTheDocument();
   });
 
   it('closes again', async () => {
     const user = userEvent.setup();
     render(<NotificationBell />);
     await user.click(screen.getByRole('button', { name: 'Notificaciones' }));
-    await user.click(screen.getByText('cerrar-stub'));
+    await user.click(await screen.findByText('cerrar-stub'));
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
