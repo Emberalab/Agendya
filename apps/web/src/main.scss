@@ -59,7 +59,8 @@
   --color-danger-border: #FECDD3;
 
   // Booking status badges — see modules/bookings/statusConfig.ts. Each status
-  // keeps its own hue (amber/emerald/slate/indigo/red) across both themes.
+  // keeps its own hue (amber/emerald/red/indigo/red) across both themes —
+  // "Cancelada" and "No asistió" are the one deliberate exception, both red.
   // Text colors are darker than the original 500-weight tones for the same
   // reason as --color-danger/--color-success above: on their own pastel
   // background these measured 2.1–4.0:1, short of 4.5:1.
@@ -69,9 +70,14 @@
   --status-confirmed-color: #047857;
   --status-confirmed-bg: #F0FDF4;
   --status-confirmed-border: #BBF7D0;
-  --status-cancelled-color: #5B6B84;
-  --status-cancelled-bg: #F8FAFC;
-  --status-cancelled-border: #E2E8F0;
+  // Reuses --color-danger/-surface/-border — same red as "No asistió" and the
+  // rest of the app's danger accents (delete buttons, error banners). The
+  // status/danger icons still differ, so the two aren't identical at a
+  // glance, but this intentionally breaks the "each status keeps its own
+  // hue" rule below — ask before reusing this pattern for a new status.
+  --status-cancelled-color: var(--color-danger);
+  --status-cancelled-bg: var(--color-danger-surface);
+  --status-cancelled-border: var(--color-danger-border);
   --status-completed-color: #4338CA;
   --status-completed-bg: #EEF2FF;
   --status-completed-border: #C7D2FE;
@@ -146,9 +152,10 @@ html[data-theme='dark'] {
   --status-confirmed-color: #34D399;
   --status-confirmed-bg: rgba(16, 185, 129, 0.16);
   --status-confirmed-border: rgba(16, 185, 129, 0.4);
-  --status-cancelled-color: #94A3B8;
-  --status-cancelled-bg: rgba(148, 163, 184, 0.12);
-  --status-cancelled-border: rgba(148, 163, 184, 0.3);
+  // See the light-theme definition above — same reuse of --color-danger.
+  --status-cancelled-color: var(--color-danger);
+  --status-cancelled-bg: var(--color-danger-surface);
+  --status-cancelled-border: var(--color-danger-border);
   --status-completed-color: #818CF8;
   --status-completed-bg: rgba(99, 102, 241, 0.16);
   --status-completed-border: rgba(99, 102, 241, 0.4);

@@ -93,6 +93,11 @@ export const scheduleExceptionSchema = z.object({
   id: z.string().uuid(),
   date: dateOnlySchema,
   reason: z.string().nullable(),
+  // How many CONFIRMED bookings already exist on this date. Only populated on
+  // creation (to drive an informational UI message — blocking a date never
+  // cancels existing bookings, see SchedulesService.createException);
+  // omitted from `listExceptions` to avoid a per-row count query there.
+  affectedBookingsCount: z.number().int().min(0).optional(),
 });
 
 export type ScheduleException = z.infer<typeof scheduleExceptionSchema>;

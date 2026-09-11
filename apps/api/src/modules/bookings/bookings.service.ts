@@ -242,7 +242,12 @@ export class BookingsService {
   /**
    * Throws when the `startAt`..`startAt + durationMinutes` window does not fit
    * inside the professional's working hours for that day, or the day is blocked
-   * by a schedule exception.
+   * by a schedule exception. Shared by every path that lands a booking on a
+   * *new* slot — initial creation, the customer's token-edit flow, and both
+   * reschedule flows — since a reschedule is, from the schedule's point of
+   * view, indistinguishable from a new booking. A blocked date never touches
+   * bookings that already occupy a slot (see SchedulesService.createException);
+   * it only gates where a booking can move *to*.
    */
   private async assertSlotWithinSchedule(
     professional: Professional,
@@ -452,6 +457,12 @@ export class BookingsService {
       newStartAt.getTime() + booking.durationMinutesSnapshot * 60_000,
     );
 
+    await this.assertSlotWithinSchedule(
+      booking.professional,
+      newStartAt,
+      booking.durationMinutesSnapshot,
+    );
+
     const oldStartAt = booking.startAt;
     const updated = await this.commitReschedule(
       booking.id,
@@ -600,6 +611,12 @@ export class BookingsService {
 
     const newEndAt = new Date(
       newStartAt.getTime() + booking.durationMinutesSnapshot * 60_000,
+    );
+
+    await this.assertSlotWithinSchedule(
+      professional,
+      newStartAt,
+      booking.durationMinutesSnapshot,
     );
 
     const oldStartAt = booking.startAt;
