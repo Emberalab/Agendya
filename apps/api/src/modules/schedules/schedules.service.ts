@@ -11,7 +11,11 @@ import type {
   WorkingHour,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
-import { dateOnlyUtc, formatDateOnly } from '../../common/utils/timezone.util';
+import {
+  dateOnlyUtc,
+  formatDateOnly,
+  zonedInstant,
+} from '../../common/utils/timezone.util';
 
 @Injectable()
 export class SchedulesService {
@@ -76,10 +80,21 @@ export class SchedulesService {
         },
       });
 
+      // Blocking a date only prevents *new* bookings/reschedules from landing
+      // on it (see BookingsService.assertSlotWithinSchedule) — it never
+      // touches bookings that already exist there. Surface how many are
+      // already on the books so the UI can say so explicitly instead of
+      // leaving the professional to wonder why the agenda didn't change.
+      const affectedBookingsCount = await this.countConfirmedBookings(
+        professionalId,
+        input.date,
+      );
+
       return {
         id: exception.id,
         date: formatDateOnly(exception.date),
         reason: exception.reason,
+        affectedBookingsCount,
       };
     } catch (error) {
       if (
@@ -90,6 +105,30 @@ export class SchedulesService {
       }
       throw error;
     }
+  }
+
+  private async countConfirmedBookings(
+    professionalId: string,
+    dateStr: string,
+  ): Promise<number> {
+    const professional = await this.prisma.professional.findUnique({
+      where: { id: professionalId },
+    });
+    if (!professional) {
+      return 0;
+    }
+
+    const dayStart = zonedInstant(dateStr, 0, professional.timezone);
+    const dayEnd = zonedInstant(dateStr, 24 * 60, professional.timezone);
+
+    return this.prisma.booking.count({
+      where: {
+        professionalId,
+        status: 'CONFIRMED',
+        startAt: { lt: dayEnd },
+        endAt: { gt: dayStart },
+      },
+    });
   }
 
   async deleteException(
