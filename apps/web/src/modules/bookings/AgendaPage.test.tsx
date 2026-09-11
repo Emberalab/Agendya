@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as api from './api';
 import { AgendaPage } from './AgendaPage';
+import { useAgendaViewStore } from './agendaViewStore';
 
 vi.mock('./api');
 
@@ -56,6 +57,10 @@ const HOME_BOOKING = {
 describe('AgendaPage', () => {
   afterEach(() => {
     vi.resetAllMocks();
+    // agendaViewStore is a module-scoped singleton (that's the point — it
+    // survives AgendaPage unmounting), so it leaks across tests in this file
+    // unless reset. Every test should start from the product default.
+    useAgendaViewStore.setState({ viewMode: 'list' });
   });
 
   it('shows a message when there are no bookings in range', async () => {
@@ -213,5 +218,64 @@ describe('AgendaPage', () => {
     // Drill into the booking card -> detail drawer
     await user.click((await screen.findAllByText('Corte de cabello'))[0]);
     expect(await screen.findByText('Detalle de la cita')).toBeInTheDocument();
+  });
+
+  describe('view selection persistence', () => {
+    async function activeViewButton(name: 'Lista' | 'Calendario') {
+      return (await screen.findAllByRole('button', { name }))[0];
+    }
+
+    it('defaults to Lista on first visit', async () => {
+      vi.mocked(api.listAgenda).mockResolvedValue([]);
+
+      renderPage();
+
+      expect(await activeViewButton('Lista')).toHaveStyle({
+        backgroundColor: 'var(--color-brand-primary)',
+      });
+      // The filter bar (search/date-range/status) only renders in list view.
+      expect(await screen.findByText(/Mostrando/)).toBeInTheDocument();
+    });
+
+    it('keeps Calendario selected after navigating away and back to Agenda', async () => {
+      vi.mocked(api.listAgenda).mockResolvedValue([]);
+
+      const user = userEvent.setup();
+      const { unmount } = renderPage();
+
+      await user.click(await activeViewButton('Calendario'));
+      expect(await activeViewButton('Calendario')).toHaveStyle({
+        backgroundColor: 'var(--color-brand-primary)',
+      });
+
+      // Simulates the route unmounting AgendaPage (e.g. Agenda -> Servicios
+      // -> Perfil) and mounting it again on return, the same as
+      // react-router does for a real navigation between sibling routes.
+      unmount();
+      renderPage();
+
+      expect(await activeViewButton('Calendario')).toHaveStyle({
+        backgroundColor: 'var(--color-brand-primary)',
+      });
+      expect(screen.queryByText(/Mostrando/)).not.toBeInTheDocument();
+    });
+
+    it('keeps Lista selected after switching back and navigating away and back', async () => {
+      vi.mocked(api.listAgenda).mockResolvedValue([]);
+
+      const user = userEvent.setup();
+      const { unmount } = renderPage();
+
+      await user.click(await activeViewButton('Calendario'));
+      await user.click(await activeViewButton('Lista'));
+
+      unmount();
+      renderPage();
+
+      expect(await activeViewButton('Lista')).toHaveStyle({
+        backgroundColor: 'var(--color-brand-primary)',
+      });
+      expect(await screen.findByText(/Mostrando/)).toBeInTheDocument();
+    });
   });
 });
