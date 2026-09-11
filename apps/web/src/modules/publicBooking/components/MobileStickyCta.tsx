@@ -71,9 +71,24 @@ export function MobileStickyCta({
       setTimeout(() => setFieldFocused(isTextEntry(document.activeElement)), 0);
     document.addEventListener('focusin', sync);
     document.addEventListener('focusout', sync);
+
+    // Scrolling a field's own text (or its content overflowing) never blurs
+    // it — on a real device or here, `document.activeElement` stays the same
+    // input for as long as it holds focus, keyboard or no keyboard. That
+    // used to mean: type into the *last* field on a step, then scroll to
+    // reach the real "Continuar" below the fold, and this bar — the one
+    // thing meant to save that scroll — stayed hidden the entire time,
+    // because nothing had blurred the field yet. Scrolling is itself proof
+    // the customer is looking for something below, so show it regardless of
+    // focus the moment they do; a fresh tap into a field re-hides it via
+    // `focusin` above as usual.
+    const onScroll = () => setFieldFocused(false);
+    window.addEventListener('scroll', onScroll, { passive: true });
+
     return () => {
       document.removeEventListener('focusin', sync);
       document.removeEventListener('focusout', sync);
+      window.removeEventListener('scroll', onScroll);
     };
   }, []);
 
