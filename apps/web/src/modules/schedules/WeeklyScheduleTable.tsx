@@ -80,7 +80,7 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
         <div
           className="grid items-center px-6 py-3"
           style={{
-            gridTemplateColumns: '150px 90px 1fr 80px',
+            gridTemplateColumns: '180px 70px 1fr 80px',
             backgroundColor: 'var(--color-surface-soft)',
             borderBottom: '1px solid var(--color-border)',
           }}
@@ -111,14 +111,17 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
               key={day}
               className="grid items-center px-6 py-4"
               style={{
-                gridTemplateColumns: '150px 90px 1fr 80px',
+                gridTemplateColumns: '180px 70px 1fr 80px',
                 borderTop: i > 0 ? '1px solid var(--color-border)' : 'none',
                 backgroundColor: changed
                   ? 'var(--color-brand-surface)'
                   : 'transparent',
               }}
             >
-              <span className="flex items-center gap-2">
+              {/* Stacked (not inline) so the "Sin guardar" badge gets its own
+                  line instead of fighting the day name for room in a fixed-
+                  width column. */}
+              <span className="flex flex-col items-start gap-1">
                 <span
                   style={{
                     fontSize: '15px',
@@ -178,7 +181,9 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
               }}
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="flex items-center gap-2">
+                {/* flex-wrap: on very narrow phones the badge drops to its
+                    own line instead of squeezing against the day name. */}
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span
                     style={{
                       fontFamily: 'var(--font-display)',
