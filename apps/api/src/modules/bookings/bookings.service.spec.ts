@@ -859,6 +859,39 @@ describe('BookingsService', () => {
         data: { status: 'EXPIRED' },
       });
     });
+
+    it('still cancels a booking whose date was blocked after it was made (blocking is not retroactive)', async () => {
+      // Business rule: a schedule exception only stops *new* bookings/reschedules
+      // from landing on that date (assertSlotWithinSchedule). It must never gate
+      // cancelling — or, elsewhere, completing — a booking that already exists
+      // there. Simulating a blocked date here (scheduleException resolves
+      // truthy) and asserting the cancel still goes through is the regression
+      // guard for that distinction.
+      const bookingRow = {
+        id: 'booking-1',
+        status: 'CONFIRMED',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        startAt: new Date('2026-08-10T14:00:00.000Z'),
+        endAt: new Date('2026-08-10T14:30:00.000Z'),
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      };
+      prisma.booking.findFirst.mockResolvedValue(bookingRow);
+      prisma.booking.update.mockResolvedValue({
+        ...bookingRow,
+        status: 'CANCELLED',
+      });
+      prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).resolves.toMatchObject({ status: 'CANCELLED' });
+    });
   });
 
   describe('completeByProfessional', () => {
@@ -1037,6 +1070,32 @@ describe('BookingsService', () => {
       expect(txBooking.update).not.toHaveBeenCalled();
     });
 
+    it('rejects rescheduling onto a date blocked by a schedule exception', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      // The exception check must run before the slot is ever written — a
+      // blocked date is not bypassable by rescheduling into it.
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects rescheduling to a time outside working hours', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      // 2026-08-11T02:00 UTC is 2026-08-10 21:00 in America/Bogota (UTC-5),
+      // outside the default 08:00-18:00 working block.
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T02:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
     it('reschedules inside a serializable transaction and notifies both parties', async () => {
       prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
       const newStartAt = new Date('2026-08-11T15:00:00.000Z');
@@ -1155,6 +1214,18 @@ describe('BookingsService', () => {
       ).rejects.toThrow(ConflictException);
     });
 
+    it('rejects rescheduling onto a date blocked by a schedule exception', async () => {
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
     it('reschedules inside a transaction and notifies only the customer', async () => {
       prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
       const newStartAt = new Date('2026-08-11T15:00:00.000Z');
@@ -1224,7 +1295,10 @@ describe('BookingsService', () => {
         cancelledAt: null,
         cancelledBy: null,
       });
-      const newStartAt = new Date('2026-08-03T10:00:00.000Z');
+      // 15:00 UTC = 10:00 in America/Bogota, inside the default 08:00-18:00
+      // working block — this test is about the UTC-day-boundary guard, not
+      // working-hours fit, so the target time just needs to be a valid slot.
+      const newStartAt = new Date('2026-08-03T15:00:00.000Z');
       txBooking.update.mockResolvedValue({
         id: 'booking-1',
         professionalId: 'prof-1',
@@ -1236,14 +1310,14 @@ describe('BookingsService', () => {
         serviceNameSnapshot: 'Corte de cabello',
         durationMinutesSnapshot: 30,
         startAt: newStartAt,
-        endAt: new Date('2026-08-03T10:30:00.000Z'),
+        endAt: new Date('2026-08-03T15:30:00.000Z'),
         createdAt: new Date('2026-07-30T10:00:00.000Z'),
         cancelledAt: null,
         cancelledBy: null,
       });
 
       const result = await service.rescheduleBooking('prof-1', 'booking-1', {
-        newStartAt: '2026-08-03T10:00:00.000Z',
+        newStartAt: '2026-08-03T15:00:00.000Z',
       });
 
       expect(result.status).toBe('CONFIRMED');

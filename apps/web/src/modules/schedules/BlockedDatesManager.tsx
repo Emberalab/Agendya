@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { AffectedBookingsPanel } from './AffectedBookingsPanel';
 import { useCreateException } from './hooks/useCreateException';
 import { useDeleteException } from './hooks/useDeleteException';
 import { useExceptions } from './hooks/useExceptions';
@@ -51,16 +52,37 @@ export function BlockedDatesManager() {
   const deleteException = useDeleteException();
   const [date, setDate] = useState('');
   const [reason, setReason] = useState('');
+  // Blocking a date only stops *new* bookings from landing on it — it never
+  // touches appointments already on the books there. When the professional
+  // just blocked a date that already has confirmed appointments, remember
+  // that here so we can say so explicitly instead of letting the agenda's
+  // unchanged appointment list look like a bug.
+  const [keptAppointments, setKeptAppointments] = useState<{
+    date: string;
+    count: number;
+  } | null>(null);
+  // The date currently open in AffectedBookingsPanel — either right after
+  // blocking a date that already had bookings, or reopened later from the
+  // list below. Resolving those bookings (cancel/reschedule) is always a
+  // separate, explicit action from blocking itself.
+  const [viewingDate, setViewingDate] = useState<string | null>(null);
 
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!date) {
       return;
     }
+    setKeptAppointments(null);
     createException.mutate(
       { date, reason: reason.trim() ? reason.trim() : undefined },
       {
-        onSuccess: () => {
+        onSuccess: (created) => {
+          if (created.affectedBookingsCount) {
+            setKeptAppointments({
+              date: created.date,
+              count: created.affectedBookingsCount,
+            });
+          }
           setDate('');
           setReason('');
         },
@@ -145,9 +167,61 @@ export function BlockedDatesManager() {
 
       {createException.isError && (
         <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
-          <p className="text-sm text-red-600 dark:text-red-400">
+          <p
+            style={{ fontFamily: 'var(--font-body)', fontSize: '13px' }}
+            className="text-red-600 dark:text-red-400"
+          >
             {getApiErrorMessage(createException.error)}
           </p>
+        </div>
+      )}
+
+      {keptAppointments && (
+        // A warning, not an info toast: it flags a pending decision (what to
+        // do with real customer bookings), not a neutral FYI — reuses the
+        // app's --status-pending-* (amber) tokens, the same visual language
+        // as a "Pendiente" booking, rather than a one-off blue. See the
+        // analogous "Horario superpuesto" warning in BlockFormDrawer.tsx.
+        <div
+          role="status"
+          className="mt-4 rounded-lg border p-3"
+          style={{
+            borderColor: 'var(--status-pending-border)',
+            backgroundColor: 'var(--status-pending-bg)',
+          }}
+        >
+          <p
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '13px',
+              marginBottom: '8px',
+              color: 'var(--status-pending-color)',
+            }}
+          >
+            Ya tienes {keptAppointments.count}{' '}
+            {keptAppointments.count === 1
+              ? 'cita confirmada'
+              : 'citas confirmadas'}{' '}
+            para el {formatDate(keptAppointments.date)}. Bloquear esta fecha
+            no las cancela por sí sola — siguen en tu Agenda hasta que tú
+            decidas qué hacer con ellas.
+          </p>
+          <button
+            type="button"
+            onClick={() => setViewingDate(keptAppointments.date)}
+            className="px-3 py-1.5 rounded-lg"
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '13px',
+              fontWeight: 600,
+              border: '1px solid var(--status-pending-color)',
+              background: 'none',
+              color: 'var(--status-pending-color)',
+              cursor: 'pointer',
+            }}
+          >
+            Ver y gestionar estas citas
+          </button>
         </div>
       )}
 
@@ -206,27 +280,52 @@ export function BlockedDatesManager() {
                     </p>
                   )}
                 </div>
-                <button
-                  type="button"
-                  onClick={() => deleteException.mutate(exception.id)}
-                  disabled={deleteException.isPending}
-                  className="shrink-0 px-3 py-1.5 rounded-lg text-sm font-semibold"
-                  style={{
-                    border: '1px solid var(--color-danger-border)',
-                    background: 'none',
-                    color: 'var(--color-danger)',
-                    cursor: deleteException.isPending
-                      ? 'not-allowed'
-                      : 'pointer',
-                  }}
-                >
-                  Eliminar
-                </button>
+                <div className="flex shrink-0 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setViewingDate(exception.date)}
+                    className="px-3 py-1.5 rounded-lg"
+                    style={{
+                      fontFamily: 'var(--font-body)',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      border: '1px solid var(--color-border)',
+                      background: 'none',
+                      color: 'var(--color-text-primary)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    Ver citas
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => deleteException.mutate(exception.id)}
+                    disabled={deleteException.isPending}
+                    className="px-3 py-1.5 rounded-lg text-sm font-semibold"
+                    style={{
+                      border: '1px solid var(--color-danger-border)',
+                      background: 'none',
+                      color: 'var(--color-danger)',
+                      cursor: deleteException.isPending
+                        ? 'not-allowed'
+                        : 'pointer',
+                    }}
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+
+      {viewingDate && (
+        <AffectedBookingsPanel
+          date={viewingDate}
+          onClose={() => setViewingDate(null)}
+        />
+      )}
     </div>
   );
 }
