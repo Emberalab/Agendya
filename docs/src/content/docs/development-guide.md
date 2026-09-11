@@ -58,7 +58,8 @@ en español).
 - Ramifica desde `main`. Los nombres de rama en este repo siguen
   `AG-<ticket>-<slug>` (estilo Linear).
 - CI corre en los PR a `main` (lint → typecheck → migrate → unit → api e2e →
-  build, más el job de Playwright). Mantenlo en verde.
+  build, más el job de Playwright). Mantenlo en verde: corre `npm run verify`
+  antes de commitear para atrapar los mismos fallos localmente.
 - Mensajes de commit: terminan con
   `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>` cuando se generan
   con Claude Code; las descripciones de PR terminan con el pie de Claude Code.
@@ -73,7 +74,7 @@ flowchart LR
   B --> C["3 · apps/api<br/>el controller enlaza ZodValidationPipe(schema)<br/>el service implementa la regla + chequeo de propiedad"]
   C --> D["4 · apps/web<br/>fn de api.ts del módulo · hooks/ (useQuery/useMutation + invalidate)<br/>el formulario usa zodResolver(schema)"]
   D --> E["5 · pruebas<br/>api *.spec.ts + test/*.e2e-spec.ts · web *.test.tsx"]
-  E --> F["6 · npm run lint && npm run typecheck && npm run test"]
+  E --> F["6 · npm run verify<br/>(lint → typecheck → test → build)"]
 ```
 
 Revisa `MVP-v1.md` primero — si la funcionalidad pertenece a `Fase-2/3/4-*.md`,
