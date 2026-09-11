@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   ci:
@@ -14,19 +14,19 @@ jobs:
       postgres:
         image: postgres:16-alpine
         env:
-          POSTGRES_USER: ronda
-          POSTGRES_PASSWORD: ronda_ci_password
-          POSTGRES_DB: ronda_ci
+          POSTGRES_USER: agendya
+          POSTGRES_PASSWORD: agendya_ci_password
+          POSTGRES_DB: agendya_ci
         ports:
           - 5432:5432
         options: >-
-          --health-cmd="pg_isready -U ronda"
+          --health-cmd="pg_isready -U agendya"
           --health-interval=10s
           --health-timeout=5s
           --health-retries=5
 
     env:
-      DATABASE_URL: postgresql://ronda:ronda_ci_password@localhost:5432/ronda_ci?schema=public
+      DATABASE_URL: postgresql://agendya:agendya_ci_password@localhost:5432/agendya_ci?schema=public
       JWT_SECRET: ci-test-secret
       JWT_EXPIRES_IN: 7d
       SLOT_GRID_MINUTES: 15
@@ -34,10 +34,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -71,10 +71,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
           cache: npm
@@ -92,7 +92,7 @@ jobs:
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: playwright-report
           path: |

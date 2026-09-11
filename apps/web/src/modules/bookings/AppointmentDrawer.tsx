@@ -2,6 +2,7 @@ import type { AgendaBooking } from '@agendya/types';
 import { useState } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { STATUS_CFG } from './statusConfig';
 
 function initials(name: string): string {
@@ -43,16 +44,23 @@ function ConfirmCompleteDialog({
   onConfirm: () => void;
   onCancel: () => void;
 }) {
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onCancel);
+
   return (
     <div
       className="fixed inset-0 z-[200] flex items-center justify-center px-4"
       style={{ backgroundColor: 'var(--overlay-scrim)' }}
     >
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Marcar como completada"
         className="rounded-3xl p-8 flex flex-col items-center gap-4 w-full max-w-sm"
         style={{ backgroundColor: 'var(--color-surface)', boxShadow: '0 24px 64px rgba(15,23,42,0.18)' }}
       >
-        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: '#EEF2FF' }}>
+        <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-brand-surface)' }}>
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <path d="M5 11l4.5 4.5L17 6" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
@@ -115,6 +123,49 @@ function InfoRow({ icon, text }: { icon: React.ReactNode; text: string }) {
   );
 }
 
+/**
+ * Home-service ("a domicilio") address, shown only when `booking.atHome`. The
+ * address is a single free-text string the customer supplied; it is rendered
+ * verbatim with hard wrapping so a long line can never overflow the card or the
+ * drawer. When it is missing we say so plainly rather than showing a fake value.
+ */
+function HomeAddressSection({ address }: { address: string | null }) {
+  return (
+    <>
+      <p
+        className="px-1"
+        style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', fontWeight: 600, letterSpacing: '0.08em', color: 'var(--color-text-muted)' }}
+      >
+        DOMICILIO
+      </p>
+      <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
+        <div className="flex items-start gap-2.5">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true" style={{ color: 'var(--color-text-brand)', flexShrink: 0, marginTop: '1px' }}>
+            <path d="M8 1.6c-2.4 0-4.4 2-4.4 4.4 0 3.1 4.4 8 4.4 8s4.4-4.9 4.4-8c0-2.4-2-4.4-4.4-4.4Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+            <circle cx="8" cy="6" r="1.5" stroke="currentColor" strokeWidth="1.3" />
+          </svg>
+          <div className="min-w-0">
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 700, color: 'var(--color-text-primary)' }}>
+              Servicio a domicilio
+            </p>
+            <p
+              className="agendya-longtext agendya-longtext--multiline mt-1"
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '14px',
+                color: address ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                lineHeight: '1.5',
+              }}
+            >
+              {address?.trim() || 'El cliente no registró una dirección.'}
+            </p>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function AppointmentDrawer({
   booking,
   onClose,
@@ -124,6 +175,9 @@ export function AppointmentDrawer({
   presentation = 'drawer',
 }: AppointmentDrawerProps) {
   const [showConfirm, setShowConfirm] = useState(false);
+  // Deactivated while the nested "mark as completed" confirm dialog is open,
+  // so its own trap (not this one) owns Escape/Tab until it closes.
+  const dialogRef = useFocusTrap<HTMLDivElement>(!!booking && !showConfirm, onClose);
 
   if (!booking) return null;
 
@@ -144,7 +198,7 @@ export function AppointmentDrawer({
   const body = (
     <>
       {booking.status === 'CANCELLED' && (
-        <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: '#FFF1F2', border: '1px solid #FECDD3' }}>
+        <div className="rounded-2xl px-4 py-3" style={{ backgroundColor: 'var(--color-danger-surface)', border: '1px solid var(--color-danger-border)' }}>
           <p style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-danger)' }}>
             {cancelledByLabel(booking.cancelledBy)}
             {booking.cancelledAt
@@ -211,8 +265,8 @@ export function AppointmentDrawer({
       </p>
       <div className="rounded-2xl p-5" style={{ backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)' }}>
         <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: '#EEF2FF' }}>
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px', color: 'var(--color-brand-primary)' }}>
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style={{ backgroundColor: 'var(--color-brand-surface)' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px', color: 'var(--color-text-brand)' }}>
               {initials(booking.customerName)}
             </span>
           </div>
@@ -244,7 +298,7 @@ export function AppointmentDrawer({
           <a
             href={`tel:${booking.customerPhone.replace(/\s+/g, '')}`}
             className="flex items-center gap-1.5"
-            style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600, color: 'var(--color-brand-primary)' }}
+            style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-brand)' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M1 1h3l1.5 3.5L4 6s1.5 3 4 4l1.5-1.5L13 10v3s-2.5 1.5-6-1C3.5 9.5 1 4.5 1 1z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
@@ -269,6 +323,9 @@ export function AppointmentDrawer({
         </div>
       </div>
 
+      {/* Home-service address — only for "a domicilio" bookings. */}
+      {booking.atHome && <HomeAddressSection address={booking.customerAddress} />}
+
       {/* Appointment info */}
       <p
         className="px-1"
@@ -289,11 +346,19 @@ export function AppointmentDrawer({
             Reserva desde enlace público
           </span>
         </div>
-        <div className="flex justify-between items-baseline gap-3">
+        <div className="flex flex-col gap-1">
           <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>Observaciones</span>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-primary)', textAlign: 'right' }}>
-            Sin observaciones
-          </span>
+          <p
+            className="agendya-longtext agendya-longtext--multiline"
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: '14px',
+              color: booking.customerNote?.trim() ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+              lineHeight: '1.5',
+            }}
+          >
+            {booking.customerNote?.trim() || 'Sin observaciones'}
+          </p>
         </div>
 
         <div
@@ -312,25 +377,31 @@ export function AppointmentDrawer({
     </>
   );
 
+  // A booking can still be marked complete after its slot has passed (the
+  // professional forgot to close it out), but it can only be rescheduled
+  // while `canReschedule` holds — mirrors the backend's assertModifiable
+  // guard, which is what actually enforces this if the button is bypassed.
   const footer =
-    booking.status === 'CONFIRMED' ? (
+    booking.status === 'CONFIRMED' || booking.status === 'EXPIRED' ? (
       <div
         className={`flex gap-3 p-4 shrink-0${presentation === 'modal' ? ' sm:justify-end' : ''}`}
         style={{ borderTop: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
       >
-        <button
-          onClick={() => onReschedule(booking)}
-          className="shrink-0 px-5 py-3 rounded-2xl text-sm font-semibold"
-          style={{
-            fontFamily: 'var(--font-body)',
-            background: 'none',
-            border: '1px solid var(--color-border)',
-            color: 'var(--color-text-primary)',
-            cursor: 'pointer',
-          }}
-        >
-          Reprogramar
-        </button>
+        {booking.canReschedule && (
+          <button
+            onClick={() => onReschedule(booking)}
+            className="shrink-0 px-5 py-3 rounded-2xl text-sm font-semibold"
+            style={{
+              fontFamily: 'var(--font-body)',
+              background: 'none',
+              border: '1px solid var(--color-border)',
+              color: 'var(--color-text-primary)',
+              cursor: 'pointer',
+            }}
+          >
+            Reprogramar
+          </button>
+        )}
         <button
           onClick={() => setShowConfirm(true)}
           className={`${presentation === 'modal' ? 'flex-1 sm:flex-none sm:px-6' : 'flex-1'} py-3 rounded-2xl text-sm font-semibold`}
@@ -365,6 +436,8 @@ export function AppointmentDrawer({
           onClick={onClose}
         >
           <div
+            ref={dialogRef}
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-label="Detalle de la cita"
@@ -421,6 +494,11 @@ export function AppointmentDrawer({
       />
 
       <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Detalle de la cita"
         className="fixed inset-0 z-[100] flex flex-col lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[420px]"
         style={{ backgroundColor: 'var(--color-surface-soft)', boxShadow: '-8px 0 40px rgba(15,23,42,0.14)' }}
       >

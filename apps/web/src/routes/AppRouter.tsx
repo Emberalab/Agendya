@@ -1,13 +1,19 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
-import { LoginPage } from '../modules/auth/LoginPage';
 import { PrivateRoute } from './PrivateRoute';
 import { PublicRoute } from './PublicRoute';
 
-// `/login` is the guaranteed entry point (the root and every unknown route
-// redirect there), so it stays in the initial bundle. Everything else is
-// code-split: the dashboard subtree and the public booking flow (which pulls in
-// the large multi-step wizard) load only when their route is visited.
+// Every route is code-split, including `/login`. It's the guaranteed entry point
+// (the root and every unknown route redirect there), but keeping it in the
+// initial bundle also dragged react-hook-form + Zod + the form resolver onto
+// the startup path of *authenticated* routes like `/dashboard/agenda`, which
+// never render a form on load. The login chunk is small and shares its
+// react-hook-form/Zod chunk with the other auth pages.
+const LoginPage = lazy(() =>
+  import('../modules/auth/LoginPage').then((m) => ({
+    default: m.LoginPage,
+  })),
+);
 const RegisterPage = lazy(() =>
   import('../modules/auth/RegisterPage').then((m) => ({
     default: m.RegisterPage,

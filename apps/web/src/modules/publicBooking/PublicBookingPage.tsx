@@ -2,6 +2,8 @@ import type { PublicBooking } from '@agendya/types';
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Logo from '../../imports/LogoGroup';
+import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
+import { ThemeToggle } from '../../shared/theme/ThemeToggle';
 import { BookingWizard } from './BookingWizard';
 import type { BookingWizardInitialValues } from './BookingWizard';
 import { BookingConfirmedView } from './components/BookingConfirmedView';
@@ -85,7 +87,7 @@ export function PublicBookingPage() {
               border: '1px solid var(--color-border)',
             }}
           >
-            <p style={{ fontSize: '14px', color: '#DC2626' }}>
+            <p style={{ fontSize: '14px', color: 'var(--color-danger)' }}>
               No encontramos esta página.
             </p>
           </div>
@@ -161,8 +163,14 @@ export function PublicBookingPage() {
           <div className="relative">
             {professional.coverImageUrl ? (
               <img
-                src={professional.coverImageUrl}
+                src={cloudinaryImageUrl(professional.coverImageUrl, {
+                  width: 1600,
+                })}
                 alt=""
+                width={1600}
+                height={600}
+                fetchPriority="high"
+                decoding="async"
                 className="h-40 w-full object-cover sm:h-52"
               />
             ) : (
@@ -196,8 +204,13 @@ export function PublicBookingPage() {
               >
                 {professional.logoUrl ? (
                   <img
-                    src={professional.logoUrl}
+                    src={cloudinaryImageUrl(professional.logoUrl, {
+                      width: 176,
+                    })}
                     alt={professional.businessName}
+                    width={176}
+                    height={176}
+                    decoding="async"
                     className="h-full w-full object-cover"
                   />
                 ) : (
@@ -232,8 +245,8 @@ export function PublicBookingPage() {
                       style={{
                         fontSize: '12px',
                         fontWeight: 600,
-                        backgroundColor: '#EEF2FF',
-                        color: 'var(--color-brand-primary)',
+                        backgroundColor: 'var(--color-brand-surface)',
+                        color: 'var(--color-text-brand)',
                       }}
                     >
                       {professional.category}
@@ -284,7 +297,7 @@ export function PublicBookingPage() {
         >
           Powered by{' '}
           <span
-            style={{ color: 'var(--color-brand-primary)', fontWeight: 600 }}
+            style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}
           >
             agendya
           </span>
@@ -303,6 +316,9 @@ function Shell({ children }: { children: React.ReactNode }) {
         fontFamily: 'var(--font-body)',
       }}
     >
+      <a href="#main-content" className="agendia-skip-link">
+        Saltar al contenido principal
+      </a>
       <header
         className="hidden items-center justify-between px-8 py-4 lg:flex"
         style={{
@@ -319,17 +335,22 @@ function Shell({ children }: { children: React.ReactNode }) {
               fontFamily: 'var(--font-display)',
               fontWeight: 700,
               fontSize: '18px',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             agendya
           </span>
         </div>
-        <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
-          Portal de Reservas Público
-        </span>
+        <div className="flex items-center gap-3">
+          <span style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+            Portal de Reservas Público
+          </span>
+          <ThemeToggle />
+        </div>
       </header>
-      {children}
+      <main id="main-content" tabIndex={-1}>
+        {children}
+      </main>
     </div>
   );
 }

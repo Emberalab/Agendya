@@ -113,7 +113,7 @@ export function BookingConfirmedView({
                 {label}
               </dt>
               <dd
-                className="mt-0.5"
+                className="agendya-longtext mt-0.5"
                 style={{
                   fontSize: '15px',
                   fontWeight: 600,
@@ -148,7 +148,7 @@ export function BookingConfirmedView({
             className="w-full rounded-xl px-6 py-3 font-semibold"
             style={{
               backgroundColor: 'var(--color-surface)',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
               border: '1px solid var(--color-border)',
               fontSize: '15px',
               cursor: 'pointer',

@@ -2,12 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Weekday, WorkingHour } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
-import { formatRange, groupByDay, toDaysPayload, type Block } from './blocks';
+import {
+  formatRange,
+  groupByDay,
+  newBlockId,
+  serializeBlocks,
+  toDaysPayload,
+  type Block,
+} from './blocks';
 import { useSetWorkingHours } from './hooks/useSetWorkingHours';
 import { WEEKDAY_LABELS, WEEKDAY_SLUGS, WEEK_ORDER } from './weekday';
 
 /** Default block applied when a rest day is switched on: 09:00–18:00. */
-const DEFAULT_BLOCK: Block = { startMinute: 540, endMinute: 1080 };
+function createDefaultBlock(): Block {
+  return { id: newBlockId(), startMinute: 540, endMinute: 1080 };
+}
 
 function serialize(byDay: Record<Weekday, Block[]>): string {
   return JSON.stringify(
@@ -29,11 +38,17 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
   }, [serverByDay]);
 
   const dirty = serialize(draft) !== serialize(serverByDay);
+  // Per-day flag (vs. the whole-week `dirty` above) so each row can show
+  // its own "sin guardar" badge — with several toggled at once, the single
+  // bottom-of-page message doesn't say which days it's actually talking
+  // about.
+  const isDayDirty = (day: Weekday) =>
+    serializeBlocks(draft[day]) !== serializeBlocks(serverByDay[day]);
 
   const toggleDay = (day: Weekday) => {
     setDraft((current) => ({
       ...current,
-      [day]: current[day].length > 0 ? [] : [{ ...DEFAULT_BLOCK }],
+      [day]: current[day].length > 0 ? [] : [createDefaultBlock()],
     }));
   };
 
@@ -47,8 +62,8 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
   return (
     <div>
       {setWorkingHours.isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 mb-4">
-          <p className="text-sm text-red-600">
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
+          <p className="text-sm text-red-600 dark:text-red-400">
             {getApiErrorMessage(setWorkingHours.error)}
           </p>
         </div>
@@ -65,7 +80,7 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
         <div
           className="grid items-center px-6 py-3"
           style={{
-            gridTemplateColumns: '150px 90px 1fr 80px',
+            gridTemplateColumns: '180px 70px 1fr 80px',
             backgroundColor: 'var(--color-surface-soft)',
             borderBottom: '1px solid var(--color-border)',
           }}
@@ -90,23 +105,33 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
         {WEEK_ORDER.map((day, i) => {
           const blocks = draft[day];
           const enabled = blocks.length > 0;
+          const changed = isDayDirty(day);
           return (
             <div
               key={day}
               className="grid items-center px-6 py-4"
               style={{
-                gridTemplateColumns: '150px 90px 1fr 80px',
+                gridTemplateColumns: '180px 70px 1fr 80px',
                 borderTop: i > 0 ? '1px solid var(--color-border)' : 'none',
+                backgroundColor: changed
+                  ? 'var(--color-brand-surface)'
+                  : 'transparent',
               }}
             >
-              <span
-                style={{
-                  fontSize: '15px',
-                  fontWeight: 500,
-                  color: 'var(--color-text-primary)',
-                }}
-              >
-                {WEEKDAY_LABELS[day]}
+              {/* Stacked (not inline) so the "Sin guardar" badge gets its own
+                  line instead of fighting the day name for room in a fixed-
+                  width column. */}
+              <span className="flex flex-col items-start gap-1">
+                <span
+                  style={{
+                    fontSize: '15px',
+                    fontWeight: 500,
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  {WEEKDAY_LABELS[day]}
+                </span>
+                {changed && <UnsavedBadge />}
               </span>
 
               <DayToggle
@@ -143,25 +168,33 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
         {WEEK_ORDER.map((day) => {
           const blocks = draft[day];
           const enabled = blocks.length > 0;
+          const changed = isDayDirty(day);
           return (
             <div
               key={day}
               className="rounded-2xl p-5"
               style={{
-                backgroundColor: 'var(--color-surface)',
-                border: '1px solid var(--color-border)',
+                backgroundColor: changed
+                  ? 'var(--color-brand-surface)'
+                  : 'var(--color-surface)',
+                border: `1px solid ${changed ? 'var(--color-brand-primary)' : 'var(--color-border)'}`,
               }}
             >
               <div className="flex items-center justify-between gap-3">
-                <span
-                  style={{
-                    fontFamily: 'var(--font-display)',
-                    fontSize: '18px',
-                    fontWeight: 700,
-                    color: 'var(--color-text-primary)',
-                  }}
-                >
-                  {WEEKDAY_LABELS[day]}
+                {/* flex-wrap: on very narrow phones the badge drops to its
+                    own line instead of squeezing against the day name. */}
+                <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-display)',
+                      fontSize: '18px',
+                      fontWeight: 700,
+                      color: 'var(--color-text-primary)',
+                    }}
+                  >
+                    {WEEKDAY_LABELS[day]}
+                  </span>
+                  {changed && <UnsavedBadge />}
                 </span>
                 <DayToggle
                   enabled={enabled}
@@ -245,13 +278,13 @@ function BlockPills({ blocks }: { blocks: Block[] }) {
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {blocks.map((block, bi) => (
+      {blocks.map((block) => (
         <span
-          key={`${block.startMinute}-${bi}`}
+          key={block.id}
           className="px-3 py-1 rounded-full"
           style={{
-            border: '1px solid #C7D2FE',
-            color: 'var(--color-brand-primary)',
+            border: '1px solid var(--color-brand-border)',
+            color: 'var(--color-text-brand)',
             fontSize: '13px',
             fontWeight: 500,
             whiteSpace: 'nowrap',
@@ -261,6 +294,24 @@ function BlockPills({ blocks }: { blocks: Block[] }) {
         </span>
       ))}
     </div>
+  );
+}
+
+function UnsavedBadge() {
+  return (
+    <span
+      style={{
+        fontSize: '11px',
+        fontWeight: 600,
+        padding: '2px 8px',
+        borderRadius: '999px',
+        backgroundColor: 'var(--color-brand-primary)',
+        color: '#fff',
+        whiteSpace: 'nowrap',
+      }}
+    >
+      Sin guardar
+    </span>
   );
 }
 

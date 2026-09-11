@@ -10,7 +10,7 @@ describe('Auth + Professionals (e2e)', () => {
   let prisma: PrismaService;
 
   const runId = Date.now();
-  const email = `e2e-${runId}@ronda.test`;
+  const email = `e2e-${runId}@agendya.test`;
   const password = 'supersecret123';
   const businessName = `E2E Belleza ${runId}`;
 
@@ -126,8 +126,31 @@ describe('Auth + Professionals (e2e)', () => {
       .expect(400);
   });
 
+  // Regression test: `photoUrl`/`logoUrl`/`coverImageUrl` used to accept any
+  // scheme `z.string().url()` allows — including `javascript:` — since the
+  // WHATWG URL parser it's built on treats those as valid URLs too.
+  it('rejects a non-http(s) URL for logoUrl', async () => {
+    await request(app.getHttpServer())
+      .patch('/professionals/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ logoUrl: 'javascript:alert(document.domain)' })
+      .expect(400);
+  });
+
+  it('accepts an https URL for logoUrl', async () => {
+    const res = await request(app.getHttpServer())
+      .patch('/professionals/me')
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ logoUrl: 'https://cdn.example.com/logo.png' })
+      .expect(200);
+
+    expect((res.body as { logoUrl: string }).logoUrl).toBe(
+      'https://cdn.example.com/logo.png',
+    );
+  });
+
   it('reports the current slug as taken by someone else as unavailable via check-slug', async () => {
-    const otherEmail = `e2e-other-${runId}@ronda.test`;
+    const otherEmail = `e2e-other-${runId}@agendya.test`;
     const other = await request(app.getHttpServer())
       .post('/auth/register')
       .send({

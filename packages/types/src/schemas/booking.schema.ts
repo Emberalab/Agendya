@@ -7,6 +7,7 @@ export const BOOKING_STATUSES = [
   'CANCELLED',
   'COMPLETED',
   'NO_SHOW',
+  'EXPIRED',
 ] as const;
 
 export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
@@ -58,6 +59,7 @@ export const publicBookingSchema = z.object({
   cancellationToken: z.string(),
   cancellationPolicyHours: z.number(),
   canCancel: z.boolean(),
+  canReschedule: z.boolean(),
 });
 
 export type PublicBooking = z.infer<typeof publicBookingSchema>;
@@ -70,10 +72,20 @@ export const agendaBookingSchema = z.object({
   customerName: z.string(),
   customerEmail: z.string(),
   customerPhone: z.string(),
+  customerNote: z.string().nullable(),
+  // Home-service ("a domicilio") modality + the address the customer gave for
+  // it. `customerAddress` is a single free-text string (the public wizard
+  // composes its street / unit / neighbourhood / reference fields into one) and
+  // is only ever non-null when `atHome` is true. Only the professional who owns
+  // the booking receives these — `listAgenda` scopes every row to the
+  // authenticated professional.
+  atHome: z.boolean(),
+  customerAddress: z.string().nullable(),
   startAt: z.string(),
   endAt: z.string(),
   status: bookingStatusSchema,
   cancellationPolicyHours: z.number(),
+  canReschedule: z.boolean(),
   createdAt: z.string(),
   cancelledAt: z.string().nullable(),
   cancelledBy: z.string().nullable(),

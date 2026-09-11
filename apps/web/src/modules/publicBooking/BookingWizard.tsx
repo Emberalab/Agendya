@@ -6,9 +6,11 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { isApiError } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { formatCOP, formatDuration } from '../services/format';
 import { Toggle } from '../services/components/Toggle';
 import { Calendar } from './components/Calendar';
+import { MobileStickyCta } from './components/MobileStickyCta';
 import { loadSavedCustomer, persistCustomer } from './customerStore';
 import { useAvailability } from './hooks/useAvailability';
 import { useCreateBooking } from './hooks/useCreateBooking';
@@ -32,6 +34,23 @@ const customerInfoSchema = createBookingSchema.pick({
 });
 
 type CustomerInfoInput = z.infer<typeof customerInfoSchema>;
+
+// `customerAddress` isn't part of `customerInfoSchema` above — it's built
+// from four separate free-text fields (see `composeAddress`) rather than
+// filled directly, so it never went through react-hook-form's zodResolver
+// like the rest of the "details" step. That let a long "Referencia para el
+// profesional" silently blow past the backend's 200-char cap: the wizard let
+// the customer click through every step, and the rejection only surfaced as
+// a generic "Validation failed" on the final confirm. Validate the composed
+// string against the same schema field the backend enforces, so the limit is
+// never duplicated as a second magic number that can drift from it.
+const addressSchema = createBookingSchema.shape.customerAddress;
+// Display-only mirror of `addressSchema`'s `max(200)` (zod doesn't expose a
+// clean way to read a check's numeric bound back out) — `addressSchema` itself,
+// not this constant, is what actually gates "Continuar", so a value here that
+// drifted from the schema could only make the counter's number wrong, never
+// let an over-limit address slip past the real check.
+const ADDRESS_MAX_LENGTH = 200;
 
 interface AddressFields {
   line: string;
@@ -198,8 +217,13 @@ export function BookingWizard({
     setSlot(null);
   }, [serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addressValid = addressFields.line.trim().length >= 5;
   const composedAddress = composeAddress(addressFields);
+  // Validated against the same schema field the backend enforces (min 5,
+  // max 200) instead of a hand-rolled length check, so a long "Referencia
+  // para el profesional" is caught here — with a message the customer can
+  // act on — rather than surfacing as a generic rejection on final submit.
+  const addressValid = addressSchema.safeParse(composedAddress).success;
+  const addressTooLong = composedAddress.length > ADDRESS_MAX_LENGTH;
 
   const canContinue = (() => {
     switch (currentStep) {
@@ -334,8 +358,25 @@ export function BookingWizard({
     setStepIndex(STEPS.findIndex((s) => s.id === step));
   };
 
+  // Single source of truth for the primary action's label — shared by the
+  // in-flow summary CTA and the mobile sticky CTA.
+  const ctaLabel =
+    currentStep === 'confirm'
+      ? isEdit
+        ? activeMutation.isPending
+          ? 'Guardando…'
+          : 'Guardar cambios'
+        : activeMutation.isPending
+          ? 'Reservando…'
+          : 'Confirmar reserva'
+      : 'Continuar →';
+
+  // The real, in-flow CTA button (inside <Summary>). The mobile sticky bar
+  // observes it and slides away whenever it is on screen.
+  const primaryCtaRef = useRef<HTMLButtonElement>(null);
+
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 lg:py-10">
+    <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-32 lg:py-10">
       <button
         type="button"
         onClick={goBack}
@@ -376,7 +417,12 @@ export function BookingWizard({
                 <AddressStep
                   value={addressFields}
                   onChange={setAddressFields}
-                  showLineError={addressFields.line.length > 0 && !addressValid}
+                  showLineError={
+                    addressFields.line.trim().length > 0 &&
+                    addressFields.line.trim().length < 5
+                  }
+                  addressLength={composedAddress.length}
+                  addressTooLong={addressTooLong}
                 />
               ) : (
                 <ModalityStep
@@ -440,22 +486,20 @@ export function BookingWizard({
             modalityLabel={modalityLabel}
             slotLabel={slotLabel}
             customerName={customer.customerName || null}
-            ctaLabel={
-              currentStep === 'confirm'
-                ? isEdit
-                  ? activeMutation.isPending
-                    ? 'Guardando…'
-                    : 'Guardar cambios'
-                  : activeMutation.isPending
-                    ? 'Reservando…'
-                    : 'Confirmar reserva'
-                : 'Continuar →'
-            }
+            ctaLabel={ctaLabel}
             ctaDisabled={!canContinue}
             onCta={goNext}
+            ctaRef={primaryCtaRef}
           />
         </aside>
       </div>
+
+      <MobileStickyCta
+        label={ctaLabel}
+        disabled={!canContinue}
+        onClick={goNext}
+        anchorRef={primaryCtaRef}
+      />
     </div>
   );
 }
@@ -513,7 +557,7 @@ function Stepper({
                   fontSize: '13px',
                   fontWeight: active ? 700 : done ? 600 : 500,
                   color: active
-                    ? 'var(--color-brand-primary)'
+                    ? 'var(--color-text-brand)'
                     : done
                       ? 'var(--color-text-primary)'
                       : 'var(--color-text-muted)',
@@ -556,8 +600,12 @@ function BusinessCard({
       <div className="relative">
         {professional.coverImageUrl ? (
           <img
-            src={professional.coverImageUrl}
+            src={cloudinaryImageUrl(professional.coverImageUrl, { width: 1600 })}
             alt=""
+            width={1600}
+            height={600}
+            fetchPriority="high"
+            decoding="async"
             className="h-36 w-full object-cover sm:h-44"
           />
         ) : (
@@ -589,8 +637,11 @@ function BusinessCard({
         >
           {professional.logoUrl ? (
             <img
-              src={professional.logoUrl}
+              src={cloudinaryImageUrl(professional.logoUrl, { width: 168 })}
               alt={professional.businessName}
+              width={168}
+              height={168}
+              decoding="async"
               className="h-full w-full object-cover"
             />
           ) : (
@@ -623,8 +674,8 @@ function BusinessCard({
               style={{
                 fontSize: '12px',
                 fontWeight: 600,
-                backgroundColor: '#EEF2FF',
-                color: 'var(--color-brand-primary)',
+                backgroundColor: 'var(--color-brand-surface)',
+                color: 'var(--color-text-brand)',
               }}
             >
               {professional.category}
@@ -728,7 +779,7 @@ function ServiceStep({
                       fontFamily: 'var(--font-display)',
                       fontWeight: 700,
                       fontSize: '17px',
-                      color: 'var(--color-brand-primary)',
+                      color: 'var(--color-text-brand)',
                     }}
                   >
                     {formatCOP(s.priceCents)}
@@ -856,10 +907,15 @@ function AddressStep({
   value,
   onChange,
   showLineError,
+  addressLength,
+  addressTooLong,
 }: {
   value: AddressFields;
   onChange: (next: AddressFields) => void;
   showLineError: boolean;
+  /** Length of the composed address (line + unit + neighborhood + reference) the backend will actually receive. */
+  addressLength: number;
+  addressTooLong: boolean;
 }) {
   const set =
     (key: keyof AddressFields) =>
@@ -911,7 +967,22 @@ function AddressStep({
           placeholder="Ej: Portón negro, timbre del apto"
           value={value.reference}
           onChange={set('reference')}
+          describedBy="addr-length-hint"
         />
+        <p
+          id="addr-length-hint"
+          aria-live="polite"
+          style={{
+            fontSize: '12px',
+            color: addressTooLong
+              ? 'var(--color-danger)'
+              : 'var(--color-text-muted)',
+          }}
+        >
+          {addressTooLong
+            ? `La dirección completa es muy larga: tiene ${addressLength} de ${ADDRESS_MAX_LENGTH} caracteres permitidos. Acorta la dirección o la referencia para continuar.`
+            : `${addressLength}/${ADDRESS_MAX_LENGTH} caracteres de la dirección completa.`}
+        </p>
       </div>
     </div>
   );
@@ -925,6 +996,7 @@ function AddressField({
   onChange,
   required,
   error,
+  describedBy,
 }: {
   id: string;
   label: string;
@@ -933,6 +1005,7 @@ function AddressField({
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
   error?: string;
+  describedBy?: string;
 }) {
   return (
     <div>
@@ -946,11 +1019,12 @@ function AddressField({
         }}
       >
         {label}
-        {required && <span style={{ color: '#DC2626' }}> *</span>}
+        {required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
       </label>
       <input
         id={id}
         type="text"
+        aria-describedby={describedBy}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
@@ -959,11 +1033,11 @@ function AddressField({
           fontSize: '14px',
           color: 'var(--color-text-primary)',
           backgroundColor: 'var(--color-surface)',
-          border: `1px solid ${error ? '#DC2626' : 'var(--color-border)'}`,
+          border: `1px solid ${error ? 'var(--color-danger)' : 'var(--color-border)'}`,
         }}
       />
       {error && (
-        <p className="mt-1.5" style={{ fontSize: '13px', color: '#DC2626' }}>
+        <p className="mt-1.5" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
           {error}
         </p>
       )}
@@ -999,7 +1073,7 @@ function ModalityRow({
       style={{
         backgroundColor: 'var(--color-surface)',
         border: `${selected ? '2px' : '1px'} solid ${
-          selected ? 'var(--color-brand-primary)' : 'var(--color-border)'
+          selected ? 'var(--color-text-brand)' : 'var(--color-border)'
         }`,
         boxShadow: selected ? '0 0 0 4px rgba(79,70,229,0.10)' : 'none',
         opacity: disabled ? 0.55 : 1,
@@ -1010,7 +1084,7 @@ function ModalityRow({
         className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
         style={{
           backgroundColor: 'var(--color-surface-soft)',
-          color: 'var(--color-brand-primary)',
+          color: 'var(--color-text-brand)',
         }}
       >
         {icon}
@@ -1039,7 +1113,7 @@ function ModalityRow({
         className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full"
         style={{
           border: `2px solid ${
-            selected ? 'var(--color-brand-primary)' : 'var(--color-border)'
+            selected ? 'var(--color-text-brand)' : 'var(--color-border)'
           }`,
         }}
       >
@@ -1126,7 +1200,7 @@ function DateTimeStep({
                 className="rounded-xl px-4 py-6 text-center"
                 style={{
                   fontSize: '14px',
-                  color: '#DC2626',
+                  color: 'var(--color-danger)',
                   backgroundColor: 'var(--color-surface-soft)',
                   border: '1px solid var(--color-border)',
                 }}
@@ -1168,18 +1242,43 @@ function SlotPills({
   }
 
   if (slots.length === 0) {
+    // Not an error — nothing failed — but it stops the customer cold with no
+    // clear next step, so it gets the same amber "needs your attention"
+    // treatment as the rest of the app's warnings (e.g. "Horario superpuesto"
+    // in BlockFormDrawer.tsx), not the muted gray an inert empty state would
+    // get, so it actually reads as "pick another date" rather than "broken."
     return (
-      <p
-        className="rounded-xl px-4 py-6 text-center"
+      <div
+        role="status"
+        className="flex items-start gap-2.5 rounded-xl px-4 py-4"
         style={{
-          fontSize: '14px',
-          color: 'var(--color-text-secondary)',
-          backgroundColor: 'var(--color-surface-soft)',
-          border: '1px solid var(--color-border)',
+          backgroundColor: 'var(--status-pending-bg)',
+          border: '1px solid var(--status-pending-border)',
         }}
       >
-        No hay horarios disponibles ese día. Prueba otra fecha.
-      </p>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+          style={{ flexShrink: 0, marginTop: '1px', color: 'var(--status-pending-color)' }}
+        >
+          <circle cx="9" cy="9" r="7.25" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M9 5.5V9.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="9" cy="12.2" r="0.9" fill="currentColor" />
+        </svg>
+        <p
+          style={{
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--status-pending-color)',
+            textAlign: 'left',
+          }}
+        >
+          No hay horarios disponibles ese día. Prueba otra fecha.
+        </p>
+      </div>
     );
   }
 
@@ -1197,11 +1296,11 @@ function SlotPills({
               fontSize: '14px',
               fontWeight: selected ? 600 : 500,
               color: selected
-                ? 'var(--color-brand-primary)'
+                ? 'var(--color-text-brand)'
                 : 'var(--color-text-primary)',
-              backgroundColor: selected ? '#EEF2FF' : 'var(--color-surface)',
+              backgroundColor: selected ? 'var(--color-brand-surface)' : 'var(--color-surface)',
               border: `1px solid ${
-                selected ? 'var(--color-brand-primary)' : 'var(--color-border)'
+                selected ? 'var(--color-text-brand)' : 'var(--color-border)'
               }`,
               cursor: 'pointer',
             }}
@@ -1299,7 +1398,7 @@ function DetailsStep({
               color: 'var(--color-text-primary)',
               backgroundColor: 'var(--color-surface)',
               border: `1px solid ${
-                errors.customerNote ? '#DC2626' : 'var(--color-border)'
+                errors.customerNote ? 'var(--color-danger)' : 'var(--color-border)'
               }`,
               resize: 'vertical',
             }}
@@ -1307,7 +1406,7 @@ function DetailsStep({
           {errors.customerNote && (
             <p
               className="mt-1.5"
-              style={{ fontSize: '13px', color: '#DC2626' }}
+              style={{ fontSize: '13px', color: 'var(--color-danger)' }}
             >
               {errors.customerNote.message}
             </p>
@@ -1327,7 +1426,7 @@ function DetailsStep({
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
             style={{
               backgroundColor: 'var(--color-surface-soft)',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             <ShieldIcon />
@@ -1407,7 +1506,7 @@ function TextField({
         }}
       >
         {label}
-        {required && <span style={{ color: '#DC2626' }}> *</span>}
+        {required && <span style={{ color: 'var(--color-danger)' }}> *</span>}
       </label>
       <input
         id={id}
@@ -1419,11 +1518,11 @@ function TextField({
           fontSize: '14px',
           color: 'var(--color-text-primary)',
           backgroundColor: 'var(--color-surface)',
-          border: `1px solid ${error ? '#DC2626' : 'var(--color-border)'}`,
+          border: `1px solid ${error ? 'var(--color-danger)' : 'var(--color-border)'}`,
         }}
       />
       {error && (
-        <p className="mt-1.5" style={{ fontSize: '13px', color: '#DC2626' }}>
+        <p className="mt-1.5" style={{ fontSize: '13px', color: 'var(--color-danger)' }}>
           {error}
         </p>
       )}
@@ -1492,7 +1591,12 @@ function ConfirmStep({
   error: unknown;
   onEdit: (step: StepId) => void;
 }) {
-  const rows: { label: string; value: string; step: StepId }[] = [
+  const rows: {
+    label: string;
+    value: string;
+    step: StepId;
+    multiline?: boolean;
+  }[] = [
     { label: 'SERVICIO', value: serviceName, step: 'service' },
     { label: 'MODALIDAD', value: modalityLabel, step: 'modality' },
   ];
@@ -1521,6 +1625,7 @@ function ConfirmStep({
       label: 'OBSERVACIONES',
       value: customer.customerNote.trim(),
       step: 'details',
+      multiline: true,
     });
   }
 
@@ -1549,10 +1654,10 @@ function ConfirmStep({
           border: '1px solid var(--color-border)',
         }}
       >
-        {rows.map(({ label, value, step }, index) => (
+        {rows.map(({ label, value, step, multiline }, index) => (
           <div
             key={label}
-            className="flex items-center justify-between gap-4 px-4 py-3.5"
+            className="flex items-start justify-between gap-4 px-4 py-3.5"
             style={{
               borderTop: index === 0 ? 'none' : '1px solid var(--color-border)',
             }}
@@ -1565,7 +1670,9 @@ function ConfirmStep({
                 {label}
               </dt>
               <dd
-                className="mt-0.5"
+                className={`agendya-longtext mt-0.5${
+                  multiline ? ' agendya-longtext--multiline' : ''
+                }`}
                 style={{
                   fontSize: '14px',
                   fontWeight: 600,
@@ -1581,7 +1688,7 @@ function ConfirmStep({
               onClick={() => onEdit(step)}
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
               style={{
-                color: 'var(--color-brand-primary)',
+                color: 'var(--color-text-brand)',
                 background: 'none',
                 border: 'none',
                 cursor: 'pointer',
@@ -1619,6 +1726,7 @@ function Summary({
   ctaLabel,
   ctaDisabled,
   onCta,
+  ctaRef,
 }: {
   serviceName: string | null;
   modalityLabel: string | null;
@@ -1627,6 +1735,8 @@ function Summary({
   ctaLabel: string;
   ctaDisabled: boolean;
   onCta: () => void;
+  /** Set by the wizard so the mobile sticky CTA can observe this button. */
+  ctaRef?: React.Ref<HTMLButtonElement>;
 }) {
   const rows: [string, string, boolean][] = [
     ['SERVICIO', serviceName ?? 'No seleccionado', serviceName != null],
@@ -1686,6 +1796,7 @@ function Summary({
       </dl>
 
       <button
+        ref={ctaRef}
         type="button"
         onClick={onCta}
         disabled={ctaDisabled}

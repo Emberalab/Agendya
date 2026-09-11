@@ -8,6 +8,7 @@ import { Prisma } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { BookingsService } from './bookings.service';
 
 const PROFESSIONAL = {
@@ -64,6 +65,7 @@ describe('BookingsService', () => {
     create: jest.Mock;
     update: jest.Mock;
   };
+  let notificationsService: { notifyAppointmentCreated: jest.Mock };
 
   beforeEach(async () => {
     txBooking = {
@@ -105,11 +107,16 @@ describe('BookingsService', () => {
         .mockResolvedValue(undefined),
     };
 
+    notificationsService = {
+      notifyAppointmentCreated: jest.fn().mockResolvedValue(undefined),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         BookingsService,
         { provide: PrismaService, useValue: prisma },
         { provide: MailService, useValue: mailService },
+        { provide: NotificationsService, useValue: notificationsService },
       ],
     }).compile();
 
@@ -236,6 +243,7 @@ describe('BookingsService', () => {
         cancellationToken: 'token-abc',
         cancellationPolicyHours: 24,
         canCancel: true,
+        canReschedule: true,
       });
     });
 
@@ -313,6 +321,86 @@ describe('BookingsService', () => {
       await expect(
         service.createPublicBooking('maria-belleza', CREATE_INPUT),
       ).rejects.toThrow(ConflictException);
+    });
+
+    it("emits appointment.created to the booking's professional with only display fields", async () => {
+      txBooking.create.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        atHome: false,
+        customerAddress: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        cancellationToken: 'token-abc',
+      });
+
+      await service.createPublicBooking('maria-belleza', CREATE_INPUT);
+
+      expect(
+        notificationsService.notifyAppointmentCreated,
+      ).toHaveBeenCalledTimes(1);
+      const [professionalArg, bookingArg] = notificationsService
+        .notifyAppointmentCreated.mock.calls[0] as [
+        { id: string },
+        { id: string },
+      ];
+      expect(professionalArg.id).toBe('prof-1');
+      expect(bookingArg.id).toBe('booking-1');
+    });
+
+    it('does not record a notification when the booking transaction fails', async () => {
+      prisma.$transaction.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('could not serialize access', {
+          code: 'P2034',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        service.createPublicBooking('maria-belleza', CREATE_INPUT),
+      ).rejects.toThrow(ConflictException);
+      expect(
+        notificationsService.notifyAppointmentCreated,
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still returns the booking when notification delivery rejects', async () => {
+      txBooking.create.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        atHome: false,
+        customerAddress: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        cancellationToken: 'token-abc',
+      });
+      notificationsService.notifyAppointmentCreated.mockRejectedValue(
+        new Error('stream boom'),
+      );
+
+      const result = await service.createPublicBooking(
+        'maria-belleza',
+        CREATE_INPUT,
+      );
+
+      expect(result.id).toBe('booking-1');
+      expect(mailService.sendBookingConfirmation).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -577,6 +665,82 @@ describe('BookingsService', () => {
         orderBy: { startAt: 'asc' },
       });
     });
+
+    it('exposes the customer note on each agenda booking', async () => {
+      prisma.booking.findMany.mockResolvedValue([
+        {
+          id: 'booking-1',
+          serviceId: 'service-1',
+          serviceNameSnapshot: 'Corte de cabello',
+          durationMinutesSnapshot: 30,
+          customerName: 'Ana',
+          customerEmail: 'ana@example.com',
+          customerPhone: '+57 300 1234567',
+          customerNote: 'Llego 5 minutos tarde',
+          startAt: new Date('2026-08-03T14:00:00.000Z'),
+          endAt: new Date('2026-08-03T14:30:00.000Z'),
+          status: 'CONFIRMED',
+          createdAt: new Date('2026-07-30T10:00:00.000Z'),
+          cancelledAt: null,
+          cancelledBy: null,
+        },
+      ]);
+
+      const [booking] = await service.listAgenda(
+        'prof-1',
+        '2026-08-03',
+        '2026-08-03',
+      );
+
+      expect(booking.customerNote).toBe('Llego 5 minutos tarde');
+    });
+
+    it('exposes atHome + the address for a home-service booking, and null for the rest', async () => {
+      const base = {
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      };
+      prisma.booking.findMany.mockResolvedValue([
+        {
+          ...base,
+          id: 'home-1',
+          atHome: true,
+          customerAddress: 'Calle 10 #43C-20 (Ref.: portón negro)',
+        },
+        // A non-home row that somehow still has an address column set: it must
+        // never be handed out.
+        {
+          ...base,
+          id: 'store-1',
+          atHome: false,
+          customerAddress: 'dato viejo que no debe salir',
+        },
+      ]);
+
+      const [home, store] = await service.listAgenda(
+        'prof-1',
+        '2026-08-03',
+        '2026-08-03',
+      );
+
+      expect(home.atHome).toBe(true);
+      expect(home.customerAddress).toBe(
+        'Calle 10 #43C-20 (Ref.: portón negro)',
+      );
+      expect(store.atHome).toBe(false);
+      expect(store.customerAddress).toBeNull();
+    });
   });
 
   describe('cancelByProfessional', () => {
@@ -617,6 +781,546 @@ describe('BookingsService', () => {
       const [[updateArgs]] = prisma.booking.update.mock.calls as UpdateCall[];
       expect(updateArgs.where).toEqual({ id: 'booking-1' });
       expect(updateArgs.data).toMatchObject({ cancelledBy: 'professional' });
+    });
+
+    it('rejects cancelling a booking whose start time has already passed (previous day)', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        status: 'CONFIRMED',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        startAt: new Date('2026-07-31T10:00:00.000Z'),
+        endAt: new Date('2026-07-31T10:30:00.000Z'),
+      });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects cancelling within the cancellation policy window', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        status: 'CONFIRMED',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        startAt: new Date('2026-08-01T10:00:00.000Z'), // 10h out, policy requires 24h
+        endAt: new Date('2026-08-01T10:30:00.000Z'),
+      });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects cancelling an already-completed booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        status: 'COMPLETED',
+        startAt: new Date('2026-09-01T10:00:00.000Z'),
+      });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects cancelling an already-expired booking without a second status write', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        status: 'EXPIRED',
+        startAt: new Date('2026-07-31T10:00:00.000Z'),
+      });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.booking.update).not.toHaveBeenCalled();
+    });
+
+    it('self-heals a stale CONFIRMED booking to EXPIRED the moment it is touched', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        status: 'CONFIRMED',
+        startAt: new Date('2026-07-31T10:00:00.000Z'),
+        endAt: new Date('2026-07-31T10:30:00.000Z'),
+      });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ForbiddenException);
+
+      expect(prisma.booking.update).toHaveBeenCalledWith({
+        where: { id: 'booking-1' },
+        data: { status: 'EXPIRED' },
+      });
+    });
+
+    it('still cancels a booking whose date was blocked after it was made (blocking is not retroactive)', async () => {
+      // Business rule: a schedule exception only stops *new* bookings/reschedules
+      // from landing on that date (assertSlotWithinSchedule). It must never gate
+      // cancelling — or, elsewhere, completing — a booking that already exists
+      // there. Simulating a blocked date here (scheduleException resolves
+      // truthy) and asserting the cancel still goes through is the regression
+      // guard for that distinction.
+      const bookingRow = {
+        id: 'booking-1',
+        status: 'CONFIRMED',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        startAt: new Date('2026-08-10T14:00:00.000Z'),
+        endAt: new Date('2026-08-10T14:30:00.000Z'),
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      };
+      prisma.booking.findFirst.mockResolvedValue(bookingRow);
+      prisma.booking.update.mockResolvedValue({
+        ...bookingRow,
+        status: 'CANCELLED',
+      });
+      prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).resolves.toMatchObject({ status: 'CANCELLED' });
+    });
+  });
+
+  describe('completeByProfessional', () => {
+    const BOOKING_ROW = {
+      id: 'booking-1',
+      status: 'CONFIRMED',
+      serviceId: 'service-1',
+      serviceNameSnapshot: 'Corte de cabello',
+      durationMinutesSnapshot: 30,
+      customerName: 'Ana',
+      customerEmail: 'ana@example.com',
+      customerPhone: '+57 300 1234567',
+      startAt: new Date('2026-07-31T10:00:00.000Z'),
+      endAt: new Date('2026-07-31T10:30:00.000Z'),
+      createdAt: new Date('2026-07-30T10:00:00.000Z'),
+      cancelledAt: null,
+      cancelledBy: null,
+    };
+
+    it('rejects completing a booking that does not belong to the professional', async () => {
+      prisma.booking.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.completeByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects completing an already-cancelled booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...BOOKING_ROW,
+        status: 'CANCELLED',
+      });
+
+      await expect(
+        service.completeByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('completes a still-confirmed booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      prisma.booking.update.mockResolvedValue({
+        ...BOOKING_ROW,
+        status: 'COMPLETED',
+      });
+
+      const result = await service.completeByProfessional(
+        'prof-1',
+        'booking-1',
+      );
+
+      expect(prisma.booking.update).toHaveBeenCalledWith({
+        where: { id: 'booking-1' },
+        data: { status: 'COMPLETED' },
+      });
+      expect(result.status).toBe('COMPLETED');
+    });
+
+    it('allows completing an EXPIRED booking (marking it after the fact)', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...BOOKING_ROW,
+        status: 'EXPIRED',
+      });
+      prisma.booking.update.mockResolvedValue({
+        ...BOOKING_ROW,
+        status: 'COMPLETED',
+      });
+
+      const result = await service.completeByProfessional(
+        'prof-1',
+        'booking-1',
+      );
+
+      expect(result.status).toBe('COMPLETED');
+    });
+  });
+
+  describe('reschedulePublicBooking', () => {
+    const BASE_BOOKING = {
+      id: 'booking-1',
+      professionalId: 'prof-1',
+      status: 'CONFIRMED',
+      customerName: 'Ana',
+      customerEmail: 'ana@example.com',
+      customerPhone: '+57 300 1234567',
+      serviceNameSnapshot: 'Corte de cabello',
+      durationMinutesSnapshot: 30,
+      cancellationToken: 'token-abc',
+      startAt: new Date('2026-08-10T14:00:00.000Z'),
+      endAt: new Date('2026-08-10T14:30:00.000Z'),
+      professional: { ...PROFESSIONAL, email: 'pro@example.com' },
+    };
+
+    it('throws not found for an unknown token', async () => {
+      prisma.booking.findUnique.mockResolvedValue(null);
+
+      await expect(
+        service.reschedulePublicBooking('missing-token', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects rescheduling an already-cancelled booking', async () => {
+      prisma.booking.findUnique.mockResolvedValue({
+        ...BASE_BOOKING,
+        status: 'CANCELLED',
+      });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects rescheduling a booking already marked completed', async () => {
+      prisma.booking.findUnique.mockResolvedValue({
+        ...BASE_BOOKING,
+        status: 'COMPLETED',
+      });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects rescheduling a booking whose start time has passed (previous day)', async () => {
+      prisma.booking.findUnique.mockResolvedValue({
+        ...BASE_BOOKING,
+        startAt: new Date('2026-07-31T10:00:00.000Z'),
+        endAt: new Date('2026-07-31T10:30:00.000Z'),
+      });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects rescheduling within the cancellation policy window', async () => {
+      prisma.booking.findUnique.mockResolvedValue({
+        ...BASE_BOOKING,
+        startAt: new Date('2026-08-01T10:00:00.000Z'), // 10h out, policy requires 24h
+        endAt: new Date('2026-08-01T10:30:00.000Z'),
+      });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a new time that is itself in the past', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2020-01-01T00:00:00.000Z',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects when the new slot overlaps another booking, inside the transaction', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      txBooking.findFirst.mockResolvedValue({ id: 'other-booking' });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects rescheduling onto a date blocked by a schedule exception', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      // The exception check must run before the slot is ever written — a
+      // blocked date is not bypassable by rescheduling into it.
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('rejects rescheduling to a time outside working hours', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      // 2026-08-11T02:00 UTC is 2026-08-10 21:00 in America/Bogota (UTC-5),
+      // outside the default 08:00-18:00 working block.
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T02:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('reschedules inside a serializable transaction and notifies both parties', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      const newStartAt = new Date('2026-08-11T15:00:00.000Z');
+      const newEndAt = new Date('2026-08-11T15:30:00.000Z');
+      txBooking.update.mockResolvedValue({
+        ...BASE_BOOKING,
+        startAt: newStartAt,
+        endAt: newEndAt,
+      });
+
+      const result = await service.reschedulePublicBooking('token-abc', {
+        newStartAt: '2026-08-11T15:00:00.000Z',
+      });
+
+      expect(txBooking.update).toHaveBeenCalledWith({
+        where: { id: 'booking-1' },
+        data: { startAt: newStartAt, endAt: newEndAt },
+      });
+      expect(mailService.sendBookingRescheduled).toHaveBeenCalledTimes(1);
+      expect(
+        mailService.sendBookingRescheduledToProfessional,
+      ).toHaveBeenCalledTimes(1);
+      expect(result.startAt).toBe('2026-08-11T15:00:00.000Z');
+    });
+
+    it('translates a serialization failure on the new slot into a conflict', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      prisma.$transaction.mockRejectedValue(
+        new Prisma.PrismaClientKnownRequestError('could not serialize access', {
+          code: 'P2034',
+          clientVersion: 'test',
+        }),
+      );
+
+      await expect(
+        service.reschedulePublicBooking('token-abc', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+  });
+
+  describe('rescheduleBooking (staff-side)', () => {
+    const BOOKING_ROW = {
+      id: 'booking-1',
+      professionalId: 'prof-1',
+      status: 'CONFIRMED',
+      serviceId: 'service-1',
+      customerEmail: 'ana@example.com',
+      customerName: 'Ana',
+      customerPhone: '+57 300 1234567',
+      serviceNameSnapshot: 'Corte de cabello',
+      durationMinutesSnapshot: 30,
+      startAt: new Date('2026-08-10T14:00:00.000Z'),
+      endAt: new Date('2026-08-10T14:30:00.000Z'),
+      createdAt: new Date('2026-07-30T10:00:00.000Z'),
+      cancelledAt: null,
+      cancelledBy: null,
+    };
+
+    it('rejects rescheduling a booking that does not belong to the professional', async () => {
+      prisma.booking.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('rejects rescheduling a booking from a previous day', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...BOOKING_ROW,
+        startAt: new Date('2026-07-31T10:00:00.000Z'),
+        endAt: new Date('2026-07-31T10:30:00.000Z'),
+      });
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects rescheduling an already-expired booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue({
+        ...BOOKING_ROW,
+        status: 'EXPIRED',
+      });
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('rejects a new time in the past', async () => {
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2020-01-01T00:00:00.000Z',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects when the new slot overlaps another booking', async () => {
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      txBooking.findFirst.mockResolvedValue({ id: 'other-booking' });
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+    });
+
+    it('rejects rescheduling onto a date blocked by a schedule exception', async () => {
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      prisma.scheduleException.findUnique.mockResolvedValue({ id: 'exc-1' });
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(txBooking.update).not.toHaveBeenCalled();
+    });
+
+    it('reschedules inside a transaction and notifies only the customer', async () => {
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      const newStartAt = new Date('2026-08-11T15:00:00.000Z');
+      const newEndAt = new Date('2026-08-11T15:30:00.000Z');
+      txBooking.update.mockResolvedValue({
+        ...BOOKING_ROW,
+        startAt: newStartAt,
+        endAt: newEndAt,
+      });
+
+      await service.rescheduleBooking('prof-1', 'booking-1', {
+        newStartAt: '2026-08-11T15:00:00.000Z',
+      });
+
+      expect(mailService.sendBookingRescheduled).toHaveBeenCalledTimes(1);
+      expect(
+        mailService.sendBookingRescheduledToProfessional,
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('reschedule/cancel guards compare absolute instants, not date strings', () => {
+    it('rejects a booking earlier the same UTC calendar day once its instant has elapsed', async () => {
+      jest
+        .spyOn(Date, 'now')
+        .mockReturnValue(new Date('2026-08-01T23:30:00.000Z').getTime());
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        status: 'CONFIRMED',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        // Same UTC calendar date as "now" (2026-08-01), but 30 minutes earlier
+        // — a date-only compare would call this "today", not "past".
+        startAt: new Date('2026-08-01T23:00:00.000Z'),
+        endAt: new Date('2026-08-01T23:30:00.000Z'),
+      });
+
+      await expect(
+        service.cancelByProfessional('prof-1', 'booking-1'),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('allows modifying a booking minutes away even when it crosses into the next UTC calendar day', async () => {
+      jest
+        .spyOn(Date, 'now')
+        .mockReturnValue(new Date('2026-08-01T23:50:00.000Z').getTime());
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({
+        ...PROFESSIONAL,
+        cancellationPolicyHours: 0,
+      });
+      prisma.booking.findFirst.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        status: 'CONFIRMED',
+        serviceId: 'service-1',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        // "Aug 2" in UTC, only 20 minutes after mocked "now" ("Aug 1").
+        startAt: new Date('2026-08-02T00:10:00.000Z'),
+        endAt: new Date('2026-08-02T00:40:00.000Z'),
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      });
+      // 15:00 UTC = 10:00 in America/Bogota, inside the default 08:00-18:00
+      // working block — this test is about the UTC-day-boundary guard, not
+      // working-hours fit, so the target time just needs to be a valid slot.
+      const newStartAt = new Date('2026-08-03T15:00:00.000Z');
+      txBooking.update.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        status: 'CONFIRMED',
+        serviceId: 'service-1',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        startAt: newStartAt,
+        endAt: new Date('2026-08-03T15:30:00.000Z'),
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      });
+
+      const result = await service.rescheduleBooking('prof-1', 'booking-1', {
+        newStartAt: '2026-08-03T15:00:00.000Z',
+      });
+
+      expect(result.status).toBe('CONFIRMED');
     });
   });
 });

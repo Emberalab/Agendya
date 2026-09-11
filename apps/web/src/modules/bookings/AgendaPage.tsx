@@ -1,20 +1,35 @@
-import { useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import type { AgendaBooking, BookingStatus } from '@agendya/types';
 import { addDays, endOfMonth, endOfWeek, format, isToday, isTomorrow, startOfMonth, startOfWeek } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { FormGroup, Input, Select } from '@moondesignsystem/react';
+import { formatEsShort, formatEsWeekdayLong } from './dateEs';
+import { AGENDA_FOCUS_BOOKING_PARAM, AGENDA_FOCUS_DATE_PARAM } from '../notifications/navigation';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
-import { AppointmentDrawer } from './AppointmentDrawer';
-import { CalendarGridView } from './CalendarGridView';
+import { useAgendaViewStore } from './agendaViewStore';
 import { ContextMenu } from './ContextMenu';
-import { RescheduleModal } from './RescheduleModal';
 import { StatusBadge } from './statusBadge';
 import { useAgenda } from './hooks/useAgenda';
 import { useCancelBooking } from './hooks/useCancelBooking';
 import { useCompleteBooking } from './hooks/useCompleteBooking';
 import { useRescheduleBooking } from './hooks/useRescheduleBooking';
 
-type ViewMode = 'list' | 'calendar';
+// The list view is the default and above-the-fold render. The calendar grid
+// (only shown after toggling to "Calendario") and the detail/reschedule
+// overlays (only shown on a row click) are split out so they — and the
+// `date-fns` Spanish locale that the drawer pulls in — stay off the agenda's
+// initial load. Each renders conditionally already; a null fallback is fine
+// because they're an explicit user action away and never affect layout.
+const CalendarGridView = lazy(() =>
+  import('./CalendarGridView').then((m) => ({ default: m.CalendarGridView })),
+);
+const AppointmentDrawer = lazy(() =>
+  import('./AppointmentDrawer').then((m) => ({ default: m.AppointmentDrawer })),
+);
+const RescheduleModal = lazy(() =>
+  import('./RescheduleModal').then((m) => ({ default: m.RescheduleModal })),
+);
+
 type StatusFilter = 'all' | BookingStatus;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
@@ -24,6 +39,7 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'CANCELLED', label: 'Canceladas' },
   { value: 'COMPLETED', label: 'Completadas' },
   { value: 'NO_SHOW', label: 'No asistieron' },
+  { value: 'EXPIRED', label: 'Vencidas' },
 ];
 
 const MOBILE_STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
@@ -31,16 +47,11 @@ const MOBILE_STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'CONFIRMED', label: 'Confirmadas' },
   { value: 'PENDING', label: 'Pendientes' },
   { value: 'CANCELLED', label: 'Canceladas' },
+  { value: 'EXPIRED', label: 'Vencidas' },
 ];
 
 function toDateOnly(date: Date): string {
   return format(date, 'yyyy-MM-dd');
-}
-
-function canModifyBooking(booking: AgendaBooking): boolean {
-  if (booking.status !== 'CONFIRMED') return false;
-  const hoursUntil = (new Date(booking.startAt).getTime() - Date.now()) / 3_600_000;
-  return hoursUntil >= booking.cancellationPolicyHours;
 }
 
 function contactCustomer(phone: string) {
@@ -54,7 +65,7 @@ function StatCard({ label, value, sub, icon }: { label: string; value: number; s
         <p
           style={{
             fontFamily: 'var(--font-mono)',
-            fontSize: '10px',
+            fontSize: '11px',
             color: 'var(--color-text-muted)',
             textTransform: 'uppercase',
             letterSpacing: '0.06em',
@@ -68,7 +79,7 @@ function StatCard({ label, value, sub, icon }: { label: string; value: number; s
         style={{
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
-          fontSize: '30px',
+          fontSize: '32px',
           color: 'var(--color-text-primary)',
           lineHeight: 1,
           marginBottom: '4px',
@@ -137,7 +148,7 @@ function StatusChip({ label, active, onClick }: { label: string; active: boolean
         fontWeight: active ? 600 : 400,
         border: `1px solid ${active ? 'rgba(79,70,229,0.2)' : 'var(--color-border)'}`,
         backgroundColor: active ? 'var(--color-brand-tint)' : 'transparent',
-        color: active ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
+        color: active ? 'var(--color-text-brand)' : 'var(--color-text-secondary)',
         cursor: 'pointer',
         whiteSpace: 'nowrap',
       }}
@@ -168,7 +179,7 @@ function RowActions({
           fontFamily: 'var(--font-body)',
           fontSize: '13px',
           fontWeight: 600,
-          color: 'var(--color-brand-primary)',
+          color: 'var(--color-text-brand)',
           background: 'none',
           border: 'none',
           cursor: 'pointer',
@@ -187,6 +198,8 @@ function RowActions({
           border: 'none',
           cursor: 'pointer',
         }}
+        aria-haspopup="true"
+        aria-expanded={menuOpen}
         aria-label="Acciones"
       >
         <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -203,7 +216,7 @@ function RowActions({
           onReschedule={() => onReschedule(booking)}
           onContact={() => contactCustomer(booking.customerPhone)}
           onCancel={() => onCancel(booking.id)}
-          canModify={canModifyBooking(booking)}
+          canModify={booking.canReschedule}
         />
       )}
     </div>
@@ -225,22 +238,22 @@ function AppointmentRow({
   return (
     <div className="flex items-center gap-4 px-5 py-3.5" style={{ minHeight: '60px' }}>
       <div className="shrink-0 w-28">
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '13px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
           {format(start, 'HH:mm')}–{format(new Date(booking.endAt), 'HH:mm')}
         </p>
-        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '11px', color: 'var(--color-text-muted)' }}>
+        <p style={{ fontFamily: 'var(--font-mono)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
           {booking.durationMinutes} min
         </p>
       </div>
 
       <div className="shrink-0 w-36">
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
           {booking.serviceName}
         </p>
       </div>
 
       <div className="flex-1 min-w-0">
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 500, color: 'var(--color-text-primary)' }}>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: '15px', fontWeight: 600, color: 'var(--color-text-primary)' }}>
           {booking.customerName}
         </p>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: '12px', color: 'var(--color-text-muted)' }}>
@@ -290,7 +303,7 @@ function AppointmentCardMobile({
       <div className="flex items-center justify-between">
         <button
           onClick={() => onViewDetail(booking)}
-          style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-brand-primary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          style={{ fontFamily: 'var(--font-body)', fontSize: '13px', fontWeight: 600, color: 'var(--color-text-brand)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           Ver detalle
         </button>
@@ -298,6 +311,8 @@ function AppointmentCardMobile({
           ref={triggerRef}
           onClick={() => setMenuOpen((o) => !o)}
           style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+          aria-haspopup="true"
+          aria-expanded={menuOpen}
           aria-label="Acciones"
         >
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -314,7 +329,7 @@ function AppointmentCardMobile({
             onReschedule={() => onReschedule(booking)}
             onContact={() => contactCustomer(booking.customerPhone)}
             onCancel={() => onCancel(booking.id)}
-            canModify={canModifyBooking(booking)}
+            canModify={booking.canReschedule}
           />
         )}
       </div>
@@ -330,11 +345,83 @@ export function AgendaPage() {
   const [to, setTo] = useState(inAWeek);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  // Lifted out of local state on purpose — see agendaViewStore.ts for why:
+  // this route fully unmounts on every navigation away from Agenda, and the
+  // selected view (Lista/Calendario) needs to survive that.
+  const viewMode = useAgendaViewStore((state) => state.viewMode);
+  const setViewMode = useAgendaViewStore((state) => state.setViewMode);
   const [selectedForReschedule, setSelectedForReschedule] = useState<AgendaBooking | null>(null);
   const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
 
-  const { data: bookings, isLoading } = useAgenda(from, to);
+  const { data: bookings, isLoading, isFetching, refetch: refetchAgenda } = useAgenda(from, to);
+
+  // Deep link from a notification: ?booking=<id>&date=<yyyy-mm-dd>. Open that
+  // booking's detail drawer regardless of the active view (list or calendar).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const focusBookingId = searchParams.get(AGENDA_FOCUS_BOOKING_PARAM);
+  const focusDate = searchParams.get(AGENDA_FOCUS_DATE_PARAM);
+
+  // Widen — never shrink — the range so the target day is fetched. Pad ±1 day
+  // to absorb the UTC-vs-professional-timezone date skew in `date`.
+  useEffect(() => {
+    if (!focusBookingId || !focusDate) return;
+    const focus = new Date(`${focusDate}T00:00:00`);
+    if (Number.isNaN(focus.getTime())) return;
+    const lo = toDateOnly(addDays(focus, -1));
+    const hi = toDateOnly(addDays(focus, 1));
+    setFrom((prev) => (lo < prev ? lo : prev));
+    setTo((prev) => (hi > prev ? hi : prev));
+  }, [focusBookingId, focusDate]);
+
+  // If the agenda was already open when the notification arrived, `bookings`
+  // can be a snapshot from *before* the booking existed — the realtime
+  // bridge invalidates the query (see useNotificationsRealtime.ts), but that
+  // background refetch isn't guaranteed to have landed by the time the
+  // customer clicks through (still `isLoading: false`, since the range was
+  // already loaded once — only a first-ever fetch sets that). Without this,
+  // the lookup below ran once against that stale snapshot, found nothing,
+  // and gave up for good — clearing the deep link so a second click (which
+  // this component staying mounted stops from re-fetching too) worked only
+  // because *something else* happened to refresh the cache in the meantime.
+  // Force exactly one fresh fetch per booking id before concluding it's
+  // genuinely not there.
+  const forcedRefetchFor = useRef<string | null>(null);
+
+  // Once the widened range covers the target day and any fetch (including a
+  // forced one, below) has settled, open the booking and drop the params so
+  // a refresh or Back doesn't reopen it.
+  const focusInRange = !focusDate || (focusDate >= from && focusDate <= to);
+  useEffect(() => {
+    if (!focusBookingId || !focusInRange || isLoading || isFetching) return;
+
+    const match = (bookings ?? []).find((b) => b.id === focusBookingId);
+    if (!match && forcedRefetchFor.current !== focusBookingId) {
+      forcedRefetchFor.current = focusBookingId;
+      void refetchAgenda();
+      return;
+    }
+    forcedRefetchFor.current = null;
+
+    if (match) setSelectedForDetail(match);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete(AGENDA_FOCUS_BOOKING_PARAM);
+        next.delete(AGENDA_FOCUS_DATE_PARAM);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [
+    focusBookingId,
+    focusInRange,
+    isLoading,
+    isFetching,
+    bookings,
+    refetchAgenda,
+    setSearchParams,
+  ]);
+
   const cancelBooking = useCancelBooking();
   const completeBooking = useCompleteBooking();
   const rescheduleBooking = useRescheduleBooking();
@@ -407,7 +494,7 @@ export function AgendaPage() {
     }
     return Array.from(map.entries()).map(([key, items]) => {
       const date = new Date(`${key}T00:00:00`);
-      const weekdayDate = format(date, "EEEE d 'de' MMMM", { locale: es }).toUpperCase();
+      const weekdayDate = formatEsWeekdayLong(date).toUpperCase();
       const suffix = `${items.length} ${items.length === 1 ? 'CITA' : 'CITAS'}`;
       const prefix = isToday(date) ? 'HOY · ' : isTomorrow(date) ? 'MAÑANA · ' : '';
       return { key, label: `${prefix}${weekdayDate} · ${suffix}`, bookings: items };
@@ -420,7 +507,7 @@ export function AgendaPage() {
     <div style={{ fontFamily: 'var(--font-body)' }}>
       <div className="mb-6">
         <h1
-          className="text-[22px] lg:text-[26px]"
+          className="text-[24px] lg:text-[28px]"
           style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}
         >
           Tu agenda
@@ -471,7 +558,7 @@ export function AgendaPage() {
         <StatCard
           label="Citas hoy"
           value={todayBookings?.length ?? 0}
-          sub={format(now, 'EEE, d MMM', { locale: es }).replace('.', '')}
+          sub={formatEsShort(now)}
           icon={
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
               <rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
@@ -548,8 +635,9 @@ export function AgendaPage() {
           <div className="flex items-end gap-3 flex-wrap">
             <div className="flex-1 min-w-48 hidden lg:block">
               <FormGroup>
-                <FormGroup.Label className="agendia-label">Buscar</FormGroup.Label>
+                <FormGroup.Label htmlFor="agenda-search" className="agendia-label">Buscar</FormGroup.Label>
                 <Input
+                  id="agenda-search"
                   type="search"
                   placeholder="Nombre, teléfono o servicio"
                   value={search}
@@ -567,13 +655,14 @@ export function AgendaPage() {
                 className="flex items-center gap-2 px-3 py-2.5 rounded-xl"
                 style={{ border: '1px solid var(--color-border)', backgroundColor: 'var(--color-surface)' }}
               >
-                <span style={{ color: 'var(--color-brand-primary)', flexShrink: 0 }}>
+                <span style={{ color: 'var(--color-text-brand)', flexShrink: 0 }}>
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.5" />
                     <path d="M10 10l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
                   </svg>
                 </span>
                 <input
+                  aria-label="Buscar cita"
                   placeholder="Buscar cita..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -592,8 +681,9 @@ export function AgendaPage() {
 
             <div className="hidden lg:block shrink-0">
               <FormGroup>
-                <FormGroup.Label className="agendia-label">Desde</FormGroup.Label>
+                <FormGroup.Label htmlFor="agenda-from" className="agendia-label">Desde</FormGroup.Label>
                 <Input
+                  id="agenda-from"
                   type="date"
                   value={from}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFrom(e.target.value)}
@@ -606,8 +696,9 @@ export function AgendaPage() {
 
             <div className="hidden lg:block shrink-0">
               <FormGroup>
-                <FormGroup.Label className="agendia-label">Hasta</FormGroup.Label>
+                <FormGroup.Label htmlFor="agenda-to" className="agendia-label">Hasta</FormGroup.Label>
                 <Input
+                  id="agenda-to"
                   type="date"
                   value={to}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTo(e.target.value)}
@@ -638,6 +729,7 @@ export function AgendaPage() {
                 Estado
               </span>
               <Select
+                aria-label="Estado"
                 value={statusFilter}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as StatusFilter)}
                 size="sm"
@@ -701,8 +793,8 @@ export function AgendaPage() {
       )}
 
       {mutationError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-3 mt-4">
-          <p className="text-sm text-red-600" style={{ fontFamily: 'var(--font-body)' }}>
+        <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mt-4">
+          <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
             {getApiErrorMessage(mutationError)}
           </p>
         </div>
@@ -792,29 +884,35 @@ export function AgendaPage() {
         )}
 
         {!isLoading && viewMode === 'calendar' && (
-          <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
+          <Suspense fallback={null}>
+            <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
+          </Suspense>
         )}
       </div>
 
       {selectedForDetail && (
-        <AppointmentDrawer
-          booking={selectedForDetail}
-          onClose={() => setSelectedForDetail(null)}
-          onReschedule={openReschedule}
-          onComplete={handleComplete}
-          completePending={completeBooking.isPending}
-          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
-        />
+        <Suspense fallback={null}>
+          <AppointmentDrawer
+            booking={selectedForDetail}
+            onClose={() => setSelectedForDetail(null)}
+            onReschedule={openReschedule}
+            onComplete={handleComplete}
+            completePending={completeBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
       )}
 
       {selectedForReschedule && (
-        <RescheduleModal
-          booking={selectedForReschedule}
-          onClose={() => setSelectedForReschedule(null)}
-          onConfirm={handleReschedule}
-          isLoading={rescheduleBooking.isPending}
-          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
-        />
+        <Suspense fallback={null}>
+          <RescheduleModal
+            booking={selectedForReschedule}
+            onClose={() => setSelectedForReschedule(null)}
+            onConfirm={handleReschedule}
+            isLoading={rescheduleBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
       )}
     </div>
   );

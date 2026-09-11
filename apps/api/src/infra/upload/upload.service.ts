@@ -58,11 +58,11 @@ export class UploadService {
     const options =
       variant === 'cover'
         ? {
-            folder: 'ronda-covers',
+            folder: 'agendya-covers',
             transformation: [{ width: 1600, height: 600, crop: 'limit' }],
           }
         : {
-            folder: 'ronda-logos',
+            folder: 'agendya-logos',
             transformation: [{ width: 400, height: 400, crop: 'limit' }],
           };
 

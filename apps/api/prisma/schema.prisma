@@ -1,4 +1,4 @@
-// Prisma schema — Ronda Fase 1 (MVP: Agenda Básica)
+// Prisma schema — Agendya Fase 1 (MVP: Agenda Básica)
 // Ver /Users/jorgeherrera/.claude/plans/dreamy-mixing-lark.md sección 1 para el razonamiento de diseño.
 
 generator client {
@@ -25,11 +25,27 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+  // A CONFIRMED booking whose startAt has passed without being completed,
+  // cancelled, or marked no-show. Set lazily (on-read, the instant a stale
+  // booking is touched) and by ExpirationScheduler's periodic sweep so it
+  // doesn't depend on the cron having run yet. See BookingsService.assertModifiable.
+  EXPIRED
 }
 
 enum Plan {
   BASIC
   PRO
+}
+
+// In-app notification feed for a professional. Persisted so the dashboard's
+// notification centre survives page reloads, offline periods, and missed
+// real-time events. Real-time (SSE) delivery is a separate, best-effort channel
+// layered on top; a future Web Push channel would be another. This row is the
+// source of truth for all of them.
+enum NotificationType {
+  APPOINTMENT_CREATED
+  // Reserved for later — only APPOINTMENT_CREATED is emitted today:
+  // APPOINTMENT_CANCELLED, APPOINTMENT_RESCHEDULED, APPOINTMENT_REMINDER, SYSTEM
 }
 
 model Professional {
@@ -56,27 +72,29 @@ model Professional {
   workingHours       WorkingHour[]
   scheduleExceptions ScheduleException[]
   bookings           Booking[]
+  notifications      Notification[]
 
-  @@index([slug])
-  @@index([googleId])
+  // `slug` and `googleId` are already `@unique`; the unique constraint's btree
+  // index fully serves equality lookups and sorts on those columns, so no
+  // secondary @@index is needed here.
 }
 
 model Service {
-  id                  String   @id @default(uuid())
+  id                  String       @id @default(uuid())
   professionalId      String
   professional        Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   name                String
   description         String?
   durationMinutes     Int
-  priceCents          Int      @default(0)
-  isActive            Boolean  @default(true)
-  homeServiceEnabled  Boolean  @default(false)
+  priceCents          Int          @default(0)
+  isActive            Boolean      @default(true)
+  homeServiceEnabled  Boolean      @default(false)
   homeDurationMinutes Int?
   homePriceCents      Int?
-  sortOrder           Int      @default(0)
+  sortOrder           Int          @default(0)
   deletedAt           DateTime?
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
 
   bookings Booking[]
 
@@ -114,25 +132,62 @@ model Booking {
   professional            Professional  @relation(fields: [professionalId], references: [id], onDelete: Cascade)
   serviceId               String?
   service                 Service?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
-  serviceNameSnapshot      String
-  durationMinutesSnapshot  Int
-  customerName             String
-  customerEmail            String
-  customerPhone            String
-  customerNote             String?
-  atHome                   Boolean       @default(false)
-  customerAddress          String?
-  startAt                  DateTime
-  endAt                    DateTime
-  status                   BookingStatus @default(CONFIRMED)
-  cancellationToken        String        @unique @default(uuid())
-  cancelledAt              DateTime?
-  cancelledBy              String?
-  reminder24hSentAt        DateTime?
-  reminder2hSentAt         DateTime?
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  serviceNameSnapshot     String
+  durationMinutesSnapshot Int
+  customerName            String
+  customerEmail           String
+  customerPhone           String
+  customerNote            String?
+  atHome                  Boolean       @default(false)
+  customerAddress         String?
+  startAt                 DateTime
+  endAt                   DateTime
+  status                  BookingStatus @default(CONFIRMED)
+  cancellationToken       String        @unique @default(uuid())
+  cancelledAt             DateTime?
+  cancelledBy             String?
+  reminder24hSentAt       DateTime?
+  reminder2hSentAt        DateTime?
+  createdAt               DateTime      @default(now())
+  updatedAt               DateTime      @updatedAt
 
+  // Agenda list: professional's bookings within a date range, any status.
   @@index([professionalId, startAt])
+  // Availability + overlap guard (createPublicBooking / reschedule): equality on
+  // professionalId + status=CONFIRMED, range on startAt. Keeps the scan bounded
+  // to live bookings instead of walking every past row for the professional.
+  @@index([professionalId, status, startAt])
+  // Global reminder / expiration sweeps: status + startAt, no professional filter.
   @@index([status, startAt])
+  // FK column: Postgres does not auto-index it. Guards the SetNull path and any
+  // "bookings for this service" lookup from a full table scan.
+  @@index([serviceId])
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  professionalId String
+  professional   Professional     @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  type           NotificationType
+  // Rendered, ready-to-display strings — the source of truth for the in-app
+  // feed and (later) a Web Push payload. Spanish-only, like the rest of the app.
+  title          String
+  body           String
+  // Minimal navigation/display metadata, e.g.
+  // { bookingId, customerName, serviceName, startAt }. Deliberately NOT a copy
+  // of the whole booking — `bookingId` is the reference; the few extra fields
+  // let the feed render without a join and are point-in-time by design (an
+  // "appointment created" entry keeps reading as it did when it fired).
+  data           Json
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+
+  // The only list query: `WHERE professionalId = ? ORDER BY createdAt DESC`
+  // (keyset-paginated on (createdAt, id)). Descending so the ORDER BY is a
+  // forward index scan.
+  @@index([professionalId, createdAt(sort: Desc)])
+  // Unread badge: `WHERE professionalId = ? AND readAt IS NULL`. Prisma has no
+  // declarative partial index; this composite still bounds the count/scan to
+  // one professional's rows.
+  @@index([professionalId, readAt])
 }

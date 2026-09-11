@@ -1,9 +1,11 @@
 import type { Page, Route } from '@playwright/test';
 import type {
   AgendaBooking,
+  Notification,
   ProfessionalProfile,
   PublicBooking,
   Service,
+  WorkingHour,
 } from '@agendya/types';
 import {
   PUBLIC_SLUG,
@@ -70,6 +72,16 @@ export class ApiMock {
   private exceptions = makeScheduleExceptions();
   private readonly publicProfessional = makePublicProfessional();
 
+  /**
+   * Body served for the real-time SSE stream (`GET /realtime/stream`). A
+   * fulfilled response cannot stay open, so the web client just reads this and
+   * reconnects on its backoff. Default: a keep-alive comment (no events).
+   */
+  private realtimeBody = ':keep-alive\n\n';
+
+  /** Persisted notification feed served by `GET /notifications`. Newest first. */
+  private notifications: Notification[] = [];
+
   constructor(private readonly page: Page) {}
 
   async install(): Promise<void> {
@@ -88,6 +100,33 @@ export class ApiMock {
 
   setAgenda(bookings: AgendaBooking[]): void {
     this.agenda = bookings;
+  }
+
+  setWorkingHours(hours: WorkingHour[]): void {
+    this.workingHours = hours;
+  }
+
+  /**
+   * Queue a real-time event to be delivered on the next `/realtime/stream`
+   * connection (the web client opens one on dashboard load and reconnects
+   * every ~1s while a response keeps ending).
+   */
+  emitRealtime(event: unknown): void {
+    this.realtimeBody = `data: ${JSON.stringify(event)}\n\n`;
+  }
+
+  /** Preload the persisted feed (e.g. to model a professional who was offline). */
+  seedNotifications(items: Notification[]): void {
+    this.notifications = [...items];
+  }
+
+  /**
+   * Model "customer books an appointment": persist the notification AND queue
+   * the `notification.created` SSE frame the dashboard reacts to.
+   */
+  emitNotification(notification: Notification): void {
+    this.notifications = [notification, ...this.notifications];
+    this.emitRealtime({ type: 'notification.created', notification });
   }
 
   /**
@@ -132,6 +171,16 @@ export class ApiMock {
     const method = request.method();
     this.record(route);
     const body = readBody(route);
+
+    // --- Real-time SSE stream ----------------------------------------------
+    if (path === '/realtime/stream') {
+      return route.fulfill({
+        status: 200,
+        contentType: 'text/event-stream',
+        headers: { 'cache-control': 'no-store' },
+        body: this.realtimeBody,
+      });
+    }
 
     // --- Auth -----------------------------------------------------------------
     if (path === '/auth/login' || path === '/auth/register') {
@@ -210,6 +259,61 @@ export class ApiMock {
       };
       this.services = [...this.services, copy];
       return json(route, copy, 201);
+    }
+
+    // --- Notifications ------------------------------------------------------
+    if (path === '/notifications' && method === 'GET') {
+      const cursor = url.searchParams.get('cursor');
+      const limit = Number(url.searchParams.get('limit') ?? '20');
+      const start = cursor
+        ? this.notifications.findIndex((n) => n.id === cursor) + 1
+        : 0;
+      const slice = this.notifications.slice(start, start + limit);
+      const nextCursor =
+        start + limit < this.notifications.length
+          ? slice[slice.length - 1].id
+          : null;
+      return json(route, { items: slice, nextCursor });
+    }
+    if (path === '/notifications/unread-count' && method === 'GET') {
+      return json(route, {
+        count: this.notifications.filter((n) => n.readAt === null).length,
+      });
+    }
+    if (path === '/notifications/read-all' && method === 'PATCH') {
+      const now = new Date().toISOString();
+      let updated = 0;
+      this.notifications = this.notifications.map((n) => {
+        if (n.readAt === null) {
+          updated += 1;
+          return { ...n, readAt: now };
+        }
+        return n;
+      });
+      return json(route, { updated });
+    }
+    const notifReadMatch = path.match(/^\/notifications\/([^/]+)\/read$/);
+    if (notifReadMatch && method === 'PATCH') {
+      const id = notifReadMatch[1];
+      const target = this.notifications.find((n) => n.id === id);
+      if (!target) return json(route, { message: 'No encontrada' }, 404);
+      target.readAt = target.readAt ?? new Date().toISOString();
+      return json(route, target);
+    }
+    if (path === '/notifications/read' && method === 'DELETE') {
+      const before = this.notifications.length;
+      this.notifications = this.notifications.filter((n) => n.readAt === null);
+      return json(route, { deleted: before - this.notifications.length });
+    }
+    const notifDeleteMatch = path.match(/^\/notifications\/([^/]+)$/);
+    if (notifDeleteMatch && method === 'DELETE') {
+      const id = notifDeleteMatch[1];
+      const before = this.notifications.length;
+      // Server only removes the caller's already-read rows.
+      this.notifications = this.notifications.filter(
+        (n) => !(n.id === id && n.readAt !== null),
+      );
+      return json(route, { deleted: before - this.notifications.length });
     }
 
     // --- Agenda (professional bookings) ---------------------------------
@@ -346,6 +450,7 @@ export class ApiMock {
       cancellationToken: 'e2e-cancellation-token',
       cancellationPolicyHours: 24,
       canCancel: true,
+      canReschedule: true,
     };
   }
 }

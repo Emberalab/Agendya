@@ -16,18 +16,25 @@ import type {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
   dateOnlyUtc,
   weekdayFromDateString,
   zonedDateParts,
   zonedInstant,
 } from '../../common/utils/timezone.util';
+import {
+  isModifiable,
+  isPast,
+  meetsCancellationWindow,
+} from './booking-policy';
 
 @Injectable()
 export class BookingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   async createPublicBooking(
@@ -45,7 +52,7 @@ export class BookingsService {
       await this.resolveServiceSelection(professional.id, input);
 
     const startAt = new Date(input.startAt);
-    if (Number.isNaN(startAt.getTime()) || startAt.getTime() <= Date.now()) {
+    if (Number.isNaN(startAt.getTime()) || isPast(startAt)) {
       throw new BadRequestException('Ese horario ya no está disponible.');
     }
     const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
@@ -67,6 +74,16 @@ export class BookingsService {
       startAt,
       endAt,
     });
+
+    // The booking is now durably persisted (the serializable transaction above
+    // has committed). Only now do we record the notification — a professional
+    // is never notified about a booking that failed to persist. This persists
+    // the notification row and then delivers it over SSE. It already swallows
+    // its own errors; the extra `.catch` keeps a persisted booking safe even
+    // if that ever regresses.
+    await this.notifications
+      .notifyAppointmentCreated(professional, booking)
+      .catch(() => undefined);
 
     await this.mailService.sendBookingConfirmation({
       to: booking.customerEmail,
@@ -98,24 +115,14 @@ export class BookingsService {
     if (!booking) {
       throw new NotFoundException('Reserva no encontrada.');
     }
-    if (booking.status !== 'CONFIRMED') {
-      throw new ConflictException('Esta reserva ya fue cancelada.');
-    }
-
     const { professional } = booking;
-    if (
-      !this.canCancel(booking.startAt, professional.cancellationPolicyHours)
-    ) {
-      throw new ForbiddenException(
-        `Solo puedes modificar con al menos ${professional.cancellationPolicyHours} horas de anticipación.`,
-      );
-    }
+    await this.assertModifiable(booking, professional, 'modificar');
 
     const { primaryServiceId, serviceNames, totalDurationMinutes } =
       await this.resolveServiceSelection(professional.id, input);
 
     const startAt = new Date(input.startAt);
-    if (Number.isNaN(startAt.getTime()) || startAt.getTime() <= Date.now()) {
+    if (Number.isNaN(startAt.getTime()) || isPast(startAt)) {
       throw new BadRequestException('Ese horario ya no está disponible.');
     }
     const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
@@ -235,7 +242,12 @@ export class BookingsService {
   /**
    * Throws when the `startAt`..`startAt + durationMinutes` window does not fit
    * inside the professional's working hours for that day, or the day is blocked
-   * by a schedule exception.
+   * by a schedule exception. Shared by every path that lands a booking on a
+   * *new* slot — initial creation, the customer's token-edit flow, and both
+   * reschedule flows — since a reschedule is, from the schedule's point of
+   * view, indistinguishable from a new booking. A blocked date never touches
+   * bookings that already occupy a slot (see SchedulesService.createException);
+   * it only gates where a booking can move *to*.
    */
   private async assertSlotWithinSchedule(
     professional: Professional,
@@ -346,10 +358,7 @@ export class BookingsService {
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
       } catch (error) {
-        const isSerializationFailure =
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === 'P2034';
-        if (!isSerializationFailure) {
+        if (!this.isSerializationConflict(error)) {
           throw error;
         }
         if (attempt === maxAttempts) {
@@ -358,6 +367,30 @@ export class BookingsService {
       }
     }
     throw new ConflictException('Ese horario ya no está disponible.');
+  }
+
+  /**
+   * A serializable transaction lost a read/write race and must be retried.
+   * Depending on *when* Postgres detects the conflict, the driver-adapter
+   * Prisma client surfaces this two different ways: as a
+   * PrismaClientKnownRequestError P2034 (conflict caught mid-query), or as a
+   * raw DriverAdapterError wrapping Postgres' own 40001 (conflict caught at
+   * COMMIT — observed from two concurrent reschedules onto the same slot).
+   * Both mean the same thing: retry.
+   */
+  private isSerializationConflict(error: unknown): boolean {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2034'
+    ) {
+      return true;
+    }
+    return (
+      error instanceof Error &&
+      error.name === 'DriverAdapterError' &&
+      (error as { cause?: { kind?: string } }).cause?.kind ===
+        'TransactionWriteConflict'
+    );
   }
 
   async getPublicBookingByToken(token: string): Promise<PublicBooking> {
@@ -379,19 +412,7 @@ export class BookingsService {
     if (!booking) {
       throw new NotFoundException('Reserva no encontrada.');
     }
-    if (booking.status !== 'CONFIRMED') {
-      throw new ConflictException('Esta reserva ya fue cancelada.');
-    }
-    if (
-      !this.canCancel(
-        booking.startAt,
-        booking.professional.cancellationPolicyHours,
-      )
-    ) {
-      throw new ForbiddenException(
-        `Solo puedes cancelar con al menos ${booking.professional.cancellationPolicyHours} horas de anticipación.`,
-      );
-    }
+    await this.assertModifiable(booking, booking.professional, 'cancelar');
 
     const updated = await this.prisma.booking.update({
       where: { id: booking.id },
@@ -425,26 +446,10 @@ export class BookingsService {
     if (!booking) {
       throw new NotFoundException('Reserva no encontrada.');
     }
-    if (booking.status !== 'CONFIRMED') {
-      throw new ConflictException('Esta reserva ya fue cancelada.');
-    }
-
-    if (
-      !this.canCancel(
-        booking.startAt,
-        booking.professional.cancellationPolicyHours,
-      )
-    ) {
-      throw new ForbiddenException(
-        `Solo puedes modificar con al menos ${booking.professional.cancellationPolicyHours} horas de anticipación.`,
-      );
-    }
+    await this.assertModifiable(booking, booking.professional, 'modificar');
 
     const newStartAt = new Date(input.newStartAt);
-    if (
-      Number.isNaN(newStartAt.getTime()) ||
-      newStartAt.getTime() <= Date.now()
-    ) {
+    if (Number.isNaN(newStartAt.getTime()) || isPast(newStartAt)) {
       throw new BadRequestException('La nueva fecha debe ser en el futuro.');
     }
 
@@ -452,28 +457,19 @@ export class BookingsService {
       newStartAt.getTime() + booking.durationMinutesSnapshot * 60_000,
     );
 
-    // Verificar que el nuevo horario no esté ocupado
-    const overlapping = await this.prisma.booking.findFirst({
-      where: {
-        professionalId: booking.professionalId,
-        status: 'CONFIRMED',
-        id: { not: booking.id },
-        startAt: { lt: newEndAt },
-        endAt: { gt: newStartAt },
-      },
-    });
-    if (overlapping) {
-      throw new ConflictException('El nuevo horario no está disponible.');
-    }
+    await this.assertSlotWithinSchedule(
+      booking.professional,
+      newStartAt,
+      booking.durationMinutesSnapshot,
+    );
 
     const oldStartAt = booking.startAt;
-    const updated = await this.prisma.booking.update({
-      where: { id: booking.id },
-      data: {
-        startAt: newStartAt,
-        endAt: newEndAt,
-      },
-    });
+    const updated = await this.commitReschedule(
+      booking.id,
+      booking.professionalId,
+      newStartAt,
+      newEndAt,
+    );
 
     // Notificar al cliente
     await this.mailService.sendBookingRescheduled({
@@ -531,21 +527,12 @@ export class BookingsService {
     if (!booking) {
       throw new NotFoundException('Reserva no encontrada.');
     }
-    if (booking.status !== 'CONFIRMED') {
-      throw new ConflictException('Esta reserva ya fue cancelada.');
-    }
 
     const professional = await this.prisma.professional.findUniqueOrThrow({
       where: { id: professionalId },
     });
 
-    if (
-      !this.canCancel(booking.startAt, professional.cancellationPolicyHours)
-    ) {
-      throw new ForbiddenException(
-        `Solo puedes cancelar con al menos ${professional.cancellationPolicyHours} horas de anticipación.`,
-      );
-    }
+    await this.assertModifiable(booking, professional, 'cancelar');
 
     const updated = await this.prisma.booking.update({
       where: { id: bookingId },
@@ -578,9 +565,12 @@ export class BookingsService {
     if (!booking) {
       throw new NotFoundException('Reserva no encontrada.');
     }
-    if (booking.status !== 'CONFIRMED') {
+    // A booking can still be marked complete after its slot has passed (the
+    // professional forgot to close it out during the appointment) — but not
+    // once it's already cancelled, completed, or marked as a no-show.
+    if (booking.status !== 'CONFIRMED' && booking.status !== 'EXPIRED') {
       throw new ConflictException(
-        'Solo puedes completar una reserva confirmada.',
+        'Solo puedes completar una reserva confirmada o vencida.',
       );
     }
 
@@ -607,27 +597,15 @@ export class BookingsService {
     if (!booking) {
       throw new NotFoundException('Reserva no encontrada.');
     }
-    if (booking.status !== 'CONFIRMED') {
-      throw new ConflictException('Esta reserva ya fue cancelada.');
-    }
 
     const professional = await this.prisma.professional.findUniqueOrThrow({
       where: { id: professionalId },
     });
 
-    if (
-      !this.canCancel(booking.startAt, professional.cancellationPolicyHours)
-    ) {
-      throw new ForbiddenException(
-        `Solo puedes modificar con al menos ${professional.cancellationPolicyHours} horas de anticipación.`,
-      );
-    }
+    await this.assertModifiable(booking, professional, 'modificar');
 
     const newStartAt = new Date(input.newStartAt);
-    if (
-      Number.isNaN(newStartAt.getTime()) ||
-      newStartAt.getTime() <= Date.now()
-    ) {
+    if (Number.isNaN(newStartAt.getTime()) || isPast(newStartAt)) {
       throw new BadRequestException('La nueva fecha debe ser en el futuro.');
     }
 
@@ -635,28 +613,19 @@ export class BookingsService {
       newStartAt.getTime() + booking.durationMinutesSnapshot * 60_000,
     );
 
-    // Verificar que el nuevo horario no esté ocupado
-    const overlapping = await this.prisma.booking.findFirst({
-      where: {
-        professionalId,
-        status: 'CONFIRMED',
-        id: { not: bookingId },
-        startAt: { lt: newEndAt },
-        endAt: { gt: newStartAt },
-      },
-    });
-    if (overlapping) {
-      throw new ConflictException('El nuevo horario no está disponible.');
-    }
+    await this.assertSlotWithinSchedule(
+      professional,
+      newStartAt,
+      booking.durationMinutesSnapshot,
+    );
 
     const oldStartAt = booking.startAt;
-    const updated = await this.prisma.booking.update({
-      where: { id: bookingId },
-      data: {
-        startAt: newStartAt,
-        endAt: newEndAt,
-      },
-    });
+    const updated = await this.commitReschedule(
+      bookingId,
+      professionalId,
+      newStartAt,
+      newEndAt,
+    );
 
     await this.mailService.sendBookingRescheduled({
       to: booking.customerEmail,
@@ -671,9 +640,110 @@ export class BookingsService {
     return this.toAgendaBooking(updated, professional);
   }
 
-  private canCancel(startAt: Date, cancellationPolicyHours: number): boolean {
-    const hoursUntilStart = (startAt.getTime() - Date.now()) / 3_600_000;
-    return hoursUntilStart >= cancellationPolicyHours;
+  /**
+   * The single server-side gate for cancelling/rescheduling a booking.
+   * Re-fetched booking state is passed in by every caller (each of them
+   * starts with a fresh `findFirst`/`findUnique`), so this always revalidates
+   * against the current status and current time rather than a stale
+   * client-supplied assumption — the concurrency-safety rule from the spec.
+   *
+   * Distinguishes *why* a booking can't be touched instead of collapsing
+   * everything into one generic error: already cancelled/completed/no-show,
+   * already vencida (expired — start time passed), or still confirmed but
+   * inside the cancellation-policy window.
+   *
+   * Self-heals a stale CONFIRMED row whose start time has already passed by
+   * flipping it to EXPIRED right here, instead of waiting for
+   * ExpirationScheduler's next sweep — belt-and-suspenders with the cron.
+   */
+  private async assertModifiable(
+    booking: Booking,
+    professional: Professional,
+    action: 'cancelar' | 'modificar',
+  ): Promise<void> {
+    if (booking.status === 'CANCELLED') {
+      throw new ConflictException('Esta reserva ya fue cancelada.');
+    }
+    if (booking.status === 'COMPLETED') {
+      throw new ConflictException('Esta reserva ya fue completada.');
+    }
+    if (booking.status === 'NO_SHOW') {
+      throw new ConflictException('Esta reserva fue marcada como no asistida.');
+    }
+
+    if (booking.status === 'EXPIRED' || isPast(booking.startAt)) {
+      if (booking.status === 'CONFIRMED') {
+        await this.prisma.booking.update({
+          where: { id: booking.id },
+          data: { status: 'EXPIRED' },
+        });
+      }
+      throw new ForbiddenException(
+        'Esta reserva ya venció: su horario ya pasó y no puede modificarse.',
+      );
+    }
+
+    if (
+      !meetsCancellationWindow(
+        booking.startAt,
+        professional.cancellationPolicyHours,
+      )
+    ) {
+      throw new ForbiddenException(
+        `Solo puedes ${action} con al menos ${professional.cancellationPolicyHours} horas de anticipación.`,
+      );
+    }
+  }
+
+  /**
+   * Applies a reschedule's overlap-check + update inside a serializable
+   * transaction, retrying on serialization failures — same guard
+   * {@link commitBookingSlot} uses, so two concurrent reschedules landing on
+   * the same new slot can't both succeed.
+   */
+  private async commitReschedule(
+    bookingId: string,
+    professionalId: string,
+    newStartAt: Date,
+    newEndAt: Date,
+  ): Promise<Booking> {
+    const maxAttempts = 3;
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        return await this.prisma.$transaction(
+          async (tx) => {
+            const overlapping = await tx.booking.findFirst({
+              where: {
+                professionalId,
+                status: 'CONFIRMED',
+                id: { not: bookingId },
+                startAt: { lt: newEndAt },
+                endAt: { gt: newStartAt },
+              },
+            });
+            if (overlapping) {
+              throw new ConflictException(
+                'El nuevo horario no está disponible.',
+              );
+            }
+
+            return tx.booking.update({
+              where: { id: bookingId },
+              data: { startAt: newStartAt, endAt: newEndAt },
+            });
+          },
+          { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        );
+      } catch (error) {
+        if (!this.isSerializationConflict(error)) {
+          throw error;
+        }
+        if (attempt === maxAttempts) {
+          throw new ConflictException('El nuevo horario no está disponible.');
+        }
+      }
+    }
+    throw new ConflictException('El nuevo horario no está disponible.');
   }
 
   private toPublicBooking(
@@ -698,9 +768,8 @@ export class BookingsService {
       status: booking.status,
       cancellationToken: booking.cancellationToken,
       cancellationPolicyHours: professional.cancellationPolicyHours,
-      canCancel:
-        booking.status === 'CONFIRMED' &&
-        this.canCancel(booking.startAt, professional.cancellationPolicyHours),
+      canCancel: isModifiable(booking, professional),
+      canReschedule: isModifiable(booking, professional),
     };
   }
 
@@ -716,10 +785,15 @@ export class BookingsService {
       customerName: booking.customerName,
       customerEmail: booking.customerEmail,
       customerPhone: booking.customerPhone,
+      customerNote: booking.customerNote,
+      atHome: booking.atHome,
+      // Only ever populated for an at-home booking; the column is null otherwise.
+      customerAddress: booking.atHome ? booking.customerAddress : null,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       status: booking.status,
       cancellationPolicyHours: professional.cancellationPolicyHours,
+      canReschedule: isModifiable(booking, professional),
       createdAt: booking.createdAt.toISOString(),
       cancelledAt: booking.cancelledAt?.toISOString() ?? null,
       cancelledBy: booking.cancelledBy ?? null,

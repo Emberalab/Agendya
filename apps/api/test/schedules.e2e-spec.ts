@@ -32,8 +32,8 @@ describe('Schedules + Availability (e2e)', () => {
   let prisma: PrismaService;
 
   const runId = Date.now();
-  const email = `e2e-schedules-${runId}@ronda.test`;
-  const otherEmail = `e2e-schedules-other-${runId}@ronda.test`;
+  const email = `e2e-schedules-${runId}@agendya.test`;
+  const otherEmail = `e2e-schedules-other-${runId}@agendya.test`;
   const password = 'supersecret123';
 
   let accessToken: string;

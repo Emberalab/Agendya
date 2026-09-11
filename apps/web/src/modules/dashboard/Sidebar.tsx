@@ -4,6 +4,8 @@ import { useAuthStore } from '../auth/authStore';
 import Group from '../../imports/LogoGroup';
 import { NAV_ITEMS } from './navItems';
 import { NavIcon } from './NavIcon';
+import { ThemeToggle } from '../../shared/theme/ThemeToggle';
+import { NotificationBell } from '../notifications/NotificationBell';
 
 export function Sidebar() {
   const user = useAuthStore((state) => state.user);
@@ -32,6 +34,7 @@ export function Sidebar() {
           <button
             onClick={() => setCollapsed(false)}
             title="Expandir menú"
+            aria-label="Expandir menú"
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '4px' }}
           >
             <div className="w-7 h-7 relative">
@@ -40,35 +43,43 @@ export function Sidebar() {
           </button>
 
           <div
-            className="w-9 h-9 rounded-full flex items-center justify-center mt-2 mb-3"
+            className="w-9 h-9 rounded-full flex items-center justify-center mt-2 mb-1"
             style={{ backgroundColor: 'var(--color-brand-primary)' }}
           >
-            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', color: '#fff' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', color: 'var(--color-text-on-brand)' }}>
               {initial}
             </span>
           </div>
 
-          {NAV_ITEMS.map((item) => (
-            <NavLink
-              key={item.id}
-              to={item.to}
-              title={item.label}
-              className="flex items-center justify-center w-10 h-10 rounded-xl"
-              style={({ isActive }) => ({
-                backgroundColor: isActive ? 'var(--color-brand-tint)' : 'transparent',
-                color: isActive ? 'var(--color-brand-primary)' : 'var(--color-text-muted)',
-              })}
-            >
-              <NavIcon id={item.id} />
-            </NavLink>
-          ))}
+          <nav aria-label="Principal" className="contents">
+            {NAV_ITEMS.map((item) => (
+              <NavLink
+                key={item.id}
+                to={item.to}
+                title={item.label}
+                className="flex items-center justify-center w-10 h-10 rounded-xl"
+                style={({ isActive }) => ({
+                  backgroundColor: isActive ? 'var(--color-brand-tint)' : 'transparent',
+                  color: isActive ? 'var(--color-text-brand)' : 'var(--color-text-muted)',
+                })}
+              >
+                <NavIcon id={item.id} />
+              </NavLink>
+            ))}
+          </nav>
 
-          <div className="flex-1 flex items-end pb-2">
+					<div className="mb-2">
+            <NotificationBell />
+          </div>
+
+          <div className="flex-1 flex flex-col items-center justify-end gap-3 pb-2">
+            <ThemeToggle />
             <button
               onClick={() => setCollapsed(false)}
               className="flex items-center justify-center w-8 h-8 rounded-lg"
               style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
               title="Expandir"
+              aria-label="Expandir menú"
             >
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                 <path d="M5 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -88,8 +99,8 @@ export function Sidebar() {
                   style={{
                     fontFamily: 'var(--font-display)',
                     fontWeight: 700,
-                    fontSize: '18px',
-                    color: 'var(--color-brand-primary)',
+                    fontSize: '20px',
+                    color: 'var(--color-text-brand)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -101,6 +112,7 @@ export function Sidebar() {
                 className="flex items-center justify-center w-6 h-6 rounded-md shrink-0"
                 style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
                 title="Colapsar menú"
+                aria-label="Colapsar menú"
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                   <path d="M9 3L5 7l4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -116,7 +128,7 @@ export function Sidebar() {
                 className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
                 style={{ backgroundColor: 'var(--color-brand-primary)' }}
               >
-                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px', color: '#fff' }}>
+                <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '13px', color: 'var(--color-text-on-brand)' }}>
                   {initial}
                 </span>
               </div>
@@ -125,7 +137,7 @@ export function Sidebar() {
                   style={{
                     fontFamily: 'var(--font-body)',
                     fontWeight: 600,
-                    fontSize: '12px',
+                    fontSize: '13px',
                     color: 'var(--color-text-primary)',
                     lineHeight: 1.3,
                     whiteSpace: 'nowrap',
@@ -138,7 +150,7 @@ export function Sidebar() {
                 <p
                   style={{
                     fontFamily: 'var(--font-mono)',
-                    fontSize: '10px',
+                    fontSize: '11px',
                     color: 'var(--color-text-muted)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -150,7 +162,7 @@ export function Sidebar() {
               </div>
             </div>
 
-            <nav className="flex flex-col gap-0.5 px-3">
+            <nav aria-label="Principal" className="flex flex-col gap-0.5 px-3">
               {NAV_ITEMS.map((item) => (
                 <NavLink
                   key={item.id}
@@ -158,16 +170,16 @@ export function Sidebar() {
                   className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl text-left w-full"
                   style={({ isActive }) => ({
                     backgroundColor: isActive ? 'var(--color-brand-tint)' : 'transparent',
-                    color: isActive ? 'var(--color-brand-primary)' : 'var(--color-text-secondary)',
+                    color: isActive ? 'var(--color-text-brand)' : 'var(--color-text-secondary)',
                     fontFamily: 'var(--font-body)',
                     fontWeight: isActive ? 600 : 400,
-                    fontSize: '13px',
+                    fontSize: '14px',
                     whiteSpace: 'nowrap',
                   })}
                 >
                   {({ isActive }) => (
                     <>
-                      <span style={{ color: isActive ? 'var(--color-brand-primary)' : 'var(--color-text-muted)', flexShrink: 0 }}>
+                      <span style={{ color: isActive ? 'var(--color-text-brand)' : 'var(--color-text-muted)', flexShrink: 0 }}>
                         <NavIcon id={item.id} />
                       </span>
                       {item.label}
@@ -182,16 +194,23 @@ export function Sidebar() {
                 </NavLink>
               ))}
             </nav>
+
+            <div className="px-3 mt-1">
+              <NotificationBell variant="row" />
+            </div>
           </div>
 
           <div className="px-3">
+            <div className="flex items-center justify-center py-2 mb-1">
+              <ThemeToggle />
+            </div>
             <button
               onClick={logout}
               className="flex items-center gap-2.5 px-2.5 py-2.5 rounded-xl w-full text-left"
               style={{
                 color: 'var(--color-text-muted)',
                 fontFamily: 'var(--font-body)',
-                fontSize: '13px',
+                fontSize: '14px',
                 border: 'none',
                 cursor: 'pointer',
                 background: 'none',

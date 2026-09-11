@@ -18,6 +18,8 @@ describe('SchedulesService', () => {
       create: jest.Mock;
       delete: jest.Mock;
     };
+    professional: { findUnique: jest.Mock };
+    booking: { count: jest.Mock };
     $transaction: jest.Mock;
   };
 
@@ -34,6 +36,12 @@ describe('SchedulesService', () => {
         create: jest.fn(),
         delete: jest.fn(),
       },
+      professional: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({ id: 'prof-1', timezone: 'America/Bogota' }),
+      },
+      booking: { count: jest.fn().mockResolvedValue(0) },
       $transaction: jest.fn().mockResolvedValue(undefined),
     };
 
@@ -135,7 +143,38 @@ describe('SchedulesService', () => {
         id: 'exc-1',
         date: '2026-08-15',
         reason: 'Vacaciones',
+        affectedBookingsCount: 0,
       });
+    });
+
+    it('reports how many confirmed bookings already exist on the blocked date, without touching them', async () => {
+      // Business rule: blocking a date never cancels or otherwise modifies
+      // bookings that already exist there — it only gates new bookings and
+      // reschedules (see BookingsService.assertSlotWithinSchedule). This is
+      // surfaced as a count for the UI, not acted on here.
+      prisma.scheduleException.create.mockResolvedValue({
+        id: 'exc-1',
+        date: new Date('2026-08-15T00:00:00.000Z'),
+        reason: null,
+      });
+      prisma.booking.count.mockResolvedValue(3);
+
+      const result = await service.createException('prof-1', {
+        date: '2026-08-15',
+      });
+
+      expect(result.affectedBookingsCount).toBe(3);
+      expect(prisma.booking.count).toHaveBeenCalledWith({
+        where: {
+          professionalId: 'prof-1',
+          status: 'CONFIRMED',
+          startAt: { lt: expect.any(Date) as unknown },
+          endAt: { gt: expect.any(Date) as unknown },
+        },
+      });
+      // The service must never write to Booking as a side effect of blocking
+      // a date.
+      expect(prisma.$transaction).not.toHaveBeenCalled();
     });
 
     it('translates a unique constraint violation into a conflict', async () => {

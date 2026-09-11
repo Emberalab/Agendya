@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 
 interface ContextMenuProps {
   anchorRef: React.RefObject<HTMLElement | null>;
@@ -24,6 +25,10 @@ export function ContextMenu({
 }: ContextMenuProps) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
+  // Traps Tab/Shift+Tab inside the popover, closes it on Escape, and returns
+  // focus to the "Acciones" button that opened it. Reuses `ref` (already used
+  // below for position calc + outside-click detection) instead of a second one.
+  useFocusTrap(true, onClose, ref);
 
   useLayoutEffect(() => {
     const anchor = anchorRef.current;
@@ -109,6 +114,8 @@ export function ContextMenu({
   return createPortal(
     <div
       ref={ref}
+      tabIndex={-1}
+      aria-label="Acciones"
       style={{
         position: 'fixed',
         top: pos ? pos.top : -9999,

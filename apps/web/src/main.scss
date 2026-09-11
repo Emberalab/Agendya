@@ -1,7 +1,6 @@
-// Imports from Figma Make Design System
-@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+// Fonts (Outfit / Plus Jakarta Sans / Inter) are loaded via <link> tags in
+// index.html — see the comment there. A CSS @import here would be render-blocking
+// and only discovered after this stylesheet parses, delaying first paint.
 
 :root {
   color-scheme: light;
@@ -15,17 +14,33 @@
   --color-surface-soft: #F8F8FC;
   --color-border: #E2E8F0;
   --color-text-primary: #0F172A;
-  --color-text-secondary: #64748B;
-  --color-text-muted: #94A3B8;
+  // text-secondary/-muted are darker than the original Figma slate-500/400
+  // pair (#64748B/#94A3B8) — those measured 4.49:1 and 2.56:1 against this
+  // page's actual backgrounds, both short of WCAG's 4.5:1 for normal text.
+  // Same slate-blue hue family, just a couple of steps darker for AA.
+  --color-text-secondary: #475569;
+  --color-text-muted: #5B6B84;
 
-  // Semantic status colors (repeated across error / success UI)
-  --color-danger: #EF4444;
-  --color-success: #10B981;
+  // Semantic status colors (repeated across error / success UI). Darker than
+  // the original red-500/emerald-500 (#EF4444/#10B981), which read at
+  // 3.76:1 and 2.54:1 against white — short of the 4.5:1 normal-text minimum.
+  --color-danger: #B91C1C;
+  --color-success: #047857;
+  // For a solid destructive-button fill with white text on top. Same value in
+  // both themes — white-on-#F87171 (the dark theme's --color-danger, tuned for
+  // text-on-dark-surface instead) is only 2.76:1.
+  --color-danger-fill: #B91C1C;
 
   // Foreground on a brand-colored surface (filled buttons, slider thumb ring)
   --color-text-on-brand: #FFFFFF;
   // Translucent brand wash for active / hover nav and chips
   --color-brand-tint: rgba(79, 70, 229, 0.08);
+  // `--color-brand-primary` is tuned for use as a *fill* (with white text on
+  // top) or a large/bold accent — as a normal-weight text/icon color it's
+  // only 2.72:1 on the dark surface below. Use this instead for links, active
+  // nav text, and other small brand-colored text/icons; it's identical to
+  // `--color-brand-primary` in light mode (already 5.9–6.3:1 there).
+  --color-text-brand: #4F46E5;
 
   // Overlay + elevation
   --overlay-scrim: rgba(15, 23, 42, 0.45);
@@ -34,6 +49,123 @@
 
   // Radius for form controls (inputs, buttons)
   --radius-control: 8px;
+
+  // Tinted surfaces (icon badges, info banners, selected states, dashed
+  // dropzone borders). Solid pastels here; the dark theme below turns them
+  // into translucent washes of the same hue instead of inverting them.
+  --color-brand-surface: #EEF2FF;
+  --color-brand-border: #C7D2FE;
+  --color-danger-surface: #FFF1F2;
+  --color-danger-border: #FECDD3;
+
+  // Booking status badges — see modules/bookings/statusConfig.ts. Each status
+  // keeps its own hue (amber/emerald/red/indigo/red) across both themes —
+  // "Cancelada" and "No asistió" are the one deliberate exception, both red.
+  // Text colors are darker than the original 500-weight tones for the same
+  // reason as --color-danger/--color-success above: on their own pastel
+  // background these measured 2.1–4.0:1, short of 4.5:1.
+  --status-pending-color: #B45309;
+  --status-pending-bg: #FFFBEB;
+  --status-pending-border: #FDE68A;
+  --status-confirmed-color: #047857;
+  --status-confirmed-bg: #F0FDF4;
+  --status-confirmed-border: #BBF7D0;
+  // Reuses --color-danger/-surface/-border — same red as "No asistió" and the
+  // rest of the app's danger accents (delete buttons, error banners). The
+  // status/danger icons still differ, so the two aren't identical at a
+  // glance, but this intentionally breaks the "each status keeps its own
+  // hue" rule below — ask before reusing this pattern for a new status.
+  --status-cancelled-color: var(--color-danger);
+  --status-cancelled-bg: var(--color-danger-surface);
+  --status-cancelled-border: var(--color-danger-border);
+  --status-completed-color: #4338CA;
+  --status-completed-bg: #EEF2FF;
+  --status-completed-border: #C7D2FE;
+  --status-noshow-color: #B91C1C;
+  --status-noshow-bg: #FFF1F2;
+  --status-noshow-border: #FECDD3;
+  // Distinct orange/terracotta family — reads as "overdue", not "error" (red,
+  // no-show) or "waiting" (amber, pending). #9A3412 measures 6.9–7.3:1 here.
+  --status-expired-color: #9A3412;
+  --status-expired-bg: #FFF7ED;
+  --status-expired-border: #FED7AA;
+}
+
+/**
+ * Dark theme, toggled by setting `data-theme="dark"` on <html> (see
+ * shared/theme/themeStore.ts + the inline snippet in index.html that applies
+ * it before first paint). Values are *adapted* from the light palette, not
+ * inverted:
+ *  - `--color-brand-primary` is kept exactly as-is: indigo-600 already reads
+ *    clearly on the dark surface below, so the brand color itself never
+ *    changes between themes.
+ *  - Hover states lighten instead of darken — darkening an already-dark
+ *    button on a dark page reads as "disabled", not "hovered".
+ *  - Text steps reuse the *same* slate scale as the light theme, just
+ *    reassigned: light-mode's muted tone becomes dark-mode's secondary tone
+ *    and vice versa, so the neutral hue family never changes, only which
+ *    step sits on which end.
+ *  - Solid pastel "tint" surfaces (badges, banners) become translucent washes
+ *    of the same hue rather than solid dark blocks.
+ */
+html[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-brand-primary: #4F46E5;
+  // Lightens on hover instead of darkening (see comment above); also nudged
+  // up from the first pass (#6366F1) so white button text clears 4.5:1 (was
+  // 4.47:1).
+  --color-brand-primary-hover: #655CE8;
+  --color-surface: #161B2C;
+  --color-surface-soft: #0B0F19;
+  --color-border: #2A3349;
+  --color-text-primary: #F1F5F9;
+  // Lighter than the first pass (#94A3B8/#64748B measured 3.6–4.0:1 here) —
+  // same slate-blue family, tuned to clear 4.5:1 against both dark surfaces.
+  --color-text-secondary: #A7B2C6;
+  // Lightened one more step (was #8B99AE, 5.92:1/6.63:1) per visual feedback —
+  // still a clear step darker than --color-text-secondary, well clear of AA.
+  --color-text-muted: #9CAAC0;
+
+  --color-danger: #F87171;
+  --color-success: #34D399;
+
+  // See the light-theme definition above: brand-primary itself isn't safe as
+  // text/icon color on a dark surface (2.72:1); this lighter indigo is
+  // (5.7:1) while still reading as clearly "brand".
+  --color-text-brand: #818CF8;
+
+  --color-brand-tint: rgba(99, 102, 241, 0.16);
+
+  --overlay-scrim: rgba(0, 0, 0, 0.6);
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-focus-brand: 0 0 0 3px rgba(99, 102, 241, 0.45);
+
+  --color-brand-surface: rgba(99, 102, 241, 0.16);
+  --color-brand-border: rgba(99, 102, 241, 0.4);
+  --color-danger-surface: rgba(239, 68, 68, 0.16);
+  --color-danger-border: rgba(239, 68, 68, 0.4);
+
+  --status-pending-color: #FBBF24;
+  --status-pending-bg: rgba(245, 158, 11, 0.16);
+  --status-pending-border: rgba(245, 158, 11, 0.4);
+  --status-confirmed-color: #34D399;
+  --status-confirmed-bg: rgba(16, 185, 129, 0.16);
+  --status-confirmed-border: rgba(16, 185, 129, 0.4);
+  // See the light-theme definition above — same reuse of --color-danger.
+  --status-cancelled-color: var(--color-danger);
+  --status-cancelled-bg: var(--color-danger-surface);
+  --status-cancelled-border: var(--color-danger-border);
+  --status-completed-color: #818CF8;
+  --status-completed-bg: rgba(99, 102, 241, 0.16);
+  --status-completed-border: rgba(99, 102, 241, 0.4);
+  --status-noshow-color: #F87171;
+  --status-noshow-bg: rgba(239, 68, 68, 0.16);
+  --status-noshow-border: rgba(239, 68, 68, 0.4);
+  // #FB923C measures 7.6–8.5:1 against the dark surfaces.
+  --status-expired-color: #FB923C;
+  --status-expired-bg: rgba(249, 115, 22, 0.16);
+  --status-expired-border: rgba(249, 115, 22, 0.4);
 }
 
 // The hue-slider thumb / track need the same declarations for the WebKit and
@@ -69,6 +201,7 @@ body {
   font-family: var(--font-body);
   color: var(--color-text-primary);
   background-color: var(--color-surface);
+  transition: background-color 0.15s, color 0.15s;
 }
 
 /* Native form controls don't inherit the body font by default (browsers use their own UI font) */
@@ -86,6 +219,91 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: 500;
   letter-spacing: 0.02em;
   color: var(--color-text-secondary);
+}
+
+/* Customer-authored free text shown inside cards, drawers and flex/grid rows —
+   observations/notes and home-service addresses. `anywhere` (not `break-word`)
+   so the string also reports a small min-content width and can't force a flex
+   item or the page to scroll horizontally; pair it with `min-width: 0` on the
+   flex/grid item. `--multiline` additionally keeps the customer's own line
+   breaks. Nothing is clipped — the full text stays readable. */
+.agendya-longtext {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.agendya-longtext--multiline {
+  white-space: pre-wrap;
+}
+
+/* Screen-reader-only content: visually hidden, still in the a11y tree.
+   Standard "clip" technique — `display:none`/`visibility:hidden` would
+   remove it from the tree instead of just hiding it visually. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Skip-to-content link: sr-only until it receives keyboard focus, then it
+   becomes the first visible, focused element on the page. */
+.agendia-skip-link {
+  position: absolute;
+  top: -1000px;
+  left: 1rem;
+  z-index: 1000;
+  padding: 0.75rem 1.25rem;
+  border-radius: var(--radius-control);
+  background-color: var(--color-brand-primary);
+  color: var(--color-text-on-brand);
+  font-family: var(--font-body);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+}
+.agendia-skip-link:focus {
+  top: 1rem;
+}
+
+/* Theme toggle switch — same visual (and asset) as the one on emberalab.com.
+   Self-hosted from /public (see switch-body-*.svg) rather than pulled from
+   res.cloudinary.com: the sidebar renders this control on every dashboard load,
+   so a third-party origin here cost a DNS/TLS handshake on the critical path
+   for a ~4 kB graphic. */
+.agendia-theme-toggle {
+  cursor: pointer;
+  background-color: transparent;
+  background-image: url(/switch-body-light.svg);
+  background-position: 50%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border: none;
+  padding: 0;
+  border-radius: 0.875rem;
+  justify-content: center;
+  align-items: center;
+  width: 3.5625rem;
+  height: 1.625rem;
+  flex-shrink: 0;
+  transition: background-image 0.3s ease-in-out, transform 0.8s;
+  display: flex;
+  position: relative;
+  box-shadow: 0 3px 5px #091e4233, 0 0 1px #091e424f;
+}
+html[data-theme='dark'] .agendia-theme-toggle {
+  background-image: url(/switch-body-dark.svg);
+}
+.agendia-theme-toggle:active {
+  transform: scale(0.94);
+}
+.agendia-theme-toggle:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 2px;
 }
 
 /* Hue slider for the profile "Color de fondo" picker */
@@ -113,6 +331,13 @@ h1, h2, h3, h4, h5, h6 {
 }
 .agendia-hue-slider::-moz-range-thumb {
   @include hue-slider-thumb;
+}
+
+/* Moon's own dark-theme error-hint red (--color-text-negative) measures
+   4.37:1 on our dark surface — just short of the 4.5:1 AA minimum for normal
+   text. Use our own AA-checked danger color instead. */
+html[data-theme='dark'] .moon-form-group-error .moon-form-hint {
+  color: var(--color-danger);
 }
 
 /* Moon input — visible border using design system tokens */
@@ -191,6 +416,57 @@ label:has(.moon-checkbox) span {
   50% { opacity: 0.45; }
 }
 
+/* Notification centre (and any right-side drawer) open transitions */
+@keyframes agendya-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes agendya-slide-in-right {
+  from { transform: translateX(16px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [style*='agendya-slide-in-right'],
+  [style*='agendya-fade-in'] {
+    animation: none !important;
+  }
+}
+
+/* Notification row exit — a modern-mobile "swipe away": the content slides left
+   and fades while the row's own height collapses so the neighbours close the
+   gap. Both run together (~220ms); React keeps the row mounted until the inner
+   `transitionend` fires (see NotificationItem). `overflow: hidden` keeps the
+   horizontal travel inside the row — it can never widen the panel. */
+.notif-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.2s ease;
+}
+.notif-row > .notif-row-inner {
+  min-height: 0;
+  overflow: hidden;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+.notif-row[data-exiting='true'] {
+  grid-template-rows: 0fr;
+}
+.notif-row[data-exiting='true'] > .notif-row-inner {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-row,
+  .notif-row > .notif-row-inner {
+    transition: none !important;
+  }
+}
+
 /* Horizontally-scrollable chip strips (mobile KPI chips) — no visible scrollbar */
 .chip-scroll::-webkit-scrollbar { display: none; }
 
@@ -199,13 +475,10 @@ label:has(.moon-checkbox) span {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
 
-// Previous classes
-$focus-ring-color: #111827;
-
 a,
 button {
   &:focus-visible {
-    outline: 2px solid $focus-ring-color;
+    outline: 2px solid var(--color-text-primary);
     outline-offset: 2px;
   }
 }

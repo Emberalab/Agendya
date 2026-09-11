@@ -64,3 +64,44 @@ test('cancels a confirmed booking from the actions menu', async ({
       .first(),
   ).toBeVisible();
 });
+
+test('remembers the Calendario view after navigating to another tab and back', async ({
+  page,
+}) => {
+  await page.goto('/dashboard/agenda');
+  await expect(page.getByRole('heading', { name: 'Tu agenda' })).toBeVisible();
+
+  const listaButton = page.getByRole('button', { name: 'Lista' }).first();
+  const calendarioButton = page
+    .getByRole('button', { name: 'Calendario' })
+    .first();
+
+  // Lista is the default on first visit.
+  await expect(listaButton).toHaveCSS(
+    'background-color',
+    'rgb(79, 70, 229)',
+  );
+
+  await calendarioButton.click();
+  await expect(calendarioButton).toHaveCSS(
+    'background-color',
+    'rgb(79, 70, 229)',
+  );
+
+  await page
+    .getByRole('complementary')
+    .getByRole('link', { name: 'Servicios' })
+    .click();
+  await expect(page).toHaveURL(/\/dashboard\/services$/);
+
+  await page
+    .getByRole('complementary')
+    .getByRole('link', { name: 'Agenda' })
+    .click();
+  await expect(page).toHaveURL(/\/dashboard\/agenda$/);
+
+  // Agenda remounted, but Calendario is still the selected view.
+  await expect(
+    page.getByRole('button', { name: 'Calendario' }).first(),
+  ).toHaveCSS('background-color', 'rgb(79, 70, 229)');
+});

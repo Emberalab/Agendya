@@ -2,10 +2,14 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, type RegisterInput } from '@agendya/types';
 import { Controller, useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormGroup, Input } from '@moondesignsystem/react';
 import Group from '../../imports/Group11';
-import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import {
+  getApiErrorMessage,
+  isWaitlistRequiredError,
+} from '../../shared/api/getApiErrorMessage';
+import { AccessWaitlistForm } from './AccessWaitlistForm';
 import { useRegister } from './hooks/useRegister';
 
 const HERO_PHOTO =
@@ -19,8 +23,14 @@ export function RegisterPage() {
   const {
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+  const [searchParams] = useSearchParams();
+  const waitlistEmail = searchParams.get('email') ?? '';
+  const showWaitlist =
+    searchParams.get('waitlist') === '1' ||
+    isWaitlistRequiredError(registerMutation.error);
 
   const onSubmit = handleSubmit((data) => {
     registerMutation.mutate(data, {
@@ -48,7 +58,7 @@ export function RegisterPage() {
               fontFamily: 'var(--font-display)',
               fontWeight: 700,
               fontSize: '24px',
-              color: 'var(--color-brand-primary)',
+              color: 'var(--color-text-brand)',
             }}
           >
             agendya
@@ -74,9 +84,17 @@ export function RegisterPage() {
             Crea tu cuenta
           </h1>
           <p className="text-sm mb-7" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-            Comienza a gestionar tus reservas de forma profesional
+            {showWaitlist
+              ? 'Aún no abrimos cuentas para todo el mundo. Reserva tu cupo y te avisamos.'
+              : 'Comienza a gestionar tus reservas de forma profesional'}
           </p>
 
+          {showWaitlist ? (
+            <AccessWaitlistForm
+              initialEmail={getValues('email') || waitlistEmail}
+              initialBusiness={getValues('businessName') ?? ''}
+            />
+          ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
             <Controller
               name="businessName"
@@ -95,9 +113,15 @@ export function RegisterPage() {
                     size="md"
                     variant="outline"
                     error={!!errors.businessName}
+                    aria-invalid={!!errors.businessName}
+                    aria-describedby={errors.businessName ? 'businessName-error' : undefined}
                     style={{ paddingLeft: '12px', paddingRight: '12px' }}
                   />
-                  {errors.businessName && <FormGroup.Hint>{errors.businessName.message}</FormGroup.Hint>}
+                  {errors.businessName && (
+                    <FormGroup.Hint id="businessName-error" role="alert">
+                      {errors.businessName.message}
+                    </FormGroup.Hint>
+                  )}
                 </FormGroup>
               )}
             />
@@ -119,9 +143,15 @@ export function RegisterPage() {
                     size="md"
                     variant="outline"
                     error={!!errors.email}
+                    aria-invalid={!!errors.email}
+                    aria-describedby={errors.email ? 'reg-email-error' : undefined}
                     style={{ paddingLeft: '12px', paddingRight: '12px' }}
                   />
-                  {errors.email && <FormGroup.Hint>{errors.email.message}</FormGroup.Hint>}
+                  {errors.email && (
+                    <FormGroup.Hint id="reg-email-error" role="alert">
+                      {errors.email.message}
+                    </FormGroup.Hint>
+                  )}
                 </FormGroup>
               )}
             />
@@ -144,6 +174,8 @@ export function RegisterPage() {
                       size="md"
                       variant="outline"
                       error={!!errors.password}
+                      aria-invalid={!!errors.password}
+                      aria-describedby="reg-password-hint"
                       className="pr-10"
                       style={{ paddingLeft: '12px', paddingRight: '12px' }}
                     />
@@ -151,7 +183,7 @@ export function RegisterPage() {
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
                       className="absolute right-3 top-1/2 -translate-y-1/2"
-                      style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}
+                      style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer', width: '24px', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                       aria-label={showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                     >
                       {showPassword ? (
@@ -169,6 +201,8 @@ export function RegisterPage() {
                     </button>
                   </div>
                   <FormGroup.Hint
+                    id="reg-password-hint"
+                    role={errors.password ? 'alert' : undefined}
                     style={{
                       fontFamily: 'var(--font-mono)',
                       fontSize: '12px',
@@ -185,20 +219,22 @@ export function RegisterPage() {
               <Checkbox
                 checked={acceptTerms}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAcceptTerms(e.target.checked)}
+                aria-label="Acepto los Términos de uso y la Política de privacidad"
+                required
               />
               <span
                 className="text-sm leading-snug"
                 style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
               >
                 Acepto los{' '}
-                <span style={{ color: 'var(--color-brand-primary)', fontWeight: 600 }}>Términos de uso</span> y la{' '}
-                <span style={{ color: 'var(--color-brand-primary)', fontWeight: 600 }}>Política de privacidad</span>
+                <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Términos de uso</span> y la{' '}
+                <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Política de privacidad</span>
               </span>
             </div>
 
             {registerMutation.isError && (
-              <div className="rounded-lg border border-red-200 bg-red-50 p-3">
-                <p className="text-sm text-red-600" style={{ fontFamily: 'var(--font-body)' }}>
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+                <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
                   {getApiErrorMessage(registerMutation.error)}
                 </p>
               </div>
@@ -215,7 +251,10 @@ export function RegisterPage() {
               {registerMutation.isPending ? 'Creando cuenta...' : 'Crear cuenta gratis'}
             </Button>
           </form>
+          )}
 
+          {!showWaitlist && (
+          <>
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
             <span className="agendia-label text-xs uppercase">O regístrate con</span>
@@ -261,6 +300,8 @@ export function RegisterPage() {
             </svg>
             Continuar con Google
           </button>
+          </>
+          )}
 
           <p
             className="text-sm text-center mt-6"
@@ -270,7 +311,7 @@ export function RegisterPage() {
             <Link
               to="/login"
               className="font-semibold underline"
-              style={{ color: 'var(--color-brand-primary)', fontFamily: 'var(--font-body)' }}
+              style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
             >
               Inicia sesión
             </Link>

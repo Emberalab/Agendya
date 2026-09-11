@@ -18,6 +18,7 @@ npm workspaces monorepo:
 - `apps/web` — React + Vite frontend
 - `packages/types` (`@agendya/types`) — shared Zod schemas/TS types consumed by both apps
 - `infra/docker-compose.yml` — local Postgres container used by the README setup flow (this is the one to use; a duplicate `docker-compose.yml` also sits at the repo root with different container naming — treat it as stale and confirm before relying on it)
+- `docs/` — engineering documentation site (Astro + Starlight + Mermaid). **Not** an npm workspace (own `package.json`/lockfile) so its toolchain stays isolated. **Bilingual** via Starlight i18n: Spanish is the default locale (`docs/src/content/docs/**`, served at `/`), English lives in `docs/src/content/docs/en/**` (served at `/en/`) — every page is mirrored in both, and a new page must be added to both trees plus the single `sidebar` in `docs/astro.config.mjs` (Spanish `label` + `translations: { en }`). Spanish pages use `/…` internal links, English pages use `/en/…`. Run with `npm run docs` (or `docs:build`). Deployed to GitHub Pages by `.github/workflows/docs.yml`. Keep both languages in sync when changing architecture, the schema, API routes, or env config; mark genuinely unclear behaviour as `TODO` rather than inventing it. See `docs/README.md`.
 
 ## `apps/web/Agendya-main` is NOT the live app
 
@@ -25,7 +26,7 @@ That folder is a self-contained Figma Make export kept for design reference (it 
 
 ## Naming note: "ronda" vs "agendya"
 
-The product appears to have been renamed from "Ronda" to "Agendya". Some infra/config still uses the old name: `infra/docker-compose.yml` container and DB credentials, the CI Postgres service credentials, and a comment in `apps/api/prisma/schema.prisma` referencing a local plan file path on the original author's machine (not portable — ignore that path if it doesn't exist). These are just leftover names, not a separate product.
+The product was renamed from "Ronda" to "Agendya" early on. Infra/config, CI, and app-visible identifiers (local Postgres credentials, the `agendya-auth`/`agendya-theme` localStorage keys, the API's root health-check string, Cloudinary upload folders, Prisma schema header) have all been updated to "Agendya" — a leftover `Ronda`/`ronda.test` reference outside the hand-authored planning docs (`Arquitectura-Tecnica.md`, `Stack-Tecnologico.md`, `MVP-v1.md`, `Fase-4-Negocios-WhatsApp.md` — old product-name mentions there are historical prose, not live config, and are intentionally left as-is) is a regression worth fixing. `apps/api/prisma/schema.prisma`'s second line still references a local plan file path on the original author's machine — not portable, ignore it if it doesn't exist.
 
 ## Tech stack
 
@@ -58,7 +59,7 @@ npm run dev:api                                           # API on :4000
 npm run dev:web                                           # web on :5173
 ```
 
-Cross-workspace: `npm run build` / `lint` / `test` / `typecheck` (each runs across all workspaces). API-only: `npm run test:e2e --workspace apps/api`, or from `apps/api`: `npx prisma migrate dev --name <desc>`, `npx prisma studio`.
+Cross-workspace: `npm run build` / `lint` / `test` / `typecheck` (each runs across all workspaces), or `npm run verify` to chain lint → typecheck → test → build in one shot (fail-fast; run before committing). API-only: `npm run test:e2e --workspace apps/api`, or from `apps/api`: `npx prisma migrate dev --name <desc>`, `npx prisma studio`.
 
 ## Conventions
 
