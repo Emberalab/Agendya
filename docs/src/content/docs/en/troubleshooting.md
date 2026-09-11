@@ -31,7 +31,7 @@ description: Common local-development problems and their fixes.
 | `401` on every authenticated call | Expired/absent token, or account `isActive=false` | Log in again; check the `Professional` row |
 | Login returns *"Esta cuenta usa autenticación con Google"* | Account has no `passwordHash` | Use "Sign in with Google" |
 | `GET /auth/google` → 404 / route missing | Google not configured | Set `GOOGLE_CLIENT_ID` **and** `GOOGLE_CLIENT_SECRET`; the strategy is only registered when both exist |
-| OAuth callback → `403 "Solicitud de autenticación inválida."` | `state` cookie missing/expired (5 min) or mismatched; third-party-cookie blocking | Restart the flow from `/auth/google`; don't bookmark the callback URL |
+| OAuth callback → JSON `403` or you land on `localhost:4000` | `state` cookie missing/expired or mismatched (Chrome can drop cookies on a `:4000` → Google → `:4000` bounce) | Restart from the in-app Google button (`/login`); don't reload or bookmark the callback URL. After the fix this redirects to `/login?error=oauth` |
 | Logged out immediately after Google login | `GoogleCallbackPage` couldn't reach `/auth/me` | Check `VITE_API_URL` / API is up; token still set, `businessName` just missing |
 | `/forgot-password` does nothing | **No reset endpoint exists** | Known gap — see [Security](/en/security/#known-gaps--todo) |
 
@@ -39,7 +39,7 @@ description: Common local-development problems and their fixes.
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| Browser: *"blocked by CORS policy"* | Frontend origin ≠ `WEB_URL` and not a private/localhost IP | Set `WEB_URL` to the exact frontend origin; for LAN testing use `npm run dev:web:host` (private IPs are allowed automatically) |
+| Browser: *"blocked by CORS policy"* | Frontend origin ≠ `WEB_URL` / `PUBLIC_WEB_URL` and not a private/localhost IP | Set `WEB_URL` (dashboard) and `PUBLIC_WEB_URL` (apex) to the exact origins; for LAN testing use `npm run dev:web:host` (private IPs are allowed automatically) |
 | API calls go to the wrong host | `VITE_API_URL` unset and page opened from an odd host | Set `VITE_API_URL` explicitly, or open the app from `localhost` / the LAN IP the API is also on |
 
 ## Build & test

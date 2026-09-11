@@ -27,6 +27,14 @@ export const notificationDataSchema = z.object({
   serviceName: z.string(),
   /** ISO-8601 UTC instant of the appointment start. */
   startAt: z.string(),
+  /**
+   * Present and `true` only for a home-service ("a domicilio") booking, so the
+   * feed can flag it. Deliberately just the flag — the customer's address is
+   * **never** put in the notification payload (it rides only on the
+   * authenticated agenda response); the professional opens the appointment
+   * detail to see it. Absent on older rows.
+   */
+  atHome: z.boolean().optional(),
 });
 export type NotificationData = z.infer<typeof notificationDataSchema>;
 
@@ -68,3 +76,16 @@ export const markAllReadResponseSchema = z.object({
   updated: z.number().int().nonnegative(),
 });
 export type MarkAllReadResponse = z.infer<typeof markAllReadResponseSchema>;
+
+/**
+ * `DELETE /notifications/:id` and `DELETE /notifications/read` — how many rows
+ * were removed. `0` when the id was unknown, not owned by the caller, or still
+ * unread (only read notifications are deletable), so both endpoints are
+ * idempotent and never leak another professional's data via a 404.
+ */
+export const deleteNotificationsResponseSchema = z.object({
+  deleted: z.number().int().nonnegative(),
+});
+export type DeleteNotificationsResponse = z.infer<
+  typeof deleteNotificationsResponseSchema
+>;

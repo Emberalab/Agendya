@@ -14,7 +14,10 @@ export default () => ({
   slotGridMinutes: parseInt(process.env.SLOT_GRID_MINUTES ?? '15', 10),
   resendApiKey: process.env.RESEND_API_KEY,
   cloudinaryUrl: process.env.CLOUDINARY_URL,
-  webUrl: process.env.WEB_URL ?? 'http://localhost:5173',
+  webUrl: (process.env.WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
+  // Public booking origin (`agendya.co`). Empty locally / on hosted-dev where
+  // the dashboard and `/:slug` share one host. Used for CORS and cancel links.
+  publicWebUrl: (process.env.PUBLIC_WEB_URL ?? '').replace(/\/+$/, ''),
   // Web Push (VAPID). All three must be set for push delivery to be active;
   // with any missing, the push endpoints report "disabled" and the notification
   // feed simply falls back to SSE + the persisted row. Generate a keypair with

@@ -1,4 +1,4 @@
-import { realtimeEventSchema, type RealtimeEvent } from '@agendya/types';
+import { parseRealtimeEvent, type RealtimeEvent } from '@agendya/types';
 import { apiBaseUrl } from '../api/apiClient';
 import { useAuthStore } from '../../modules/auth/authStore';
 
@@ -225,12 +225,12 @@ class RealtimeClient {
       return;
     }
 
-    const result = realtimeEventSchema.safeParse(parsed);
-    if (!result.success) return; // unknown / malformed event -> ignore safely
+    const event = parseRealtimeEvent(parsed);
+    if (!event) return; // unknown / malformed event -> ignore safely
 
     for (const listener of this.listeners) {
       try {
-        listener(result.data);
+        listener(event);
       } catch {
         // one listener throwing must not stop the others
       }

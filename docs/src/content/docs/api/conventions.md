@@ -85,7 +85,8 @@ params obligatorios de rango de fechas `from` / `to`.
 
 ## CORS
 
-Orígenes permitidos: el `WEB_URL` configurado exactamente, más cualquier origen
+Orígenes permitidos: `WEB_URL` y, si está definido, `PUBLIC_WEB_URL`
+(exactos), más cualquier origen
 `http(s)` en `localhost` / una IP de red privada (`127.0.0.1`, `10/8`,
 `172.16/12`, `192.168/16`) — este último para `npm run dev:web:host`.
 `credentials` es `false` (sin autenticación por cookie). Un `Origin`

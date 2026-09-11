@@ -30,7 +30,9 @@ boots.
 | `RESEND_API_KEY` | *(empty)* | No | Emails are logged to the console instead of sent |
 | `CLOUDINARY_URL` | *(empty)* | No | `POST /upload/image` returns `503 Service Unavailable` |
 | `PORT` | `4000` | No (defaults `4000`) | API listen port |
-| `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | CORS allow-origin, OAuth success redirect base, cancel-link base in emails |
+| `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | Dashboard CORS origin, OAuth success redirect base |
+| `PUBLIC_WEB_URL` | *(empty)* | No | Public booking origin (`https://agendya.co`): extra CORS origin and cancel-link base. Falls back to `WEB_URL` |
+| `PROFESSIONAL_EMAIL_ALLOWLIST` | *(empty = open locally)* | No | Emails allowed to register/log in as a professional. Railway `production`/`dev` use built-in lists; this env overrides them. Empty = open |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (defaults `25000`) | Milliseconds between `event: ping` frames on the `GET /realtime/stream` SSE stream. Lower it if a reverse proxy drops idle connections sooner |
 | `VAPID_PUBLIC_KEY` | *(empty)* | No | With any of the three VAPID keys missing, Web Push is disabled: `GET /notifications/push/public-key` returns `null`, the dashboard hides the toggle, and the feed still delivers over SSE. Generate a pair with `npx web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | *(empty)* | No | Same as above |
@@ -53,6 +55,8 @@ unique secret before any real deployment.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `VITE_API_URL` | *(unset)* → `http://<page-host>:4000` | Base URL the browser calls for the API. Leave unset for localhost **and** LAN testing (`npm run dev:web:host`); set it only to target a different backend (e.g. staging). |
+| `VITE_PUBLIC_SITE_URL` | *(unset)* → `window.location.origin` | Public page origin (`/{slug}`). Prod: `https://agendya.co`. Hosted-dev: `https://app-dev.agendya.co`. |
+| `VITE_WAITLIST_URL` | *(unset)* | Waitlist form POST. Hosted: Actions secret `VITE_WAITLIST_URL`. Without it the submit is a no-op |
 
 `apiClient` resolves it as:
 

@@ -61,7 +61,7 @@ npm run dev:api                                           # API on :4000
 npm run dev:web                                           # web on :5173
 ```
 
-Cross-workspace: `npm run build` / `lint` / `test` / `typecheck` (each runs across all workspaces). API-only: `npm run test:e2e --workspace apps/api`, or from `apps/api`: `npx prisma migrate dev --name <desc>`, `npx prisma studio`.
+Cross-workspace: `npm run build` / `lint` / `test` / `typecheck` (each runs across all workspaces), or `npm run verify` to chain lint → typecheck → test → build in one shot (fail-fast; run before committing). API-only: `npm run test:e2e --workspace apps/api`, or from `apps/api`: `npx prisma migrate dev --name <desc>`, `npx prisma studio`.
 
 ## Conventions
 

@@ -31,7 +31,7 @@ description: Problemas habituales del desarrollo local y sus soluciones.
 | `401` en cada llamada autenticada | Token expirado/ausente, o cuenta `isActive=false` | Vuelve a iniciar sesión; revisa la fila de `Professional` |
 | El login devuelve *"Esta cuenta usa autenticación con Google"* | La cuenta no tiene `passwordHash` | Usa «Iniciar sesión con Google» |
 | `GET /auth/google` → 404 / ruta ausente | Google sin configurar | Pon `GOOGLE_CLIENT_ID` **y** `GOOGLE_CLIENT_SECRET`; la estrategia solo se registra cuando ambos existen |
-| Callback de OAuth → `403 "Solicitud de autenticación inválida."` | Cookie `state` ausente/expirada (5 min) o no coincide; bloqueo de cookies de terceros | Reinicia el flujo desde `/auth/google`; no guardes la URL del callback en marcadores |
+| Callback de OAuth → JSON `403` o te deja en `localhost:4000` | Cookie `state` ausente/expirada o no coincide (Chrome a veces borra cookies de un bounce `:4000` → Google → `:4000`) | Reinicia desde el botón de Google en la app (`/login`); no recargues ni guardes la URL del callback. Tras el arreglo, esto redirige a `/login?error=oauth` |
 | Sesión cerrada justo tras el login con Google | `GoogleCallbackPage` no pudo alcanzar `/auth/me` | Revisa `VITE_API_URL` / que la API esté arriba; el token sigue puesto, solo falta `businessName` |
 | `/forgot-password` no hace nada | **No existe endpoint de restablecimiento** | Brecha conocida — ver [Seguridad](/security/#brechas-conocidas--todo) |
 
@@ -39,7 +39,7 @@ description: Problemas habituales del desarrollo local y sus soluciones.
 
 | Síntoma | Causa | Solución |
 | --- | --- | --- |
-| Navegador: *"blocked by CORS policy"* | El origen del frontend ≠ `WEB_URL` y no es una IP privada/localhost | Pon `WEB_URL` al origen exacto del frontend; para pruebas por LAN usa `npm run dev:web:host` (las IP privadas se permiten automáticamente) |
+| Navegador: *"blocked by CORS policy"* | El origen del frontend ≠ `WEB_URL` / `PUBLIC_WEB_URL` y no es una IP privada/localhost | Pon `WEB_URL` (dashboard) y `PUBLIC_WEB_URL` (apex) a los orígenes exactos; para pruebas por LAN usa `npm run dev:web:host` (las IP privadas se permiten automáticamente) |
 | Las llamadas a la API van al host equivocado | `VITE_API_URL` sin definir y la página abierta desde un host raro | Define `VITE_API_URL` explícitamente, o abre la app desde `localhost` / la IP de LAN donde también está la API |
 
 ## Build y pruebas

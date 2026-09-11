@@ -2,7 +2,7 @@ import AxeBuilder from '@axe-core/playwright';
 import type { Page } from '@playwright/test';
 import { expect, test } from '../../fixtures/test';
 import { STORAGE_STATE } from '../../utils/auth-state';
-import { PUBLIC_SLUG } from '../../fixtures/data';
+import { PUBLIC_SLUG, makeHomeServiceAgendaBooking } from '../../fixtures/data';
 
 /**
  * WCAG 2.2 AA automated audit. Runs axe-core against the rendered page (real
@@ -145,10 +145,96 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoViolations(page);
     });
 
+    test('agenda page — appointment detail drawer for a home-service booking', async ({
+      page,
+      api,
+    }) => {
+      api.setAgenda([
+        makeHomeServiceAgendaBooking({
+          customerAddress:
+            'Calle 10 #43C-20, Apartamento 502 Torre 1, Barrio El Poblado (Ref.: portón negro junto a la panadería)',
+        }),
+      ]);
+      await page.goto('/dashboard/agenda');
+      await page
+        .getByRole('button', { name: 'Ver detalle' })
+        .first()
+        .click();
+      await expect(
+        page.getByRole('dialog', { name: 'Detalle de la cita' }),
+      ).toBeVisible();
+      await expect(page.getByText('DOMICILIO', { exact: true })).toBeVisible();
+      await expectNoViolations(page);
+    });
+
     test('schedule page', async ({ page }) => {
       await page.goto('/dashboard/schedule');
       await expect(
         page.getByRole('heading', { name: 'Horario Semanal' }),
+      ).toBeVisible();
+      await expectNoViolations(page);
+    });
+
+    test('notification centre — list, detail view, and delete-read dialog', async ({
+      page,
+      api,
+    }) => {
+      api.seedNotifications([
+        {
+          id: '00000000-0000-4000-8000-0000000000c1',
+          type: 'APPOINTMENT_CREATED',
+          title: 'Nueva cita',
+          body: 'Carla reservó Corte premium',
+          data: {
+            bookingId: '00000000-0000-4000-8000-0000000000d1',
+            customerName: 'Carla',
+            serviceName: 'Corte premium',
+            startAt: '2099-09-10T18:30:00.000Z',
+          },
+          readAt: null,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: '00000000-0000-4000-8000-0000000000c2',
+          type: 'APPOINTMENT_CREATED',
+          title: 'Cita leída',
+          body: 'Bruno reservó Barba',
+          data: {
+            bookingId: '00000000-0000-4000-8000-0000000000d2',
+            customerName: 'Bruno',
+            serviceName: 'Barba',
+            startAt: '2099-09-11T18:30:00.000Z',
+          },
+          readAt: '2099-01-01T00:00:00.000Z',
+          createdAt: '2099-01-01T00:00:00.000Z',
+        },
+      ]);
+
+      await page.goto('/dashboard/agenda');
+      await page
+        .getByRole('button', { name: /^Notificaciones/ })
+        .filter({ visible: true })
+        .first()
+        .click();
+      const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+      await expect(panel.getByText('Cita leída')).toBeVisible();
+
+      // Detail view (new): heading, ← control, facts list, primary CTA.
+      await panel.getByRole('button', { name: /Nueva cita\./ }).click();
+      await expect(
+        panel.getByRole('heading', { name: 'Detalle de la cita' }),
+      ).toBeVisible();
+      await expectNoViolations(page);
+      await panel
+        .getByRole('button', { name: 'Volver a notificaciones' })
+        .click();
+
+      // Bulk-delete confirmation dialog (new).
+      await panel.getByRole('button', { name: 'Eliminar leídas' }).click();
+      await expect(
+        page.getByRole('dialog', {
+          name: '¿Eliminar notificaciones leídas?',
+        }),
       ).toBeVisible();
       await expectNoViolations(page);
     });

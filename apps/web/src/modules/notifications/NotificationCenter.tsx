@@ -1,19 +1,47 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import type { Notification } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
+import { usePrefersReducedMotion } from '../../shared/a11y/prefersReducedMotion';
+import { useToastStore } from '../../shared/notifications/toastStore';
 import { NotificationItem } from './NotificationItem';
 import { PushNotificationToggle } from './PushNotificationToggle';
+import { NotificationDetailView } from './NotificationDetailView';
+import { ConfirmDeleteReadDialog } from './ConfirmDeleteReadDialog';
 import { routeForNotification } from './navigation';
 import { useNotificationList } from './hooks/useNotificationList';
 import { useMarkAllNotificationsRead } from './hooks/useMarkAllNotificationsRead';
 import { useMarkNotificationRead } from './hooks/useMarkNotificationRead';
+import { useDeleteNotification } from './hooks/useDeleteNotification';
+import { useDeleteReadNotifications } from './hooks/useDeleteReadNotifications';
 
 export function NotificationCenter({ onClose }: { onClose: () => void }) {
-  const panelRef = useFocusTrap<HTMLDivElement>(true, onClose);
   const navigate = useNavigate();
+
+  // Two views inside the one panel: the list, and one notification's detail.
+  const [detail, setDetail] = useState<Notification | null>(null);
+  const [confirmDeleteRead, setConfirmDeleteRead] = useState(false);
+  // Row to restore focus to when returning from the detail view.
+  const lastActivatedId = useRef<string | null>(null);
+
+  const reducedMotion = usePrefersReducedMotion();
+  // Rows currently playing their exit animation. The optimistic cache removal
+  // for a single delete is deferred until its animation reports done, so the
+  // slide-out is never cut short by an early unmount.
+  const [exitingIds, setExitingIds] = useState<ReadonlySet<string>>(
+    () => new Set(),
+  );
+  // Ids animating out as part of a "Eliminar leídas" run — those stay collapsed
+  // (not re-committed row by row) until the bulk request settles.
+  const bulkExitingIds = useRef<Set<string>>(new Set());
+
+  // Disable the panel's own focus trap while the confirm dialog owns focus —
+  // same pattern as the agenda drawer's ConfirmCompleteDialog.
+  const panelRef = useFocusTrap<HTMLDivElement>(!confirmDeleteRead, onClose);
+  const backBtnRef = useRef<HTMLButtonElement>(null);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   const {
     data,
@@ -27,17 +55,21 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
   } = useNotificationList();
   const markRead = useMarkNotificationRead();
   const markAll = useMarkAllNotificationsRead();
+  const { requestDelete } = useDeleteNotification();
+  const deleteRead = useDeleteReadNotifications();
+  const pushToast = useToastStore((state) => state.push);
 
   const items = useMemo(
     () => data?.pages.flatMap((page) => page.items) ?? [],
     [data],
   );
   const hasUnread = items.some((n) => n.readAt === null);
+  const readCount = items.filter((n) => n.readAt !== null).length;
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const node = sentinelRef.current;
-    if (!node || !hasNextPage) return;
+    if (!node || !hasNextPage || detail) return;
     const observer = new IntersectionObserver((entries) => {
       if (entries[0]?.isIntersecting && !isFetchingNextPage) {
         void fetchNextPage();
@@ -45,14 +77,111 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
     });
     observer.observe(node);
     return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, detail]);
+
+  // Move focus sensibly across the list ⇄ detail transition.
+  useEffect(() => {
+    if (detail) {
+      backBtnRef.current?.focus();
+      return;
+    }
+    if (lastActivatedId.current) {
+      const row = bodyRef.current?.querySelector<HTMLButtonElement>(
+        `[data-notification-id="${lastActivatedId.current}"] button`,
+      );
+      (row ?? bodyRef.current)?.focus();
+      lastActivatedId.current = null;
+    }
+  }, [detail]);
 
   const activate = (notification: Notification) => {
     if (notification.readAt === null) {
       markRead.mutate(notification.id);
     }
-    navigate(routeForNotification(notification));
+    lastActivatedId.current = notification.id;
+    // Open the detail *inside* the panel — no route change, no panel close.
+    setDetail(notification);
+  };
+
+  const openInAgenda = () => {
+    if (!detail) return;
+    navigate(routeForNotification(detail));
     onClose();
+  };
+
+  // Click "Eliminar" on a read row → start its exit animation. The actual
+  // optimistic removal + undo toast fire from `handleExited` once the animation
+  // finishes. Under reduced motion there is no animation, so commit right away.
+  const handleDeleteOne = useCallback(
+    (notification: Notification) => {
+      if (exitingIds.has(notification.id)) return;
+      if (reducedMotion) {
+        requestDelete(notification);
+        return;
+      }
+      setExitingIds((prev) => new Set(prev).add(notification.id));
+    },
+    [exitingIds, reducedMotion, requestDelete],
+  );
+
+  const handleExited = useCallback(
+    (notification: Notification) => {
+      if (bulkExitingIds.current.has(notification.id)) {
+        // Part of a bulk run — leave it collapsed; the mutation prunes the
+        // cache (or, on failure, `exitingIds` is cleared and it springs back).
+        return;
+      }
+      setExitingIds((prev) => {
+        if (!prev.has(notification.id)) return prev;
+        const next = new Set(prev);
+        next.delete(notification.id);
+        return next;
+      });
+      requestDelete(notification);
+    },
+    [requestDelete],
+  );
+
+  const bulkDeleteFailed = () => {
+    pushToast({
+      title: 'No se pudieron eliminar las notificaciones leídas.',
+      durationMs: 5_000,
+    });
+  };
+
+  const confirmBulkDelete = () => {
+    const readIds = items.filter((n) => n.readAt !== null).map((n) => n.id);
+
+    if (reducedMotion || readIds.length === 0) {
+      deleteRead.mutate(undefined, {
+        onError: bulkDeleteFailed,
+        onSettled: () => setConfirmDeleteRead(false),
+      });
+      return;
+    }
+
+    // Fade/slide every read row out together, then let the request prune them.
+    bulkExitingIds.current = new Set(readIds);
+    setExitingIds((prev) => new Set([...prev, ...readIds]));
+    setConfirmDeleteRead(false);
+    const clearBulk = () => {
+      bulkExitingIds.current = new Set();
+      setExitingIds((prev) => {
+        const next = new Set(prev);
+        for (const id of readIds) next.delete(id);
+        return next;
+      });
+    };
+    deleteRead.mutate(undefined, {
+      // Success: the hook has pruned the cache, so the rows are already gone —
+      // just drop the now-stale bookkeeping. Failure: clear it so the collapsed
+      // rows animate back open, and tell the user.
+      onSuccess: clearBulk,
+      onError: () => {
+        clearBulk();
+        bulkDeleteFailed();
+      },
+    });
   };
 
   // Portalled to <body>: the bell lives inside the sticky sidebar, which is its
@@ -83,40 +212,81 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
         }}
       >
         <header
-          className="flex items-center gap-3 px-4 py-3.5 shrink-0"
+          className="flex items-center gap-2 px-3 py-3.5 shrink-0"
           style={{ borderBottom: '1px solid var(--color-border)' }}
         >
-          <h2
-            className="flex-1"
-            style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: '16px',
-              color: 'var(--color-text-primary)',
-            }}
-          >
-            Notificaciones
-          </h2>
-
-          <button
-            type="button"
-            onClick={() => markAll.mutate()}
-            disabled={!hasUnread || markAll.isPending}
-            style={{
-              fontFamily: 'var(--font-body)',
-              fontSize: '13px',
-              fontWeight: 600,
-              color: hasUnread
-                ? 'var(--color-text-brand)'
-                : 'var(--color-text-muted)',
-              background: 'none',
-              border: 'none',
-              cursor: hasUnread ? 'pointer' : 'default',
-              padding: '4px',
-            }}
-          >
-            Marcar todas como leídas
-          </button>
+          {detail ? (
+            <>
+              <button
+                ref={backBtnRef}
+                type="button"
+                onClick={() => setDetail(null)}
+                aria-label="Volver a notificaciones"
+                className="rounded-md p-1"
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--color-text-muted)',
+                  lineHeight: 0,
+                }}
+              >
+                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                  <path
+                    d="M11 3.5 5.5 9l5.5 5.5"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+              <h2
+                className="flex-1 px-1"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                Detalle de la cita
+              </h2>
+            </>
+          ) : (
+            <>
+              <h2
+                className="flex-1 px-1"
+                style={{
+                  fontFamily: 'var(--font-display)',
+                  fontWeight: 700,
+                  fontSize: '16px',
+                  color: 'var(--color-text-primary)',
+                }}
+              >
+                Notificaciones
+              </h2>
+              <button
+                type="button"
+                onClick={() => markAll.mutate()}
+                disabled={!hasUnread || markAll.isPending}
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '13px',
+                  fontWeight: 600,
+                  color: hasUnread
+                    ? 'var(--color-text-brand)'
+                    : 'var(--color-text-muted)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: hasUnread ? 'pointer' : 'default',
+                  padding: '4px',
+                }}
+              >
+                Marcar todas como leídas
+              </button>
+            </>
+          )}
 
           <button
             type="button"
@@ -144,7 +314,23 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
 
         <PushNotificationToggle />
 
-        <div className="flex-1 overflow-y-auto">
+        {/* Detail view — the list stays mounted below (just hidden) so its
+            scroll position, loaded pages and infinite-scroll state survive. */}
+        {detail && (
+          <div className="flex-1 overflow-y-auto">
+            <NotificationDetailView
+              notification={detail}
+              onOpenInAgenda={openInAgenda}
+            />
+          </div>
+        )}
+
+        <div
+          ref={bodyRef}
+          tabIndex={-1}
+          className="flex-1 overflow-y-auto"
+          hidden={detail !== null}
+        >
           {isLoading && <SkeletonList />}
 
           {!isLoading && isError && (
@@ -227,6 +413,9 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
                     <NotificationItem
                       notification={notification}
                       onActivate={activate}
+                      onDelete={handleDeleteOne}
+                      exiting={exitingIds.has(notification.id)}
+                      onExited={handleExited}
                     />
                   </li>
                 ))}
@@ -258,7 +447,45 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
             </>
           )}
         </div>
+
+        {/* Bulk action — only while there is something it can act on. Sticky to
+            the panel's bottom so it is reachable without scrolling the feed. */}
+        {!detail && readCount > 0 && (
+          <div
+            className="shrink-0 flex justify-center px-4 py-2.5"
+            style={{
+              borderTop: '1px solid var(--color-border)',
+              backgroundColor: 'var(--color-surface)',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setConfirmDeleteRead(true)}
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: 'var(--color-danger)',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px 8px',
+              }}
+            >
+              Eliminar leídas
+            </button>
+          </div>
+        )}
       </div>
+
+      {confirmDeleteRead && (
+        <ConfirmDeleteReadDialog
+          count={readCount}
+          pending={deleteRead.isPending}
+          onConfirm={confirmBulkDelete}
+          onCancel={() => setConfirmDeleteRead(false)}
+        />
+      )}
     </>,
     document.body,
   );

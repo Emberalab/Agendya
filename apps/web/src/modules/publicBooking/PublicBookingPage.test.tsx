@@ -364,4 +364,54 @@ describe('PublicBookingPage', () => {
       await screen.findByText('Tu cita está confirmada'),
     ).toBeInTheDocument();
   });
+
+  // Regression: the backend rejects `customerAddress` over 200 characters
+  // (packages/types `createBookingSchema`), but the composed address (line +
+  // unit + neighborhood + "(Ref.: reference)") was never checked against that
+  // limit client-side — a long "Referencia para el profesional" let the
+  // customer click through every remaining step only to hit a generic
+  // "Validation failed" on final submit, with no indication of what to fix.
+  it('blocks continuing past the address step when the composed address is too long', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByRole('heading', { name: 'María Belleza' });
+    await user.click(screen.getByRole('button', { name: 'Reservar cita' }));
+
+    await user.click(screen.getByText('Corte de cabello'));
+    await user.click(screen.getByRole('button', { name: /Continuar/ }));
+
+    await user.click(screen.getByText('A domicilio'));
+    expect(
+      await screen.findByText('¿Dónde será el servicio?'),
+    ).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/Dirección/), 'Calle 10 # 20-30');
+
+    const continueButton = screen.getByRole('button', { name: /Continuar/ });
+    expect(continueButton).toBeEnabled();
+
+    // "Calle 10 # 20-30" (16) + " (Ref.: " (8) + 190 x 'a' + ")" (1) = 215
+    // characters — well past the 200-char backend limit.
+    await user.type(
+      screen.getByLabelText('Referencia para el profesional'),
+      'a'.repeat(190),
+    );
+
+    expect(
+      await screen.findByText(/La dirección completa es muy larga/),
+    ).toBeInTheDocument();
+    expect(continueButton).toBeDisabled();
+
+    // Trim it back under the limit and the step becomes completable again.
+    const referenceField = screen.getByLabelText(
+      'Referencia para el profesional',
+    );
+    await user.clear(referenceField);
+    await user.type(referenceField, 'Portón negro');
+
+    expect(
+      screen.queryByText(/La dirección completa es muy larga/),
+    ).not.toBeInTheDocument();
+    expect(continueButton).toBeEnabled();
+  });
 });

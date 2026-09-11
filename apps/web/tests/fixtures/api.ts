@@ -5,6 +5,7 @@ import type {
   ProfessionalProfile,
   PublicBooking,
   Service,
+  WorkingHour,
 } from '@agendya/types';
 import {
   PUBLIC_SLUG,
@@ -99,6 +100,10 @@ export class ApiMock {
 
   setAgenda(bookings: AgendaBooking[]): void {
     this.agenda = bookings;
+  }
+
+  setWorkingHours(hours: WorkingHour[]): void {
+    this.workingHours = hours;
   }
 
   /**
@@ -303,6 +308,21 @@ export class ApiMock {
       if (!target) return json(route, { message: 'No encontrada' }, 404);
       target.readAt = target.readAt ?? new Date().toISOString();
       return json(route, target);
+    }
+    if (path === '/notifications/read' && method === 'DELETE') {
+      const before = this.notifications.length;
+      this.notifications = this.notifications.filter((n) => n.readAt === null);
+      return json(route, { deleted: before - this.notifications.length });
+    }
+    const notifDeleteMatch = path.match(/^\/notifications\/([^/]+)$/);
+    if (notifDeleteMatch && method === 'DELETE') {
+      const id = notifDeleteMatch[1];
+      const before = this.notifications.length;
+      // Server only removes the caller's already-read rows.
+      this.notifications = this.notifications.filter(
+        (n) => !(n.id === id && n.readAt !== null),
+      );
+      return json(route, { deleted: before - this.notifications.length });
     }
 
     // --- Agenda (professional bookings) ---------------------------------

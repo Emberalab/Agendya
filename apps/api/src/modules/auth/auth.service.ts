@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import type { AuthResponse, LoginInput, RegisterInput } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { ensureUniqueSlug, slugify } from '../../common/utils/slug.util';
+import { assertProfessionalEmailAllowed } from './professional-allowlist';
 
 const SALT_ROUNDS = 10;
 
@@ -34,6 +35,8 @@ export class AuthService {
   ) {}
 
   async register(input: RegisterInput): Promise<AuthResponse> {
+    assertProfessionalEmailAllowed(input.email);
+
     const existing = await this.prisma.professional.findUnique({
       where: { email: input.email },
     });
@@ -60,6 +63,8 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<AuthResponse> {
+    assertProfessionalEmailAllowed(input.email);
+
     const professional = await this.prisma.professional.findUnique({
       where: { email: input.email },
     });
@@ -85,6 +90,8 @@ export class AuthService {
   }
 
   async googleLogin(googleUser: GoogleUser): Promise<AuthResponse> {
+    assertProfessionalEmailAllowed(googleUser.email);
+
     let professional = await this.prisma.professional.findUnique({
       where: { googleId: googleUser.googleId },
     });

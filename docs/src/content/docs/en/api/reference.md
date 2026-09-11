@@ -18,11 +18,11 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 
 | Method | Path | Auth | Body / Query | Response |
 | --- | --- | --- | --- | --- |
-| `POST` | `/auth/register` | none · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` |
-| `POST` | `/auth/login` | none · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` |
+| `POST` | `/auth/register` | none · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `403 { code: "WAITLIST_REQUIRED" }` on Railway if the email is not on the closed-beta list |
+| `POST` | `/auth/login` | none · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · same waitlist `403` |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
 | `GET` | `/auth/google` | none | — | `302` → Google (sets `oauth_state` cookie) |
-| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` |
+| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · email not allowed: `{WEB_URL}/register?waitlist=1` · invalid `state`: `{WEB_URL}/login?error=oauth` |
 
 `user` = `{ id, email, businessName, slug }`.
 
@@ -98,10 +98,13 @@ scoped to `req.user.id` server-side; a client-supplied id is never trusted.
 | `POST` | `/notifications/push/unsubscribe` | `{ endpoint }` — `pushUnsubscribeInputSchema` | `204` — `deleteMany` scoped to `{ endpoint, professionalId }` |
 
 `Notification` (`notificationSchema`): `{ id, type, title, body, data: {
-bookingId, customerName, serviceName, startAt }, readAt: string \| null,
-createdAt }`. `type` is only `APPOINTMENT_CREATED` today. `markRead` /
-`markAllRead` filter by `professionalId` in the `updateMany` `where`, so a
-professional cannot touch another's notification.
+bookingId, customerName, serviceName, startAt, atHome? }, readAt: string \| null,
+createdAt }`. `type` is only `APPOINTMENT_CREATED` today; for a home-service
+booking the `title` is `"Nueva cita a domicilio"` and `data.atHome` is `true`.
+The customer's address is **never** in the payload (or the SSE frame) — the
+professional opens the appointment detail, whose `AgendaBooking` carries
+`customerAddress`. `markRead` / `markAllRead` filter by `professionalId` in the
+`updateMany` `where`, so a professional cannot touch another's notification.
 
 **Web Push** delivers the same `Notification` row as an OS-level alert
 (`pushMessageSchema`: `{ title, body, notificationId, bookingId, startAt }`). The

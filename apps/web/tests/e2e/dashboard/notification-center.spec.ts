@@ -81,12 +81,148 @@ test('customer booking → toast, bell count, centre entry, survives reload, ope
     .getByRole('button', { name: /^Sin leer\. Nueva cita\./ });
   await expect(item).toBeVisible();
 
-  // 9-10. Activating it marks it read and opens that booking's detail drawer,
-  // then the agenda strips the deep-link params from the URL.
+  // 9. Activating it marks it read and opens the detail *inside the panel* —
+  // no route change, panel stays open.
   await item.click();
-  await expect(page.getByText('Detalle de la cita')).toBeVisible();
+  const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+  await expect(
+    panel.getByRole('heading', { name: 'Detalle de la cita' }),
+  ).toBeVisible();
   await expect(page).toHaveURL(/\/dashboard\/agenda$/);
   await expect(bell(page)).toHaveAccessibleName('Notificaciones');
+
+  // ← returns to the list without closing the panel.
+  await panel.getByRole('button', { name: 'Volver a notificaciones' }).click();
+  await expect(
+    panel.getByRole('heading', { name: 'Notificaciones' }),
+  ).toBeVisible();
+
+  // 10. "Ver en la agenda" performs the original deep-link + opens the drawer;
+  // the agenda then strips the params from the URL.
+  await panel.getByRole('button', { name: /Nueva cita\./ }).first().click();
+  await panel.getByRole('button', { name: 'Ver en la agenda →' }).click();
+  await expect(
+    page.getByRole('dialog', { name: 'Detalle de la cita' }),
+  ).toBeVisible();
+  await expect(page).toHaveURL(/\/dashboard\/agenda$/);
+});
+
+test('delete a read notification (with undo) and bulk-delete the rest', async ({
+  page,
+  api,
+}) => {
+  api.setAgenda(makeAgendaBookings());
+  api.seedNotifications([
+    makeNotification({
+      id: '00000000-0000-4000-8000-00000000aaa1',
+      readAt: null,
+      title: 'Nueva cita',
+      body: 'Sin leer',
+    }),
+    makeNotification({
+      id: '00000000-0000-4000-8000-00000000aaa2',
+      readAt: '2026-09-01T00:00:00.000Z',
+      title: 'Cita leída uno',
+      body: 'Leída 1',
+    }),
+    makeNotification({
+      id: '00000000-0000-4000-8000-00000000aaa3',
+      readAt: '2026-09-01T00:00:00.000Z',
+      title: 'Cita leída dos',
+      body: 'Leída 2',
+    }),
+  ]);
+
+  await page.goto('/dashboard/agenda');
+  await expect(page.getByRole('heading', { name: 'Tu agenda' })).toBeVisible();
+  await bell(page).click();
+  const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+
+  // Unread rows have no delete control.
+  await expect(
+    panel.getByRole('button', { name: 'Eliminar notificación: Nueva cita' }),
+  ).toHaveCount(0);
+
+  // Delete one read notification → it slides out and disappears; an undo toast
+  // is offered. The slide is contained — it must not widen the page.
+  await panel
+    .getByRole('button', { name: 'Eliminar notificación: Cita leída uno' })
+    .click();
+  await expect(panel.getByText('Cita leída uno')).toHaveCount(0);
+  await expect(
+    page.getByRole('region', { name: 'Notificaciones' }).getByText(
+      'Notificación eliminada',
+    ),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth <=
+        document.documentElement.clientWidth,
+    ),
+  ).toBe(true);
+
+  // Bulk-delete the remaining read notification behind a confirmation.
+  await panel.getByRole('button', { name: 'Eliminar leídas' }).click();
+  const confirm = page.getByRole('dialog', {
+    name: '¿Eliminar notificaciones leídas?',
+  });
+  await confirm.getByRole('button', { name: 'Eliminar' }).click();
+
+  await expect(panel.getByText('Cita leída dos')).toHaveCount(0);
+  // The unread one survives; the bulk action is gone.
+  await expect(
+    panel.getByRole('button', { name: /^Sin leer\. Nueva cita\./ }),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole('button', { name: 'Eliminar leídas' }),
+  ).toHaveCount(0);
+
+  // X still closes the whole panel.
+  await panel.getByRole('button', { name: 'Cerrar notificaciones' }).click();
+  await expect(panel).toBeHidden();
+});
+
+test('individual delete works with no slide when motion is reduced', async ({
+  page,
+  api,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  api.setAgenda(makeAgendaBookings());
+  api.seedNotifications([
+    makeNotification({
+      id: '00000000-0000-4000-8000-00000000bbb1',
+      readAt: null,
+      title: 'Nueva cita',
+      body: 'Sin leer',
+    }),
+    makeNotification({
+      id: '00000000-0000-4000-8000-00000000bbb2',
+      readAt: '2026-09-01T00:00:00.000Z',
+      title: 'Cita leída',
+      body: 'Leída',
+    }),
+  ]);
+
+  await page.goto('/dashboard/agenda');
+  await expect(page.getByRole('heading', { name: 'Tu agenda' })).toBeVisible();
+  await bell(page).click();
+  const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+
+  await panel
+    .getByRole('button', { name: 'Eliminar notificación: Cita leída' })
+    .click();
+
+  // Removed straight away, same undo affordance, no animation involved.
+  await expect(panel.getByText('Cita leída')).toHaveCount(0);
+  await expect(
+    page
+      .getByRole('region', { name: 'Notificaciones' })
+      .getByText('Notificación eliminada'),
+  ).toBeVisible();
+  await expect(
+    panel.getByRole('button', { name: /^Sin leer\. Nueva cita\./ }),
+  ).toBeVisible();
 });
 
 test('deep link opens the booking in calendar view too', async ({ page, api }) => {
@@ -112,6 +248,113 @@ test('deep link opens the booking in calendar view too', async ({ page, api }) =
   await toast.getByText('Nueva cita').click();
 
   await expect(page.getByText('Detalle de la cita')).toBeVisible();
+});
+
+// Regression: "Ver en la agenda" opened the drawer only on a *second* try.
+// Root cause — if the agenda was already open, its `bookings` query had
+// already been fetched once *before* the new booking existed; the deep-link
+// effect checked that (now stale) snapshot exactly once, found nothing, and
+// gave up for good, silently clearing the deep link and leaving the plain
+// agenda page behind. Reproduced here by never pushing the notification live
+// (so useNotificationsRealtime's cache-invalidation never runs for it
+// either) and only adding the booking to the server *after* the agenda's
+// first fetch — nothing else would prompt a refetch before the click.
+test('"Ver en la agenda" opens the booking on the first click even when the agenda was fetched before it existed', async ({
+  page,
+  api,
+}) => {
+  const agenda = makeAgendaBookings();
+  const target = agenda[0];
+
+  api.setAgenda([]);
+  api.seedNotifications([
+    makeNotification({
+      data: {
+        bookingId: target.id,
+        customerName: target.customerName,
+        serviceName: target.serviceName,
+        startAt: target.startAt,
+      },
+    }),
+  ]);
+
+  await page.goto('/dashboard/agenda');
+  await expect(page.getByRole('heading', { name: 'Tu agenda' })).toBeVisible();
+  await page.getByRole('button', { name: 'Calendario' }).click();
+
+  // The booking now exists server-side; the client's already-fetched cache
+  // was never told.
+  api.setAgenda(agenda);
+
+  await bell(page).click();
+  const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+  await panel.getByRole('button', { name: /Nueva cita\./ }).first().click();
+  await panel.getByRole('button', { name: 'Ver en la agenda →' }).click();
+
+  await expect(page.getByText('Detalle de la cita')).toBeVisible();
+});
+
+// Regression: fixing the above (forcing a fresh fetch when the deep-linked
+// booking isn't in the cached range) exposed a second issue — widening
+// `from`/`to` to cover a far-out day is a *new* react-query key, and without
+// `placeholderData: keepPreviousData` (see useAgenda.ts) a key change briefly
+// resets `data` to `undefined`. The whole agenda card unmounted to the
+// "Cargando agenda…" placeholder and popped back a moment later — correct,
+// but it reads as the page reloading/glitching. `route.fallback()` (not
+// `continue()`, which would skip the API mock entirely) delays every agenda
+// fetch so the in-between state is long enough to actually observe.
+test('does not flash the loading placeholder while the deep link widens the date range', async ({
+  page,
+  api,
+}) => {
+  const agenda = makeAgendaBookings();
+  const target = agenda[0];
+  api.setAgenda(agenda);
+  api.emitNotification(
+    makeNotification({
+      data: {
+        bookingId: target.id,
+        customerName: target.customerName,
+        serviceName: target.serviceName,
+        // Far outside the default range, so the deep link must widen it.
+        startAt: '2099-10-25T18:30:00.000Z',
+      },
+    }),
+  );
+
+  await page.goto('/dashboard/agenda');
+  await expect(page.getByRole('heading', { name: 'Tu agenda' })).toBeVisible();
+
+  await page.evaluate(() => {
+    (window as unknown as { __sawLoading: boolean }).__sawLoading = false;
+    new MutationObserver(() => {
+      if (document.body.innerText.includes('Cargando agenda')) {
+        (window as unknown as { __sawLoading: boolean }).__sawLoading = true;
+      }
+    }).observe(document.body, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+  });
+  await page.route('**/bookings?**', async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    await route.fallback();
+  });
+
+  await bell(page).click();
+  const panel = page.getByRole('dialog', { name: 'Notificaciones' });
+  await panel.getByRole('button', { name: /Nueva cita\./ }).first().click();
+  await panel.getByRole('button', { name: 'Ver en la agenda →' }).click();
+
+  await expect(page.getByText('Detalle de la cita')).toBeVisible({
+    timeout: 5000,
+  });
+  expect(
+    await page.evaluate(
+      () => (window as unknown as { __sawLoading: boolean }).__sawLoading,
+    ),
+  ).toBe(false);
 });
 
 test('does not duplicate the toast or the centre row while the SSE client reconnects', async ({

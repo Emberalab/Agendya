@@ -43,6 +43,7 @@ describe('NotificationsService', () => {
       findFirst: jest.Mock;
       count: jest.Mock;
       updateMany: jest.Mock;
+      deleteMany: jest.Mock;
     };
   };
   let realtime: { emitNotificationCreated: jest.Mock };
@@ -56,6 +57,7 @@ describe('NotificationsService', () => {
         findFirst: jest.fn(),
         count: jest.fn().mockResolvedValue(0),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+        deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
     };
     realtime = { emitNotificationCreated: jest.fn() };
@@ -129,6 +131,31 @@ describe('NotificationsService', () => {
         service.notifyAppointmentCreated(PROFESSIONAL, BOOKING),
       ).resolves.toBeUndefined();
       expect(realtime.emitNotificationCreated).toHaveBeenCalledTimes(1);
+    });
+
+    it('flags an at-home booking in the title and data, without the address', async () => {
+      prisma.notification.create.mockResolvedValue(row());
+
+      await service.notifyAppointmentCreated(PROFESSIONAL, {
+        ...BOOKING,
+        atHome: true,
+        customerAddress: 'Calle 10 #43C-20 (Ref.: portón negro)',
+      });
+
+      const [[createArg]] = prisma.notification.create.mock.calls as [
+        [{ data: Record<string, unknown> }],
+      ];
+      expect(createArg.data.title).toBe('Nueva cita a domicilio');
+      expect(createArg.data.data).toEqual({
+        bookingId: BOOKING.id,
+        customerName: 'Ana',
+        serviceName: 'Corte de cabello',
+        startAt: '2026-08-03T14:00:00.000Z',
+        atHome: true,
+      });
+      // The address never rides along in the payload.
+      expect(JSON.stringify(createArg.data)).not.toContain('Calle 10');
+      expect(JSON.stringify(createArg.data)).not.toContain('portón negro');
     });
   });
 
@@ -246,6 +273,39 @@ describe('NotificationsService', () => {
       expect(prisma.notification.updateMany).toHaveBeenCalledWith({
         where: { professionalId: 'prof-1', readAt: null },
         data: { readAt: expect.any(Date) as unknown },
+      });
+    });
+  });
+
+  describe('deleteRead (single)', () => {
+    it('scopes the delete to the owner and to already-read rows', async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 1 });
+
+      await expect(service.deleteRead('prof-1', 'n-9')).resolves.toEqual({
+        deleted: 1,
+      });
+      expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+        where: { id: 'n-9', professionalId: 'prof-1', readAt: { not: null } },
+      });
+    });
+
+    it('reports 0 (not an error) when nothing matched — unknown, not owned, or unread', async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 0 });
+      await expect(service.deleteRead('prof-1', 'n-x')).resolves.toEqual({
+        deleted: 0,
+      });
+    });
+  });
+
+  describe('deleteAllRead (bulk)', () => {
+    it("deletes only this professional's read rows and returns the count", async () => {
+      prisma.notification.deleteMany.mockResolvedValue({ count: 4 });
+
+      await expect(service.deleteAllRead('prof-1')).resolves.toEqual({
+        deleted: 4,
+      });
+      expect(prisma.notification.deleteMany).toHaveBeenCalledWith({
+        where: { professionalId: 'prof-1', readAt: { not: null } },
       });
     });
   });

@@ -53,10 +53,14 @@ export class NotificationsService {
         customerName: booking.customerName,
         serviceName: booking.serviceNameSnapshot,
         startAt: booking.startAt.toISOString(),
+        // Flag only — the address is never carried in the payload. The
+        // professional opens the appointment detail (authenticated agenda
+        // response) to see it.
+        ...(booking.atHome ? { atHome: true } : {}),
       };
       await this.create(professional.id, {
         type: 'APPOINTMENT_CREATED',
-        title: 'Nueva cita',
+        title: booking.atHome ? 'Nueva cita a domicilio' : 'Nueva cita',
         body: `${booking.customerName} reservó ${booking.serviceNameSnapshot} · ${this.formatWhen(
           booking.startAt,
           professional.timezone,
@@ -191,6 +195,35 @@ export class NotificationsService {
       data: { readAt: new Date() },
     });
     return { updated: count };
+  }
+
+  /**
+   * Deletes one of the professional's own notifications — and only if it has
+   * already been read. Scoped by `professionalId` in the `where` clause, so a
+   * professional can never remove another's row. Idempotent: `{ deleted: 0 }`
+   * when the id is unknown, not owned, or still unread (rather than a 404 that
+   * would confirm the row exists for someone else).
+   */
+  async deleteRead(
+    professionalId: string,
+    id: string,
+  ): Promise<{ deleted: number }> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { id, professionalId, readAt: { not: null } },
+    });
+    return { deleted: count };
+  }
+
+  /**
+   * Deletes every *read* notification for this professional in one statement.
+   * Unread rows are never touched. Served by the `(professionalId, readAt)`
+   * index.
+   */
+  async deleteAllRead(professionalId: string): Promise<{ deleted: number }> {
+    const { count } = await this.prisma.notification.deleteMany({
+      where: { professionalId, readAt: { not: null } },
+    });
+    return { deleted: count };
   }
 
   private toDto(row: NotificationRow): Notification {

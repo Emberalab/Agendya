@@ -1,22 +1,35 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { AgendaBooking, BookingStatus } from '@agendya/types';
 import { addDays, endOfMonth, endOfWeek, format, isToday, isTomorrow, startOfMonth, startOfWeek } from 'date-fns';
-import { es } from 'date-fns/locale';
 import { FormGroup, Input, Select } from '@moondesignsystem/react';
+import { formatEsShort, formatEsWeekdayLong } from './dateEs';
 import { AGENDA_FOCUS_BOOKING_PARAM, AGENDA_FOCUS_DATE_PARAM } from '../notifications/navigation';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
-import { AppointmentDrawer } from './AppointmentDrawer';
-import { CalendarGridView } from './CalendarGridView';
+import { useAgendaViewStore } from './agendaViewStore';
 import { ContextMenu } from './ContextMenu';
-import { RescheduleModal } from './RescheduleModal';
 import { StatusBadge } from './statusBadge';
 import { useAgenda } from './hooks/useAgenda';
 import { useCancelBooking } from './hooks/useCancelBooking';
 import { useCompleteBooking } from './hooks/useCompleteBooking';
 import { useRescheduleBooking } from './hooks/useRescheduleBooking';
 
-type ViewMode = 'list' | 'calendar';
+// The list view is the default and above-the-fold render. The calendar grid
+// (only shown after toggling to "Calendario") and the detail/reschedule
+// overlays (only shown on a row click) are split out so they — and the
+// `date-fns` Spanish locale that the drawer pulls in — stay off the agenda's
+// initial load. Each renders conditionally already; a null fallback is fine
+// because they're an explicit user action away and never affect layout.
+const CalendarGridView = lazy(() =>
+  import('./CalendarGridView').then((m) => ({ default: m.CalendarGridView })),
+);
+const AppointmentDrawer = lazy(() =>
+  import('./AppointmentDrawer').then((m) => ({ default: m.AppointmentDrawer })),
+);
+const RescheduleModal = lazy(() =>
+  import('./RescheduleModal').then((m) => ({ default: m.RescheduleModal })),
+);
+
 type StatusFilter = 'all' | BookingStatus;
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
@@ -332,11 +345,15 @@ export function AgendaPage() {
   const [to, setTo] = useState(inAWeek);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  // Lifted out of local state on purpose — see agendaViewStore.ts for why:
+  // this route fully unmounts on every navigation away from Agenda, and the
+  // selected view (Lista/Calendario) needs to survive that.
+  const viewMode = useAgendaViewStore((state) => state.viewMode);
+  const setViewMode = useAgendaViewStore((state) => state.setViewMode);
   const [selectedForReschedule, setSelectedForReschedule] = useState<AgendaBooking | null>(null);
   const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
 
-  const { data: bookings, isLoading } = useAgenda(from, to);
+  const { data: bookings, isLoading, isFetching, refetch: refetchAgenda } = useAgenda(from, to);
 
   // Deep link from a notification: ?booking=<id>&date=<yyyy-mm-dd>. Open that
   // booking's detail drawer regardless of the active view (list or calendar).
@@ -356,12 +373,35 @@ export function AgendaPage() {
     setTo((prev) => (hi > prev ? hi : prev));
   }, [focusBookingId, focusDate]);
 
-  // Once the widened range covers the target day and has loaded, open the
-  // booking and drop the params so a refresh or Back doesn't reopen it.
+  // If the agenda was already open when the notification arrived, `bookings`
+  // can be a snapshot from *before* the booking existed — the realtime
+  // bridge invalidates the query (see useNotificationsRealtime.ts), but that
+  // background refetch isn't guaranteed to have landed by the time the
+  // customer clicks through (still `isLoading: false`, since the range was
+  // already loaded once — only a first-ever fetch sets that). Without this,
+  // the lookup below ran once against that stale snapshot, found nothing,
+  // and gave up for good — clearing the deep link so a second click (which
+  // this component staying mounted stops from re-fetching too) worked only
+  // because *something else* happened to refresh the cache in the meantime.
+  // Force exactly one fresh fetch per booking id before concluding it's
+  // genuinely not there.
+  const forcedRefetchFor = useRef<string | null>(null);
+
+  // Once the widened range covers the target day and any fetch (including a
+  // forced one, below) has settled, open the booking and drop the params so
+  // a refresh or Back doesn't reopen it.
   const focusInRange = !focusDate || (focusDate >= from && focusDate <= to);
   useEffect(() => {
-    if (!focusBookingId || !focusInRange || isLoading) return;
+    if (!focusBookingId || !focusInRange || isLoading || isFetching) return;
+
     const match = (bookings ?? []).find((b) => b.id === focusBookingId);
+    if (!match && forcedRefetchFor.current !== focusBookingId) {
+      forcedRefetchFor.current = focusBookingId;
+      void refetchAgenda();
+      return;
+    }
+    forcedRefetchFor.current = null;
+
     if (match) setSelectedForDetail(match);
     setSearchParams(
       (prev) => {
@@ -372,7 +412,15 @@ export function AgendaPage() {
       },
       { replace: true },
     );
-  }, [focusBookingId, focusInRange, isLoading, bookings, setSearchParams]);
+  }, [
+    focusBookingId,
+    focusInRange,
+    isLoading,
+    isFetching,
+    bookings,
+    refetchAgenda,
+    setSearchParams,
+  ]);
 
   const cancelBooking = useCancelBooking();
   const completeBooking = useCompleteBooking();
@@ -446,7 +494,7 @@ export function AgendaPage() {
     }
     return Array.from(map.entries()).map(([key, items]) => {
       const date = new Date(`${key}T00:00:00`);
-      const weekdayDate = format(date, "EEEE d 'de' MMMM", { locale: es }).toUpperCase();
+      const weekdayDate = formatEsWeekdayLong(date).toUpperCase();
       const suffix = `${items.length} ${items.length === 1 ? 'CITA' : 'CITAS'}`;
       const prefix = isToday(date) ? 'HOY · ' : isTomorrow(date) ? 'MAÑANA · ' : '';
       return { key, label: `${prefix}${weekdayDate} · ${suffix}`, bookings: items };
@@ -510,7 +558,7 @@ export function AgendaPage() {
         <StatCard
           label="Citas hoy"
           value={todayBookings?.length ?? 0}
-          sub={format(now, 'EEE, d MMM', { locale: es }).replace('.', '')}
+          sub={formatEsShort(now)}
           icon={
             <svg width="16" height="16" viewBox="0 0 16 16" fill="none" style={{ color: 'var(--color-text-muted)' }}>
               <rect x="1" y="3" width="14" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
@@ -836,29 +884,35 @@ export function AgendaPage() {
         )}
 
         {!isLoading && viewMode === 'calendar' && (
-          <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
+          <Suspense fallback={null}>
+            <CalendarGridView bookings={filteredBookings} initialMonth={from} onBookingClick={setSelectedForDetail} />
+          </Suspense>
         )}
       </div>
 
       {selectedForDetail && (
-        <AppointmentDrawer
-          booking={selectedForDetail}
-          onClose={() => setSelectedForDetail(null)}
-          onReschedule={openReschedule}
-          onComplete={handleComplete}
-          completePending={completeBooking.isPending}
-          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
-        />
+        <Suspense fallback={null}>
+          <AppointmentDrawer
+            booking={selectedForDetail}
+            onClose={() => setSelectedForDetail(null)}
+            onReschedule={openReschedule}
+            onComplete={handleComplete}
+            completePending={completeBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
       )}
 
       {selectedForReschedule && (
-        <RescheduleModal
-          booking={selectedForReschedule}
-          onClose={() => setSelectedForReschedule(null)}
-          onConfirm={handleReschedule}
-          isLoading={rescheduleBooking.isPending}
-          presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
-        />
+        <Suspense fallback={null}>
+          <RescheduleModal
+            booking={selectedForReschedule}
+            onClose={() => setSelectedForReschedule(null)}
+            onConfirm={handleReschedule}
+            isLoading={rescheduleBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
       )}
     </div>
   );

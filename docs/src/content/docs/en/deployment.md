@@ -3,12 +3,19 @@ title: Deployment
 description: Production build, migrations, CI, and what the repository does and does not specify about hosting.
 ---
 
-:::caution[No CD / hosting config in the repo]
-As of Phase 1 the repository contains **no** deployment manifests — no
-`Dockerfile`, no `vercel.json` / `render.yaml` / `fly.toml` / `Procfile`, and
-no deploy job in CI. `.github/workflows/ci.yml` runs **CI only** (lint,
-typecheck, test, build). Everything below about *where* things run is marked
-`TODO` and must be decided by the team.
+:::note[Where each piece runs]
+- **API:** Railway (`agendya-api`), environments `dev` (branch `dev` →
+  `https://agendya-dev.up.railway.app`) and `production` (branch `main` →
+  `https://api.agendya.co`). The start command runs `prisma migrate deploy`
+  then `npm run start:prod`.
+- **Web:** GoDaddy/cPanel. `.github/workflows/deploy-web.yml` builds
+  `apps/web` with `VITE_API_URL` / `VITE_PUBLIC_SITE_URL` / `VITE_WAITLIST_URL` and uploads `dist/`
+  over FTPS: branch `dev` → `https://app-dev.agendya.co`, branch `main` →
+  `https://app.agendya.co`. In cPanel, `agendya.co`'s document root must be
+  **the same folder** as `app.agendya.co` so public `/{slug}` lives on the
+  apex.
+- **CI:** `.github/workflows/ci.yml` (lint, typecheck, test, build) on push
+  and PR to `dev` and `main`. It does not deploy.
 :::
 
 ## What the repo defines
@@ -27,8 +34,8 @@ typecheck, test, build). Everything below about *where* things run is marked
 
 - Node.js 24.
 - Env: `DATABASE_URL`, `JWT_SECRET` (**strong, not the placeholder**),
-  `WEB_URL` (the real frontend origin — drives CORS, OAuth redirect, email
-  links). Optional: `JWT_EXPIRES_IN`, `PORT`, `SLOT_GRID_MINUTES`,
+  `WEB_URL` (dashboard: CORS and OAuth), `PUBLIC_WEB_URL` (public booking
+  apex and cancel-link base). Optional: `JWT_EXPIRES_IN`, `PORT`, `SLOT_GRID_MINUTES`,
   `RESEND_API_KEY`, `CLOUDINARY_URL`, `GOOGLE_CLIENT_ID` /
   `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL`. See
   [Environment variables](/en/getting-started/environment/).
@@ -64,7 +71,7 @@ flowchart LR
 
 ## CI (what actually runs today)
 
-`.github/workflows/ci.yml`, on push and PR to `main`:
+`.github/workflows/ci.yml`, on push and PR to `dev` and `main`:
 
 ```mermaid
 flowchart LR
@@ -95,13 +102,7 @@ Astro and publishes to **GitHub Pages** on pushes to `main` that touch `docs/**`
   for a project site) — currently `https://emberalab.github.io` with a `TODO`.
 - Local: `cd docs && npm run build && npm run preview`.
 
-## TODO — decisions the team still owns
+## TODO — still open
 
-- API host (container platform vs. PaaS) and how the single-instance cron
-  constraint is honoured.
-- Managed PostgreSQL provider + backup policy.
-- Web static host / CDN and the build-time `VITE_API_URL` per environment.
-- Secret storage for `JWT_SECRET`, `RESEND_API_KEY`, `CLOUDINARY_URL`, Google
-  OAuth.
-- Google OAuth: register the production `GOOGLE_CALLBACK_URL`.
-- A staging environment and a promote-to-prod flow.
+- Backup policy for Railway Postgres.
+- Exactly one API instance per environment (crons have no distributed lock).

@@ -50,6 +50,7 @@ describe('Notifications (e2e)', () => {
   let tokenB: string;
   let slugA: string;
   let serviceIdA: string;
+  let serviceIdHomeA: string;
 
   const day = futureDate(14);
   const authA = () => ({ Authorization: `Bearer ${tokenA}` });
@@ -64,6 +65,26 @@ describe('Notifications (e2e)', () => {
         customerName,
         customerEmail: 'cliente@example.com',
         customerPhone: '+57 300 1234567',
+      })
+      .expect(201);
+    return (res.body as { id: string }).id;
+  }
+
+  async function bookHome(
+    hhmm: string,
+    customerName: string,
+    customerAddress: string,
+  ): Promise<string> {
+    const res = await request(app.getHttpServer())
+      .post(`/public/professionals/${slugA}/bookings`)
+      .send({
+        serviceIds: serviceIdHomeA,
+        startAt: `${day.dateStr}T${hhmm}:00.000Z`,
+        customerName,
+        customerEmail: 'cliente@example.com',
+        customerPhone: '+57 300 1234567',
+        atHome: true,
+        customerAddress,
       })
       .expect(201);
     return (res.body as { id: string }).id;
@@ -102,6 +123,19 @@ describe('Notifications (e2e)', () => {
       });
     serviceIdA = (svc.body as { id: string }).id;
 
+    const homeSvc = await request(app.getHttpServer())
+      .post('/services')
+      .set(authA())
+      .send({
+        name: 'Corte a domicilio',
+        durationMinutes: 30,
+        priceCents: 2000000,
+        homeServiceEnabled: true,
+        homeDurationMinutes: 45,
+        homePriceCents: 2500000,
+      });
+    serviceIdHomeA = (homeSvc.body as { id: string }).id;
+
     await request(app.getHttpServer())
       .put('/schedules/working-hours')
       .set(authA())
@@ -130,6 +164,8 @@ describe('Notifications (e2e)', () => {
     await request(server).get('/notifications/unread-count').expect(401);
     await request(server).patch('/notifications/some-id/read').expect(401);
     await request(server).patch('/notifications/read-all').expect(401);
+    await request(server).delete('/notifications/read').expect(401);
+    await request(server).delete('/notifications/some-id').expect(401);
   });
 
   it('records an APPOINTMENT_CREATED notification for the booking owner only', async () => {
@@ -264,5 +300,134 @@ describe('Notifications (e2e)', () => {
       .set(authA())
       .expect(200);
     expect((after.body as { count: number }).count).toBe(0);
+  });
+
+  // --- Deletion ---------------------------------------------------------------
+  // After the block above, professional A has several *read* notifications and
+  // no unread ones; professional B has none.
+
+  const listA = async (): Promise<NotificationBody[]> => {
+    const res = await request(app.getHttpServer())
+      .get('/notifications?limit=50')
+      .set(authA())
+      .expect(200);
+    return (res.body as { items: NotificationBody[] }).items;
+  };
+
+  it("does not let a professional delete another professional's notification", async () => {
+    const [target] = await listA();
+
+    const res = await request(app.getHttpServer())
+      .delete(`/notifications/${target.id}`)
+      .set(authB())
+      .expect(200);
+    expect((res.body as { deleted: number }).deleted).toBe(0);
+
+    expect((await listA()).some((n) => n.id === target.id)).toBe(true);
+  });
+
+  it('deletes a single read notification for its owner and is idempotent', async () => {
+    const before = await listA();
+    const target = before[0];
+
+    const res = await request(app.getHttpServer())
+      .delete(`/notifications/${target.id}`)
+      .set(authA())
+      .expect(200);
+    expect((res.body as { deleted: number }).deleted).toBe(1);
+
+    const after = await listA();
+    expect(after).toHaveLength(before.length - 1);
+    expect(after.some((n) => n.id === target.id)).toBe(false);
+
+    // Deleting it again is a no-op, not a 404.
+    const again = await request(app.getHttpServer())
+      .delete(`/notifications/${target.id}`)
+      .set(authA())
+      .expect(200);
+    expect((again.body as { deleted: number }).deleted).toBe(0);
+  });
+
+  it('refuses to delete an UNREAD notification via the single-delete endpoint', async () => {
+    await book('16:30', 'Ana Cuatro'); // fresh unread notification for A
+    const unread = (await listA()).find((n) => n.readAt === null);
+    expect(unread).toBeDefined();
+
+    const res = await request(app.getHttpServer())
+      .delete(`/notifications/${unread!.id}`)
+      .set(authA())
+      .expect(200);
+    expect((res.body as { deleted: number }).deleted).toBe(0);
+
+    expect((await listA()).some((n) => n.id === unread!.id)).toBe(true);
+  });
+
+  it('bulk-deletes only READ notifications for the authenticated professional', async () => {
+    const before = await listA();
+    const readIds = before.filter((n) => n.readAt !== null).map((n) => n.id);
+    const unreadIds = before.filter((n) => n.readAt === null).map((n) => n.id);
+    expect(readIds.length).toBeGreaterThan(0);
+    expect(unreadIds).toHaveLength(1);
+
+    const res = await request(app.getHttpServer())
+      .delete('/notifications/read')
+      .set(authA())
+      .expect(200);
+    expect((res.body as { deleted: number }).deleted).toBe(readIds.length);
+
+    const after = await listA();
+    expect(after.map((n) => n.id)).toEqual(unreadIds);
+    expect(after.every((n) => n.readAt === null)).toBe(true);
+
+    // B never had any and is untouched.
+    const listB = await request(app.getHttpServer())
+      .get('/notifications')
+      .set(authB())
+      .expect(200);
+    expect((listB.body as { items: NotificationBody[] }).items).toHaveLength(0);
+  });
+
+  it('flags an at-home booking in the notification, but never carries the address in the payload', async () => {
+    const address =
+      'Calle 10 #43C-20, Apto 502 (Ref.: portón negro junto a la panadería)';
+    const bookingId = await bookHome('13:00', 'Valentina Home', address);
+
+    const list = await request(app.getHttpServer())
+      .get('/notifications')
+      .set(authA())
+      .expect(200);
+    const newest = (list.body as { items: NotificationBody[] }).items[0];
+
+    expect(newest.title).toBe('Nueva cita a domicilio');
+    expect(newest.data.bookingId).toBe(bookingId);
+    expect((newest.data as { atHome?: boolean }).atHome).toBe(true);
+
+    // The address must not leak through the feed row, anywhere in it.
+    expect(JSON.stringify(newest)).not.toContain('Calle 10');
+    expect(JSON.stringify(newest)).not.toContain('portón negro');
+
+    // …but it IS on the authenticated agenda response for the owner.
+    const agenda = await request(app.getHttpServer())
+      .get(`/bookings?from=${day.dateStr}&to=${day.dateStr}`)
+      .set(authA())
+      .expect(200);
+    const row = (
+      agenda.body as Array<{
+        id: string;
+        atHome: boolean;
+        customerAddress: string | null;
+      }>
+    ).find((b) => b.id === bookingId);
+    expect(row?.atHome).toBe(true);
+    expect(row?.customerAddress).toBe(address);
+
+    // A different professional cannot see it at all.
+    const agendaB = await request(app.getHttpServer())
+      .get(`/bookings?from=${day.dateStr}&to=${day.dateStr}`)
+      .set(authB())
+      .expect(200);
+    expect(
+      (agendaB.body as Array<{ id: string }>).some((b) => b.id === bookingId),
+    ).toBe(false);
   });
 });

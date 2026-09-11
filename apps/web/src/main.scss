@@ -59,7 +59,8 @@
   --color-danger-border: #FECDD3;
 
   // Booking status badges — see modules/bookings/statusConfig.ts. Each status
-  // keeps its own hue (amber/emerald/slate/indigo/red) across both themes.
+  // keeps its own hue (amber/emerald/red/indigo/red) across both themes —
+  // "Cancelada" and "No asistió" are the one deliberate exception, both red.
   // Text colors are darker than the original 500-weight tones for the same
   // reason as --color-danger/--color-success above: on their own pastel
   // background these measured 2.1–4.0:1, short of 4.5:1.
@@ -69,9 +70,14 @@
   --status-confirmed-color: #047857;
   --status-confirmed-bg: #F0FDF4;
   --status-confirmed-border: #BBF7D0;
-  --status-cancelled-color: #5B6B84;
-  --status-cancelled-bg: #F8FAFC;
-  --status-cancelled-border: #E2E8F0;
+  // Reuses --color-danger/-surface/-border — same red as "No asistió" and the
+  // rest of the app's danger accents (delete buttons, error banners). The
+  // status/danger icons still differ, so the two aren't identical at a
+  // glance, but this intentionally breaks the "each status keeps its own
+  // hue" rule below — ask before reusing this pattern for a new status.
+  --status-cancelled-color: var(--color-danger);
+  --status-cancelled-bg: var(--color-danger-surface);
+  --status-cancelled-border: var(--color-danger-border);
   --status-completed-color: #4338CA;
   --status-completed-bg: #EEF2FF;
   --status-completed-border: #C7D2FE;
@@ -146,9 +152,10 @@ html[data-theme='dark'] {
   --status-confirmed-color: #34D399;
   --status-confirmed-bg: rgba(16, 185, 129, 0.16);
   --status-confirmed-border: rgba(16, 185, 129, 0.4);
-  --status-cancelled-color: #94A3B8;
-  --status-cancelled-bg: rgba(148, 163, 184, 0.12);
-  --status-cancelled-border: rgba(148, 163, 184, 0.3);
+  // See the light-theme definition above — same reuse of --color-danger.
+  --status-cancelled-color: var(--color-danger);
+  --status-cancelled-bg: var(--color-danger-surface);
+  --status-cancelled-border: var(--color-danger-border);
   --status-completed-color: #818CF8;
   --status-completed-bg: rgba(99, 102, 241, 0.16);
   --status-completed-border: rgba(99, 102, 241, 0.4);
@@ -214,6 +221,20 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--color-text-secondary);
 }
 
+/* Customer-authored free text shown inside cards, drawers and flex/grid rows —
+   observations/notes and home-service addresses. `anywhere` (not `break-word`)
+   so the string also reports a small min-content width and can't force a flex
+   item or the page to scroll horizontally; pair it with `min-width: 0` on the
+   flex/grid item. `--multiline` additionally keeps the customer's own line
+   breaks. Nothing is clipped — the full text stays readable. */
+.agendya-longtext {
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+.agendya-longtext--multiline {
+  white-space: pre-wrap;
+}
+
 /* Screen-reader-only content: visually hidden, still in the a11y tree.
    Standard "clip" technique — `display:none`/`visibility:hidden` would
    remove it from the tree instead of just hiding it visually. */
@@ -249,11 +270,15 @@ h1, h2, h3, h4, h5, h6 {
   top: 1rem;
 }
 
-/* Theme toggle switch — same visual (and asset) as the one on emberalab.com. */
+/* Theme toggle switch — same visual (and asset) as the one on emberalab.com.
+   Self-hosted from /public (see switch-body-*.svg) rather than pulled from
+   res.cloudinary.com: the sidebar renders this control on every dashboard load,
+   so a third-party origin here cost a DNS/TLS handshake on the critical path
+   for a ~4 kB graphic. */
 .agendia-theme-toggle {
   cursor: pointer;
   background-color: transparent;
-  background-image: url(https://res.cloudinary.com/dxspvj1rj/image/upload/v1730144169/switch-body-light_nbhtni.svg);
+  background-image: url(/switch-body-light.svg);
   background-position: 50%;
   background-size: cover;
   background-repeat: no-repeat;
@@ -271,7 +296,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 3px 5px #091e4233, 0 0 1px #091e424f;
 }
 html[data-theme='dark'] .agendia-theme-toggle {
-  background-image: url(https://res.cloudinary.com/dxspvj1rj/image/upload/v1730144178/switch-body-dark_hwbgeq.svg);
+  background-image: url(/switch-body-dark.svg);
 }
 .agendia-theme-toggle:active {
   transform: scale(0.94);
@@ -406,6 +431,39 @@ label:has(.moon-checkbox) span {
   [style*='agendya-slide-in-right'],
   [style*='agendya-fade-in'] {
     animation: none !important;
+  }
+}
+
+/* Notification row exit — a modern-mobile "swipe away": the content slides left
+   and fades while the row's own height collapses so the neighbours close the
+   gap. Both run together (~220ms); React keeps the row mounted until the inner
+   `transitionend` fires (see NotificationItem). `overflow: hidden` keeps the
+   horizontal travel inside the row — it can never widen the panel. */
+.notif-row {
+  display: grid;
+  grid-template-rows: 1fr;
+  overflow: hidden;
+  transition: grid-template-rows 0.2s ease;
+}
+.notif-row > .notif-row-inner {
+  min-height: 0;
+  overflow: hidden;
+  transition:
+    transform 0.22s ease,
+    opacity 0.22s ease;
+}
+.notif-row[data-exiting='true'] {
+  grid-template-rows: 0fr;
+}
+.notif-row[data-exiting='true'] > .notif-row-inner {
+  transform: translateX(-40px);
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notif-row,
+  .notif-row > .notif-row-inner {
+    transition: none !important;
   }
 }
 

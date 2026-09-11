@@ -25,7 +25,7 @@ Agendya has **two kinds** of notification:
 - **From:** `Agendya <reservas@agendya.app>` (hard-coded).
 - **Dates:** `Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle:
   'short', timeZone })` in the professional's timezone.
-- **Cancel link:** `{WEB_URL}/bookings/<cancellationToken>`.
+- **Cancel link:** `{PUBLIC_WEB_URL or WEB_URL}/bookings/<cancellationToken>`.
 - **XSS:** every interpolated value (`customerName`, `businessName`,
   `serviceName`, …) passes through `escapeHtml` — the booking form is public
   and the professional receives some of those values in their inbox.
@@ -73,8 +73,8 @@ flowchart LR
 | `id` | uuid | |
 | `professionalId` | uuid | FK → `Professional`, `onDelete: Cascade` |
 | `type` | `NotificationType` | today only `APPOINTMENT_CREATED`; reserved `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` |
-| `title` / `body` | string | ready-to-render strings (es-CO); also serve a future Web Push payload |
-| `data` | `Json` | `{ bookingId, customerName, serviceName, startAt }` — `bookingId` is the navigation reference; the rest avoids a join and is point-in-time |
+| `title` / `body` | string | ready-to-render strings (es-CO); also serve a future Web Push payload. Home service: `title` = `"Nueva cita a domicilio"` |
+| `data` | `Json` | `{ bookingId, customerName, serviceName, startAt, atHome? }` — `bookingId` is the navigation reference; the rest avoids a join and is point-in-time. `atHome: true` is added only for a home-service booking (a flag, never the address) |
 | `readAt` | `DateTime?` | `null` while unread |
 | `createdAt` | `DateTime` | |
 

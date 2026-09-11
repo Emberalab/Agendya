@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registerSchema, type RegisterInput } from '@agendya/types';
 import { Controller, useForm } from 'react-hook-form';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormGroup, Input } from '@moondesignsystem/react';
 import Group from '../../imports/Group11';
-import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { apiBaseUrl } from '../../shared/api/apiClient';
+import {
+  getApiErrorMessage,
+  isWaitlistRequiredError,
+} from '../../shared/api/getApiErrorMessage';
+import { AccessWaitlistForm } from './AccessWaitlistForm';
 import { useRegister } from './hooks/useRegister';
 
 const HERO_PHOTO =
@@ -20,8 +24,14 @@ export function RegisterPage() {
   const {
     control,
     handleSubmit,
+    getValues,
     formState: { errors },
   } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+  const [searchParams] = useSearchParams();
+  const waitlistEmail = searchParams.get('email') ?? '';
+  const showWaitlist =
+    searchParams.get('waitlist') === '1' ||
+    isWaitlistRequiredError(registerMutation.error);
 
   const onSubmit = handleSubmit((data) => {
     registerMutation.mutate(data, {
@@ -75,9 +85,17 @@ export function RegisterPage() {
             Crea tu cuenta
           </h1>
           <p className="text-sm mb-7" style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}>
-            Comienza a gestionar tus reservas de forma profesional
+            {showWaitlist
+              ? 'Aún no abrimos cuentas para todo el mundo. Reserva tu cupo y te avisamos.'
+              : 'Comienza a gestionar tus reservas de forma profesional'}
           </p>
 
+          {showWaitlist ? (
+            <AccessWaitlistForm
+              initialEmail={getValues('email') || waitlistEmail}
+              initialBusiness={getValues('businessName') ?? ''}
+            />
+          ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
             <Controller
               name="businessName"
@@ -234,7 +252,10 @@ export function RegisterPage() {
               {registerMutation.isPending ? 'Creando cuenta...' : 'Crear cuenta gratis'}
             </Button>
           </form>
+          )}
 
+          {!showWaitlist && (
+          <>
           <div className="flex items-center gap-3 my-5">
             <div className="flex-1 h-px" style={{ backgroundColor: 'var(--color-border)' }} />
             <span className="agendia-label text-xs uppercase">O regístrate con</span>
@@ -280,6 +301,8 @@ export function RegisterPage() {
             </svg>
             Continuar con Google
           </button>
+          </>
+          )}
 
           <p
             className="text-sm text-center mt-6"

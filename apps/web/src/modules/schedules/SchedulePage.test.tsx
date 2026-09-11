@@ -103,4 +103,55 @@ describe('SchedulePage', () => {
       );
     });
   });
+
+  it('tells the professional their existing appointments were kept when blocking a date that already has some', async () => {
+    // Business rule: blocking a date never cancels bookings that already
+    // exist on it — only the UI copy communicates that, so this guards
+    // against the message silently disappearing or, worse, implying
+    // cancellation.
+    vi.mocked(api.createException).mockResolvedValue({
+      id: 'exc-2',
+      date: '2026-12-31',
+      reason: null,
+      affectedBookingsCount: 3,
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByRole('switch', { name: 'Estado de Lunes' });
+
+    const dateInput = document.getElementById(
+      'exception-date',
+    ) as HTMLInputElement;
+    await user.type(dateInput, '2026-12-31');
+    await user.click(screen.getByRole('button', { name: 'Bloquear fecha' }));
+
+    const notice = await screen.findByRole('status');
+    expect(notice).toHaveTextContent('3');
+    expect(notice).toHaveTextContent('no las cancela');
+  });
+
+  it('shows no appointments-kept notice when the blocked date had no bookings', async () => {
+    vi.mocked(api.createException).mockResolvedValue({
+      id: 'exc-2',
+      date: '2026-12-31',
+      reason: null,
+      affectedBookingsCount: 0,
+    });
+
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByRole('switch', { name: 'Estado de Lunes' });
+
+    const dateInput = document.getElementById(
+      'exception-date',
+    ) as HTMLInputElement;
+    await user.type(dateInput, '2026-12-31');
+    await user.click(screen.getByRole('button', { name: 'Bloquear fecha' }));
+
+    await waitFor(() => {
+      expect(api.createException).toHaveBeenCalled();
+    });
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
 });

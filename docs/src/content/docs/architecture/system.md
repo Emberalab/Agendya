@@ -84,7 +84,7 @@ flowchart LR
 | Preocupación | Dónde |
 | --- | --- |
 | Cabeceras de seguridad | `helmet()` en `bootstrap.ts` (CSP completa — API JSON, sin HTML) |
-| CORS | Función de origen a medida en `bootstrap.ts` + `common/utils/cors.util.ts` (`WEB_URL` configurado + cualquier origen localhost/red privada) |
+| CORS | Función de origen a medida en `bootstrap.ts` + `common/utils/cors.util.ts` (`WEB_URL` + `PUBLIC_WEB_URL` + cualquier origen localhost/red privada) |
 | Rate limiting | Guard global de `@nestjs/throttler`; overrides por ruta con `@Throttle` |
 | Validación de entrada | `ZodValidationPipe` con esquemas de `@agendya/types`, por ruta |
 | Autenticación | `passport-jwt` (`JwtStrategy` recarga al profesional y comprueba `isActive`) |
