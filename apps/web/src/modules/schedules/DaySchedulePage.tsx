@@ -150,7 +150,10 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
       </h1>
       <p
         className="text-[13px] lg:text-sm mb-6"
-        style={{ color: 'var(--color-text-secondary)' }}
+        style={{
+          fontFamily: 'var(--font-body)',
+          color: 'var(--color-text-secondary)',
+        }}
       >
         Personaliza las jornadas y pausas regulares de este día.
       </p>
