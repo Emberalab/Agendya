@@ -263,11 +263,15 @@ h1, h2, h3, h4, h5, h6 {
   top: 1rem;
 }
 
-/* Theme toggle switch — same visual (and asset) as the one on emberalab.com. */
+/* Theme toggle switch — same visual (and asset) as the one on emberalab.com.
+   Self-hosted from /public (see switch-body-*.svg) rather than pulled from
+   res.cloudinary.com: the sidebar renders this control on every dashboard load,
+   so a third-party origin here cost a DNS/TLS handshake on the critical path
+   for a ~4 kB graphic. */
 .agendia-theme-toggle {
   cursor: pointer;
   background-color: transparent;
-  background-image: url(https://res.cloudinary.com/dxspvj1rj/image/upload/v1730144169/switch-body-light_nbhtni.svg);
+  background-image: url(/switch-body-light.svg);
   background-position: 50%;
   background-size: cover;
   background-repeat: no-repeat;
@@ -285,7 +289,7 @@ h1, h2, h3, h4, h5, h6 {
   box-shadow: 0 3px 5px #091e4233, 0 0 1px #091e424f;
 }
 html[data-theme='dark'] .agendia-theme-toggle {
-  background-image: url(https://res.cloudinary.com/dxspvj1rj/image/upload/v1730144178/switch-body-dark_hwbgeq.svg);
+  background-image: url(/switch-body-dark.svg);
 }
 .agendia-theme-toggle:active {
   transform: scale(0.94);

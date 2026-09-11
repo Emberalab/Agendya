@@ -1,6 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as api from './api';
@@ -93,8 +93,9 @@ describe('AgendaPage', () => {
 
     await user.click((await screen.findAllByRole('button', { name: 'Ver detalle' }))[0]);
 
-    const drawer = await screen.findByText('Detalle de la cita');
-    expect(within(drawer.closest('div')!).getByText('Detalle de la cita')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Detalle de la cita' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
   });
 

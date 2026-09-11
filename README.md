@@ -69,6 +69,7 @@ The web app runs at `http://localhost:5173` and the API at `http://localhost:400
 
 ## Other useful scripts
 
+- `npm run verify` — lint + typecheck + test + build across all workspaces, in that order, stopping at the first failure (run this before committing)
 - `npm run build` — build all workspaces
 - `npm run lint` — lint all workspaces
 - `npm run test` — run tests in all workspaces
