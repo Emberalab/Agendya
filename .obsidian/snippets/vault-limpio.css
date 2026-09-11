@@ -1,0 +1,21 @@
+/* Oculta del explorador de archivos las carpetas de código que no aportan como notas */
+.nav-folder:has(> .nav-folder-title[data-path="node_modules"]),
+.nav-folder:has(> .nav-folder-title[data-path="apps"]),
+.nav-folder:has(> .nav-folder-title[data-path="packages"]),
+.nav-folder:has(> .nav-folder-title[data-path="infra"]),
+.nav-folder:has(> .nav-folder-title[data-path=".github"]),
+.nav-folder:has(> .nav-folder-title[data-path=".claude"]) {
+  display: none;
+}
+
+/* Oculta archivos sueltos de configuración/infra en la raíz */
+.nav-file:has(> .nav-file-title[data-path="README.md"]),
+.nav-file:has(> .nav-file-title[data-path="package.json"]),
+.nav-file:has(> .nav-file-title[data-path="package-lock.json"]),
+.nav-file:has(> .nav-file-title[data-path="docker-compose.yml"]),
+.nav-file:has(> .nav-file-title[data-path=".gitignore"]),
+.nav-file:has(> .nav-file-title[data-path=".nvmrc"]),
+.nav-file:has(> .nav-file-title[data-path=".prettierrc"]),
+.nav-file:has(> .nav-file-title[data-path=".prettierignore"]) {
+  display: none;
+}
