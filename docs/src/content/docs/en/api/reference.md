@@ -92,6 +92,10 @@ scoped to `req.user.id` server-side; a client-supplied id is never trusted.
 | `GET` | `/notifications/unread-count` | — | `{ count }` |
 | `PATCH` | `/notifications/read-all` | — | `{ updated }` (rows marked) |
 | `PATCH` | `/notifications/:id/read` | — | `Notification` — `404` if not yours; idempotent |
+| `GET` | `/notifications/push/public-key` | — | `{ publicKey: string \| null }` — VAPID key; `null` when the server has no keys (Web Push disabled) |
+| `GET` | `/notifications/push/status` | — | `{ subscribed: boolean }` — whether the professional has any device registered |
+| `POST` | `/notifications/push/subscribe` | the browser's `PushSubscription.toJSON()` — `pushSubscribeInputSchema` | `204` — upsert by `endpoint` (globally unique); reassigns the device to the authenticated professional |
+| `POST` | `/notifications/push/unsubscribe` | `{ endpoint }` — `pushUnsubscribeInputSchema` | `204` — `deleteMany` scoped to `{ endpoint, professionalId }` |
 
 `Notification` (`notificationSchema`): `{ id, type, title, body, data: {
 bookingId, customerName, serviceName, startAt, atHome? }, readAt: string \| null,
@@ -101,6 +105,12 @@ The customer's address is **never** in the payload (or the SSE frame) — the
 professional opens the appointment detail, whose `AgendaBooking` carries
 `customerAddress`. `markRead` / `markAllRead` filter by `professionalId` in the
 `updateMany` `where`, so a professional cannot touch another's notification.
+
+**Web Push** delivers the same `Notification` row as an OS-level alert
+(`pushMessageSchema`: `{ title, body, notificationId, bookingId, startAt }`). The
+fan-out lives in `NotificationsService.create()` after the `INSERT` and the SSE
+emit, is fire-and-forget, and prunes subscriptions that return `404`/`410`. See
+[Notifications › Web Push](/en/features/notifications/#web-push).
 
 ## Real-time — `modules/realtime`
 

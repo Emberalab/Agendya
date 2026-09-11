@@ -92,6 +92,10 @@ Todo se acota a `req.user.id` en el servidor; nunca se confía en un id del clie
 | `GET` | `/notifications/unread-count` | — | `{ count }` |
 | `PATCH` | `/notifications/read-all` | — | `{ updated }` (nº marcadas) |
 | `PATCH` | `/notifications/:id/read` | — | `Notification` — `404` si no es propia; idempotente |
+| `GET` | `/notifications/push/public-key` | — | `{ publicKey: string \| null }` — clave VAPID; `null` si el servidor no tiene claves (Web Push desactivado) |
+| `GET` | `/notifications/push/status` | — | `{ subscribed: boolean }` — si el profesional tiene algún dispositivo registrado |
+| `POST` | `/notifications/push/subscribe` | `PushSubscription.toJSON()` del navegador — `pushSubscribeInputSchema` | `204` — upsert por `endpoint` (único global); reasigna el dispositivo al profesional autenticado |
+| `POST` | `/notifications/push/unsubscribe` | `{ endpoint }` — `pushUnsubscribeInputSchema` | `204` — `deleteMany` acotado a `{ endpoint, professionalId }` |
 
 `Notification` (`notificationSchema`): `{ id, type, title, body, data: { bookingId,
 customerName, serviceName, startAt, atHome? }, readAt: string \| null, createdAt }`.
@@ -101,6 +105,12 @@ customerName, serviceName, startAt, atHome? }, readAt: string \| null, createdAt
 detalle de la cita, cuyo `AgendaBooking` sí trae `customerAddress`. `markRead` /
 `markAllRead` filtran por `professionalId` en el `where` del `updateMany`, así que
 un profesional no puede tocar la notificación de otro.
+
+**Web Push** entrega la misma fila `Notification` como aviso del sistema
+operativo (`pushMessageSchema`: `{ title, body, notificationId, bookingId,
+startAt }`). El fan-out vive en `NotificationsService.create()` tras el `INSERT`
+y el SSE, es *fire-and-forget*, y poda las suscripciones que devuelven `404`/`410`.
+Ver [Notificaciones › Web Push](/features/notifications/#web-push).
 
 ## Real-time — `modules/realtime`
 

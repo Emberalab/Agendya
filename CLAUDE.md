@@ -30,9 +30,9 @@ The product was renamed from "Ronda" to "Agendya" early on. Infra/config, CI, an
 
 ## Tech stack
 
-**API** (`apps/api`): NestJS 11, Prisma 7 + PostgreSQL, Zod validation (`common/pipes/zod-validation.pipe.ts`), JWT auth (`@nestjs/jwt` + `passport-jwt`) plus Google OAuth (`passport-google-oauth20`), `@nestjs/schedule` for the booking reminder cron (`modules/bookings/reminders.scheduler.ts`), `@nestjs/throttler` for rate limiting, Resend for transactional email, Cloudinary for image uploads (logos/covers), bcrypt for password hashing.
+**API** (`apps/api`): NestJS 11, Prisma 7 + PostgreSQL, Zod validation (`common/pipes/zod-validation.pipe.ts`), JWT auth (`@nestjs/jwt` + `passport-jwt`) plus Google OAuth (`passport-google-oauth20`), `@nestjs/schedule` for the booking reminder cron (`modules/bookings/reminders.scheduler.ts`), `@nestjs/throttler` for rate limiting, Resend for transactional email, Cloudinary for image uploads (logos/covers), `web-push` (VAPID) for PWA push notifications to the professional (`modules/notifications/push-subscriptions.service.ts`), bcrypt for password hashing.
 
-**Web** (`apps/web`): React 19 + Vite + TypeScript, React Router 7, TanStack Query for server state, React Hook Form + Zod resolvers for forms, Zustand for client state, Tailwind CSS v4, Moon Design System (`@moondesignsystem/react` / `/ui`) for UI components, axios for HTTP, date-fns for dates, Vitest + Testing Library + MSW for tests, oxlint for linting.
+**Web** (`apps/web`): React 19 + Vite + TypeScript, React Router 7, TanStack Query for server state, React Hook Form + Zod resolvers for forms, Zustand for client state, Tailwind CSS v4, Moon Design System (`@moondesignsystem/react` / `/ui`) for UI components, axios for HTTP, date-fns for dates, `vite-plugin-pwa` (`injectManifest` strategy, custom service worker at `src/sw.ts` for offline shell + Web Push), Vitest + Testing Library + MSW for tests, oxlint for linting.
 
 **Shared**: `packages/types` holds the Zod schemas (booking, service, schedule, professional, auth) used by both apps. When a data shape changes, update it there first, then adjust both consumers.
 
@@ -43,6 +43,8 @@ The product was renamed from "Ronda" to "Agendya" early on. Infra/config, CI, an
 - **WorkingHour** — weekly recurring availability per professional (`dayOfWeek` + `startMinute`/`endMinute`).
 - **ScheduleException** — one-off closed dates per professional.
 - **Booking** — a customer appointment: snapshots the service name/duration at booking time, `status` (PENDING/CONFIRMED/CANCELLED/COMPLETED/NO_SHOW), `cancellationToken` for public cancel links, `reminder24hSentAt`/`reminder2hSentAt` for the reminder scheduler, optional `atHome` + `customerAddress`.
+- **Notification** — the professional's persistent in-app feed row; source of truth for SSE + Web Push delivery.
+- **PushSubscription** — one browser Web Push subscription per professional device (`endpoint` globally unique); fanned out from `NotificationsService.create()`.
 - Slot calculation is grid-based: the `SLOT_GRID_MINUTES` env var (default 15) sets booking slot granularity — see `apps/api/src/modules/schedules/availability.service.ts`.
 
 ## Setup & commands

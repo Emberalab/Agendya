@@ -5,6 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormGroup, Input } from '@moondesignsystem/react';
 import Group from '../../imports/Group11';
+import { apiBaseUrl } from '../../shared/api/apiClient';
 import {
   getApiErrorMessage,
   isWaitlistRequiredError,
@@ -39,7 +40,7 @@ export function RegisterPage() {
   });
 
   const handleGoogleRegister = () => {
-    window.location.href = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/auth/google`;
+    window.location.href = `${apiBaseUrl}/auth/google`;
   };
 
   return (

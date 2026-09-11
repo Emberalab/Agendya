@@ -6,11 +6,19 @@ import { NAV_ITEMS } from './navItems';
 import { NavIcon } from './NavIcon';
 import { ThemeToggle } from '../../shared/theme/ThemeToggle';
 import { NotificationBell } from '../notifications/NotificationBell';
+import { disablePush } from '../../shared/push/pushManager';
 
 export function Sidebar() {
   const user = useAuthStore((state) => state.user);
-  const logout = useAuthStore((state) => state.logout);
+  const clearSession = useAuthStore((state) => state.logout);
   const [collapsed, setCollapsed] = useState(false);
+
+  // Drop this browser's push subscription before the token is gone (the
+  // unsubscribe call needs it), so pushes for this account stop reaching the
+  // device — especially if someone else signs in on the same browser next.
+  const logout = () => {
+    void disablePush().finally(() => clearSession());
+  };
 
   const initial = user?.businessName?.charAt(0).toUpperCase() ?? '?';
 

@@ -15,6 +15,7 @@ erDiagram
   Professional ||--o{ ScheduleException : "has"
   Professional ||--o{ Booking : "receives"
   Professional ||--o{ Notification : "gets alerts"
+  Professional ||--o{ PushSubscription : "registers devices"
   Service ||--o{ Booking : "booked as (nullable)"
 
   Professional {
@@ -107,6 +108,17 @@ erDiagram
     datetime readAt "nullable — null = unread"
     datetime createdAt
   }
+
+  PushSubscription {
+    string id PK
+    string professionalId FK
+    string endpoint "unique — push service URL"
+    string p256dh
+    string auth
+    string userAgent "nullable"
+    datetime createdAt
+    datetime lastActiveAt
+  }
 ```
 
 ## Relationships & cascade rules
@@ -118,6 +130,7 @@ erDiagram
 | `ScheduleException.professional` | `Professional` | many-to-one | `Cascade` |
 | `Booking.professional` | `Professional` | many-to-one | `Cascade` |
 | `Notification.professional` | `Professional` | many-to-one | `Cascade` |
+| `PushSubscription.professional` | `Professional` | many-to-one | `Cascade` |
 | `Booking.service` | `Service` | many-to-one, **optional** | `SetNull` — deleting a service keeps its bookings; `serviceId` becomes `null`, and `serviceNameSnapshot` / `durationMinutesSnapshot` preserve what was booked |
 
 ## Enums

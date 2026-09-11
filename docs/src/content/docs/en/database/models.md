@@ -104,7 +104,7 @@ The enum keeps `PENDING` (and `NO_SHOW`) but no current code path creates a
 
 An entry in a professional's persistent **notification centre** (see
 [Notifications](/en/features/notifications/#notification-centre)). The row is the
-source of truth; SSE and a future Web Push are delivery channels.
+source of truth; SSE and Web Push are delivery channels.
 
 | Field | Type | Notes |
 | --- | --- | --- |
@@ -123,3 +123,24 @@ No automatic deletion. Future strategy: a daily `@Cron` removing read rows older
 than ~90 days, plus a per-professional cap. See
 [Notifications › Retention](/en/features/notifications/#retention).
 :::
+
+## PushSubscription
+
+One browser **Web Push** subscription for a professional (see
+[Notifications › Web Push](/en/features/notifications/#web-push)). After granting
+permission, the dashboard POSTs the browser's `PushSubscription`; there is one
+row per device/browser.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `endpoint` | `String @unique` | The push service URL. Globally unique — the same browser re-subscribing returns the same endpoint, so an `upsert` keeps one row per device |
+| `p256dh` / `auth` | `String` | Encryption material from `PushSubscription.toJSON().keys`, needed to sign each payload |
+| `userAgent` | `String?` | Best-effort provenance for the settings UI; not used for delivery |
+| `createdAt` | `DateTime @default(now())` | |
+| `lastActiveAt` | `DateTime @default(now())` | Bumped on each successful send; enables a future sweep of stale endpoints |
+
+Index: `@@index([professionalId])` — delivery loads every subscription for one
+professional. Web Push is a best-effort delivery channel for the `Notification`
+row, never the source of truth: a push that fails (or a device that was offline)
+still leaves the row readable from `GET /notifications`.

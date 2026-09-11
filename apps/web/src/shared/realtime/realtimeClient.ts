@@ -157,7 +157,9 @@ class RealtimeClient {
 
     try {
       const response = await fetch(
-        new URL(STREAM_PATH, apiBaseUrl).toString(),
+        // Concatenate: `apiBaseUrl` may carry a base path (`/api`) that
+        // `new URL(STREAM_PATH, apiBaseUrl)` would discard.
+        `${apiBaseUrl}${STREAM_PATH}`,
         {
           method: 'GET',
           headers: {

@@ -15,6 +15,7 @@ erDiagram
   Professional ||--o{ ScheduleException : "tiene"
   Professional ||--o{ Booking : "recibe"
   Professional ||--o{ Notification : "recibe avisos"
+  Professional ||--o{ PushSubscription : "registra dispositivos"
   Service ||--o{ Booking : "reservado como (nullable)"
 
   Professional {
@@ -107,6 +108,17 @@ erDiagram
     datetime readAt "nullable — null = sin leer"
     datetime createdAt
   }
+
+  PushSubscription {
+    string id PK
+    string professionalId FK
+    string endpoint "unique — URL del servicio de push"
+    string p256dh
+    string auth
+    string userAgent "nullable"
+    datetime createdAt
+    datetime lastActiveAt
+  }
 ```
 
 ## Relaciones y reglas de cascada
@@ -118,6 +130,7 @@ erDiagram
 | `ScheduleException.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Booking.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Notification.professional` | `Professional` | muchos a uno | `Cascade` |
+| `PushSubscription.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Booking.service` | `Service` | muchos a uno, **opcional** | `SetNull` — al borrar un servicio se conservan sus reservas; `serviceId` pasa a `null`, y `serviceNameSnapshot` / `durationMinutesSnapshot` preservan lo que se reservó |
 
 ## Enums

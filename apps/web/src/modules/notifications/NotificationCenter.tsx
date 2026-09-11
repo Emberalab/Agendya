@@ -7,6 +7,7 @@ import { useFocusTrap } from '../../shared/a11y/useFocusTrap';
 import { usePrefersReducedMotion } from '../../shared/a11y/prefersReducedMotion';
 import { useToastStore } from '../../shared/notifications/toastStore';
 import { NotificationItem } from './NotificationItem';
+import { PushNotificationToggle } from './PushNotificationToggle';
 import { NotificationDetailView } from './NotificationDetailView';
 import { ConfirmDeleteReadDialog } from './ConfirmDeleteReadDialog';
 import { routeForNotification } from './navigation';
@@ -310,6 +311,8 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
             </svg>
           </button>
         </header>
+
+        <PushNotificationToggle />
 
         {/* Detail view — the list stays mounted below (just hidden) so its
             scroll position, loaded pages and infinite-scroll state survive. */}

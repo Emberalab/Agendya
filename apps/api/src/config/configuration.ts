@@ -18,4 +18,15 @@ export default () => ({
   // Public booking origin (`agendya.co`). Empty locally / on hosted-dev where
   // the dashboard and `/:slug` share one host. Used for CORS and cancel links.
   publicWebUrl: (process.env.PUBLIC_WEB_URL ?? '').replace(/\/+$/, ''),
+  // Web Push (VAPID). All three must be set for push delivery to be active;
+  // with any missing, the push endpoints report "disabled" and the notification
+  // feed simply falls back to SSE + the persisted row. Generate a keypair with
+  // `npx web-push generate-vapid-keys`.
+  webPush: {
+    publicKey: process.env.VAPID_PUBLIC_KEY,
+    privateKey: process.env.VAPID_PRIVATE_KEY,
+    // `mailto:` (or https) contact the push service can reach if a payload
+    // misbehaves — required by the Web Push spec.
+    subject: process.env.VAPID_SUBJECT ?? 'mailto:soporte@agendya.app',
+  },
 });

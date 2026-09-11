@@ -34,6 +34,9 @@ arranque.
 | `PUBLIC_WEB_URL` | *(vacío)* | No | Origen público (`https://agendya.co`): CORS extra y base de los enlaces de cancelación. Si falta, se usa `WEB_URL` |
 | `PROFESSIONAL_EMAIL_ALLOWLIST` | *(vacío = abierto en local)* | No | Correos que pueden registrar/entrar como profesional. En Railway `production`/`dev` hay listas por defecto; esta variable las pisa. Vacía = abierto |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (por defecto `25000`) | Milisegundos entre frames `event: ping` en el stream SSE `GET /realtime/stream`. Bájalo si un proxy inverso corta antes las conexiones inactivas |
+| `VAPID_PUBLIC_KEY` | *(vacío)* | No | Sin las tres claves VAPID, Web Push se desactiva: `GET /notifications/push/public-key` devuelve `null`, el dashboard oculta el interruptor y el feed sigue por SSE. Genera un par con `npx web-push generate-vapid-keys` |
+| `VAPID_PRIVATE_KEY` | *(vacío)* | No | Igual que arriba |
+| `VAPID_SUBJECT` | `mailto:soporte@agendya.app` | No (por defecto `mailto:`) | URI de contacto (`mailto:` o `https:`) que el servicio de push usa para avisar de un payload problemático |
 
 ### Solo para pruebas
 

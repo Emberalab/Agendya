@@ -73,6 +73,7 @@ model Professional {
   scheduleExceptions ScheduleException[]
   bookings           Booking[]
   notifications      Notification[]
+  pushSubscriptions  PushSubscription[]
 
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
@@ -190,4 +191,35 @@ model Notification {
   // declarative partial index; this composite still bounds the count/scan to
   // one professional's rows.
   @@index([professionalId, readAt])
+}
+
+// One browser Web Push subscription for a professional. The dashboard registers
+// a service worker and, once the professional grants notification permission,
+// POSTs the browser's `PushSubscription` here (see push.schema.ts). A
+// professional with several devices/browsers has one row per endpoint.
+//
+// Web Push is a best-effort delivery channel for the `Notification` feed, never
+// the source of truth: a push that fails (or a device that was offline) still
+// leaves the row readable from `GET /notifications`.
+model PushSubscription {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  // The push service URL. Globally unique — the same browser re-subscribing
+  // returns the same endpoint, so an upsert on this keeps one row per device.
+  endpoint       String       @unique
+  // Encryption material from `PushSubscription.toJSON().keys`, needed to sign
+  // each payload for this subscription.
+  p256dh         String
+  auth           String
+  // Best-effort provenance for the settings UI ("Chrome on Android"); not used
+  // for delivery.
+  userAgent      String?
+  createdAt      DateTime     @default(now())
+  // Bumped on each successful send; lets a future sweep prune stale endpoints
+  // the push service never told us to drop.
+  lastActiveAt   DateTime     @default(now())
+
+  // Delivery loads every subscription for one professional.
+  @@index([professionalId])
 }

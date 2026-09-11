@@ -280,6 +280,15 @@ export class ApiMock {
         count: this.notifications.filter((n) => n.readAt === null).length,
       });
     }
+    // Web Push: the suite runs without VAPID keys, so the server reports push
+    // disabled and the dashboard hides the toggle. Stubbed to keep the mock
+    // exhaustive (no "unhandled route" noise) rather than to exercise push.
+    if (path === '/notifications/push/public-key' && method === 'GET') {
+      return json(route, { publicKey: null });
+    }
+    if (path === '/notifications/push/status' && method === 'GET') {
+      return json(route, { subscribed: false });
+    }
     if (path === '/notifications/read-all' && method === 'PATCH') {
       const now = new Date().toISOString();
       let updated = 0;
