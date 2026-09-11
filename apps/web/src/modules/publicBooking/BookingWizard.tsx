@@ -35,6 +35,23 @@ const customerInfoSchema = createBookingSchema.pick({
 
 type CustomerInfoInput = z.infer<typeof customerInfoSchema>;
 
+// `customerAddress` isn't part of `customerInfoSchema` above — it's built
+// from four separate free-text fields (see `composeAddress`) rather than
+// filled directly, so it never went through react-hook-form's zodResolver
+// like the rest of the "details" step. That let a long "Referencia para el
+// profesional" silently blow past the backend's 200-char cap: the wizard let
+// the customer click through every step, and the rejection only surfaced as
+// a generic "Validation failed" on the final confirm. Validate the composed
+// string against the same schema field the backend enforces, so the limit is
+// never duplicated as a second magic number that can drift from it.
+const addressSchema = createBookingSchema.shape.customerAddress;
+// Display-only mirror of `addressSchema`'s `max(200)` (zod doesn't expose a
+// clean way to read a check's numeric bound back out) — `addressSchema` itself,
+// not this constant, is what actually gates "Continuar", so a value here that
+// drifted from the schema could only make the counter's number wrong, never
+// let an over-limit address slip past the real check.
+const ADDRESS_MAX_LENGTH = 200;
+
 interface AddressFields {
   line: string;
   unit: string;
@@ -200,8 +217,13 @@ export function BookingWizard({
     setSlot(null);
   }, [serviceId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const addressValid = addressFields.line.trim().length >= 5;
   const composedAddress = composeAddress(addressFields);
+  // Validated against the same schema field the backend enforces (min 5,
+  // max 200) instead of a hand-rolled length check, so a long "Referencia
+  // para el profesional" is caught here — with a message the customer can
+  // act on — rather than surfacing as a generic rejection on final submit.
+  const addressValid = addressSchema.safeParse(composedAddress).success;
+  const addressTooLong = composedAddress.length > ADDRESS_MAX_LENGTH;
 
   const canContinue = (() => {
     switch (currentStep) {
@@ -395,7 +417,12 @@ export function BookingWizard({
                 <AddressStep
                   value={addressFields}
                   onChange={setAddressFields}
-                  showLineError={addressFields.line.length > 0 && !addressValid}
+                  showLineError={
+                    addressFields.line.trim().length > 0 &&
+                    addressFields.line.trim().length < 5
+                  }
+                  addressLength={composedAddress.length}
+                  addressTooLong={addressTooLong}
                 />
               ) : (
                 <ModalityStep
@@ -880,10 +907,15 @@ function AddressStep({
   value,
   onChange,
   showLineError,
+  addressLength,
+  addressTooLong,
 }: {
   value: AddressFields;
   onChange: (next: AddressFields) => void;
   showLineError: boolean;
+  /** Length of the composed address (line + unit + neighborhood + reference) the backend will actually receive. */
+  addressLength: number;
+  addressTooLong: boolean;
 }) {
   const set =
     (key: keyof AddressFields) =>
@@ -935,7 +967,22 @@ function AddressStep({
           placeholder="Ej: Portón negro, timbre del apto"
           value={value.reference}
           onChange={set('reference')}
+          describedBy="addr-length-hint"
         />
+        <p
+          id="addr-length-hint"
+          aria-live="polite"
+          style={{
+            fontSize: '12px',
+            color: addressTooLong
+              ? 'var(--color-danger)'
+              : 'var(--color-text-muted)',
+          }}
+        >
+          {addressTooLong
+            ? `La dirección completa es muy larga: tiene ${addressLength} de ${ADDRESS_MAX_LENGTH} caracteres permitidos. Acorta la dirección o la referencia para continuar.`
+            : `${addressLength}/${ADDRESS_MAX_LENGTH} caracteres de la dirección completa.`}
+        </p>
       </div>
     </div>
   );
@@ -949,6 +996,7 @@ function AddressField({
   onChange,
   required,
   error,
+  describedBy,
 }: {
   id: string;
   label: string;
@@ -957,6 +1005,7 @@ function AddressField({
   onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
   required?: boolean;
   error?: string;
+  describedBy?: string;
 }) {
   return (
     <div>
@@ -975,6 +1024,7 @@ function AddressField({
       <input
         id={id}
         type="text"
+        aria-describedby={describedBy}
         value={value}
         onChange={onChange}
         placeholder={placeholder}
@@ -1192,18 +1242,43 @@ function SlotPills({
   }
 
   if (slots.length === 0) {
+    // Not an error — nothing failed — but it stops the customer cold with no
+    // clear next step, so it gets the same amber "needs your attention"
+    // treatment as the rest of the app's warnings (e.g. "Horario superpuesto"
+    // in BlockFormDrawer.tsx), not the muted gray an inert empty state would
+    // get, so it actually reads as "pick another date" rather than "broken."
     return (
-      <p
-        className="rounded-xl px-4 py-6 text-center"
+      <div
+        role="status"
+        className="flex items-start gap-2.5 rounded-xl px-4 py-4"
         style={{
-          fontSize: '14px',
-          color: 'var(--color-text-secondary)',
-          backgroundColor: 'var(--color-surface-soft)',
-          border: '1px solid var(--color-border)',
+          backgroundColor: 'var(--status-pending-bg)',
+          border: '1px solid var(--status-pending-border)',
         }}
       >
-        No hay horarios disponibles ese día. Prueba otra fecha.
-      </p>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 18 18"
+          fill="none"
+          aria-hidden="true"
+          style={{ flexShrink: 0, marginTop: '1px', color: 'var(--status-pending-color)' }}
+        >
+          <circle cx="9" cy="9" r="7.25" stroke="currentColor" strokeWidth="1.5" />
+          <path d="M9 5.5V9.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+          <circle cx="9" cy="12.2" r="0.9" fill="currentColor" />
+        </svg>
+        <p
+          style={{
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--status-pending-color)',
+            textAlign: 'left',
+          }}
+        >
+          No hay horarios disponibles ese día. Prueba otra fecha.
+        </p>
+      </div>
     );
   }
 

@@ -10,7 +10,9 @@ import { PUBLIC_SLUG } from '../../fixtures/data';
  *
  * Keyboard-focus behaviour (bar hides while a field is focused) is covered by
  * the `MobileStickyCta` unit test; the custom date picker makes the details
- * step brittle to drive here.
+ * step brittle to drive here in general — the one exception is the
+ * scroll-while-focused regression below (test G), which needs a real
+ * browser's scroll/focus behaviour to actually prove.
  */
 
 const BAR = 'mobile-sticky-cta';
@@ -91,6 +93,40 @@ test.describe('mobile — sticky booking CTA', () => {
     await expect(stickyButton).toBeDisabled();
     await page.getByText('En el establecimiento').click();
     await expect(stickyButton).toBeEnabled();
+  });
+
+  // Regression: on the "Tus datos" step, filling the last field and then
+  // scrolling straight to the real "Continuar" (the natural mobile gesture —
+  // no reason to tap away first) used to leave this bar hidden the whole
+  // way down, because nothing had blurred the field yet. See the matching
+  // unit test ("shows again on scroll…") for the isolated mechanism; this
+  // drives it through the real wizard to prove the fix holds end to end.
+  test('G: reappears on scroll even if the last-typed field is still focused', async ({
+    page,
+  }) => {
+    await openWizard(page);
+    const sticky = page.getByTestId(BAR);
+    const realCta = page.getByRole('button', { name: /Continuar/ });
+
+    await page.getByText('Corte de cabello').click();
+    await sticky.locator('button').click();
+    await page.getByText('En el establecimiento').click();
+    await sticky.locator('button').click();
+
+    await expect(page.getByText('Elige una fecha')).toBeVisible();
+    await page.getByRole('button', { name: 'Mes siguiente' }).click();
+    await page.getByRole('button', { name: '15' }).click();
+    await page.getByRole('button', { name: /^\d{1,2}:\d{2}/ }).first().click();
+    await sticky.locator('button').click();
+
+    await expect(page.getByRole('heading', { name: 'Tus datos' })).toBeVisible();
+    await page.getByLabel(/Observaciones/).fill('Alergia al tinte');
+    await expect(sticky).toHaveAttribute('data-state', 'hidden');
+
+    // Scroll toward the real CTA without ever tapping away to blur first.
+    await page.mouse.wheel(0, 150);
+    await expect(realCta).not.toBeInViewport();
+    await expect(sticky).toHaveAttribute('data-state', 'shown');
   });
 
   test('H: stays clear of the iOS home indicator via safe-area inset', async ({
