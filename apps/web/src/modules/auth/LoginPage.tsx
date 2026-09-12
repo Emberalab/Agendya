@@ -11,6 +11,8 @@ import {
   isWaitlistRequiredError,
 } from '../../shared/api/getApiErrorMessage';
 import { AccessWaitlistForm } from './AccessWaitlistForm';
+import { FieldError } from './FieldError';
+import { postAuthPath } from './postAuthPath';
 import { useLogin } from './hooks/useLogin';
 
 const HERO_PHOTO =
@@ -33,7 +35,8 @@ export function LoginPage() {
 
   const onSubmit = handleSubmit((data) => {
     loginMutation.mutate(data, {
-      onSuccess: () => navigate('/dashboard/profile', { replace: true }),
+      onSuccess: (session) =>
+        navigate(postAuthPath(session.user), { replace: true }),
     });
   });
 
@@ -121,9 +124,7 @@ export function LoginPage() {
                     style={{ paddingLeft: '12px', paddingRight: '12px' }}
                   />
                   {errors.email && (
-                    <FormGroup.Hint id="email-error" role="alert">
-                      {errors.email.message}
-                    </FormGroup.Hint>
+                    <FieldError id="email-error">{errors.email.message}</FieldError>
                   )}
                 </FormGroup>
               )}
@@ -174,9 +175,9 @@ export function LoginPage() {
                     </button>
                   </div>
                   {errors.password && (
-                    <FormGroup.Hint id="password-error" role="alert">
+                    <FieldError id="password-error">
                       {errors.password.message}
-                    </FormGroup.Hint>
+                    </FieldError>
                   )}
                 </FormGroup>
               )}

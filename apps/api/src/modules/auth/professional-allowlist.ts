@@ -1,29 +1,26 @@
 import { ForbiddenException } from '@nestjs/common';
 
+export const WAITLIST_REQUIRED_CODE = 'WAITLIST_REQUIRED';
+
+export type PlatformAccessGrant = 'SUPER_ADMIN' | 'ALLOWLISTED';
+
+export type AllowlistPolicy =
+  | { mode: 'open' }
+  | { mode: 'env'; emails: string[] }
+  | { mode: 'database' };
+
 /**
- * Closed beta: only these emails may register or log in as professionals.
- * Railway `start:prod` runs in both environments, so we key off
+ * Closed beta: Railway `start:prod` runs in both environments, so we key off
  * `RAILWAY_ENVIRONMENT_NAME` (`production` vs `dev`), not `NODE_ENV`.
  *
  * Local / CI leave both unset → allowlist is off (open signup).
- * `PROFESSIONAL_EMAIL_ALLOWLIST` (comma-separated) overrides the arrays.
- * Set it to empty to force the list open even on Railway.
+ * On Railway, allowed emails come from `PlatformAccessEmail` (database).
+ * `PROFESSIONAL_EMAIL_ALLOWLIST` (comma-separated) overrides that table.
+ * Set it to empty to force signup open even on Railway.
+ *
+ * A `SUPER_ADMIN` grant always bypasses the list so an env override cannot
+ * lock the platform admin out.
  */
-export const PROFESSIONAL_EMAIL_ALLOWLIST = {
-  production: [
-    'hjose0650@gmail.com',
-    'afz.0228@gmail.com',
-    'jorgeemherrera@gmail.com',
-  ],
-  dev: [
-    'hjose0650@gmail.com',
-    'afz.0228@gmail.com',
-    'jorgeemherrera@gmail.com',
-  ],
-} as const;
-
-export const WAITLIST_REQUIRED_CODE = 'WAITLIST_REQUIRED';
-
 export function parseEmailAllowlist(raw: string | undefined): string[] {
   if (raw === undefined) {
     return [];
@@ -34,39 +31,55 @@ export function parseEmailAllowlist(raw: string | undefined): string[] {
     .filter((email) => email.length > 0);
 }
 
-export function resolveProfessionalAllowlist(
+export function resolveAllowlistPolicy(
   env: NodeJS.ProcessEnv = process.env,
-): string[] | null {
+): AllowlistPolicy {
   if (env.PROFESSIONAL_EMAIL_ALLOWLIST !== undefined) {
     const parsed = parseEmailAllowlist(env.PROFESSIONAL_EMAIL_ALLOWLIST);
-    return parsed.length > 0 ? parsed : null;
+    return parsed.length > 0 ? { mode: 'env', emails: parsed } : { mode: 'open' };
   }
 
   const railwayEnv = env.RAILWAY_ENVIRONMENT_NAME ?? '';
-  if (railwayEnv === 'production') {
-    return [...PROFESSIONAL_EMAIL_ALLOWLIST.production];
-  }
-  if (railwayEnv === 'dev') {
-    return [...PROFESSIONAL_EMAIL_ALLOWLIST.dev];
+  if (railwayEnv === 'production' || railwayEnv === 'dev') {
+    return { mode: 'database' };
   }
 
-  return null;
+  return { mode: 'open' };
 }
 
-export function assertProfessionalEmailAllowed(
+export async function assertProfessionalEmailAllowed(
   email: string,
+  lookupGrant: (normalizedEmail: string) => Promise<PlatformAccessGrant | null>,
   env: NodeJS.ProcessEnv = process.env,
-): void {
-  const allowlist = resolveProfessionalAllowlist(env);
-  if (!allowlist) {
+): Promise<void> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const grant = await lookupGrant(normalizedEmail);
+
+  if (grant === 'SUPER_ADMIN') {
     return;
   }
 
-  if (!allowlist.includes(email.trim().toLowerCase())) {
-    throw new ForbiddenException({
-      code: WAITLIST_REQUIRED_CODE,
-      message:
-        'El acceso está en periodo de prueba. Únete a la lista de espera.',
-    });
+  const policy = resolveAllowlistPolicy(env);
+  if (policy.mode === 'open') {
+    return;
   }
+
+  if (policy.mode === 'env') {
+    if (!policy.emails.includes(normalizedEmail)) {
+      throwWaitlistRequired();
+    }
+    return;
+  }
+
+  if (!grant) {
+    throwWaitlistRequired();
+  }
+}
+
+function throwWaitlistRequired(): never {
+  throw new ForbiddenException({
+    code: WAITLIST_REQUIRED_CODE,
+    message:
+      'El acceso está en periodo de prueba. Únete a la lista de espera.',
+  });
 }

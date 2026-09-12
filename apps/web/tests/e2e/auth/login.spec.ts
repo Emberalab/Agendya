@@ -27,7 +27,9 @@ test.describe('Email + password login', () => {
     await page.getByLabel('Contraseña *').fill('whatever');
     await page.getByRole('button', { name: 'Iniciar sesión' }).click();
 
-    await expect(page.getByText(/invalid email/i)).toBeVisible();
+    await expect(
+      page.getByText(/eso no parece un correo/i),
+    ).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
   });
 

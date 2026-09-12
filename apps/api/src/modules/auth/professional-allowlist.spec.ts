@@ -1,13 +1,13 @@
 import { ForbiddenException } from '@nestjs/common';
 import {
-  PROFESSIONAL_EMAIL_ALLOWLIST,
   assertProfessionalEmailAllowed,
   parseEmailAllowlist,
-  resolveProfessionalAllowlist,
+  resolveAllowlistPolicy,
+  type PlatformAccessGrant,
 } from './professional-allowlist';
 
 describe('professional-allowlist', () => {
-  const beta = PROFESSIONAL_EMAIL_ALLOWLIST.production[0];
+  const noGrant = async () => null;
 
   it('parses a comma-separated list case-insensitively', () => {
     expect(parseEmailAllowlist('  A@X.com, b@y.com ')).toEqual([
@@ -16,48 +16,79 @@ describe('professional-allowlist', () => {
     ]);
   });
 
-  it('is off locally when no Railway env or override is set', () => {
-    expect(resolveProfessionalAllowlist({})).toBeNull();
+  it('is open locally when no Railway env or override is set', () => {
+    expect(resolveAllowlistPolicy({})).toEqual({ mode: 'open' });
   });
 
-  it('uses the production array on Railway production', () => {
+  it('reads grants from the database on Railway production and dev', () => {
     expect(
-      resolveProfessionalAllowlist({ RAILWAY_ENVIRONMENT_NAME: 'production' }),
-    ).toEqual([...PROFESSIONAL_EMAIL_ALLOWLIST.production]);
+      resolveAllowlistPolicy({ RAILWAY_ENVIRONMENT_NAME: 'production' }),
+    ).toEqual({ mode: 'database' });
+    expect(
+      resolveAllowlistPolicy({ RAILWAY_ENVIRONMENT_NAME: 'dev' }),
+    ).toEqual({ mode: 'database' });
   });
 
-  it('uses the development array on Railway dev', () => {
+  it('lets PROFESSIONAL_EMAIL_ALLOWLIST override the database', () => {
     expect(
-      resolveProfessionalAllowlist({ RAILWAY_ENVIRONMENT_NAME: 'dev' }),
-    ).toEqual([...PROFESSIONAL_EMAIL_ALLOWLIST.dev]);
-  });
-
-  it('lets PROFESSIONAL_EMAIL_ALLOWLIST override the arrays', () => {
-    expect(
-      resolveProfessionalAllowlist({
+      resolveAllowlistPolicy({
         RAILWAY_ENVIRONMENT_NAME: 'production',
         PROFESSIONAL_EMAIL_ALLOWLIST: 'other@agendya.co',
       }),
-    ).toEqual(['other@agendya.co']);
+    ).toEqual({ mode: 'env', emails: ['other@agendya.co'] });
   });
 
   it('treats an empty override as open signup', () => {
     expect(
-      resolveProfessionalAllowlist({
+      resolveAllowlistPolicy({
         RAILWAY_ENVIRONMENT_NAME: 'production',
         PROFESSIONAL_EMAIL_ALLOWLIST: '',
       }),
-    ).toBeNull();
+    ).toEqual({ mode: 'open' });
   });
 
-  it('allows listed emails and forbids others', () => {
+  it('allows listed emails and forbids others when the env override is set', async () => {
+    const env = { PROFESSIONAL_EMAIL_ALLOWLIST: 'beta@agendya.test' };
+    await expect(
+      assertProfessionalEmailAllowed('beta@agendya.test', noGrant, env),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertProfessionalEmailAllowed('BETA@agendya.test', noGrant, env),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertProfessionalEmailAllowed('intruso@gmail.com', noGrant, env),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('allows a database ALLOWLISTED grant on Railway', async () => {
     const env = { RAILWAY_ENVIRONMENT_NAME: 'production' };
-    expect(() => assertProfessionalEmailAllowed(beta, env)).not.toThrow();
-    expect(() =>
-      assertProfessionalEmailAllowed(beta.toUpperCase(), env),
-    ).not.toThrow();
-    expect(() =>
-      assertProfessionalEmailAllowed('intruso@gmail.com', env),
-    ).toThrow(ForbiddenException);
+    const lookup = async (email: string): Promise<PlatformAccessGrant | null> =>
+      email === 'beta@agendya.test' ? 'ALLOWLISTED' : null;
+
+    await expect(
+      assertProfessionalEmailAllowed('beta@agendya.test', lookup, env),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertProfessionalEmailAllowed('intruso@gmail.com', lookup, env),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('bypasses any allowlist for a SUPER_ADMIN grant', async () => {
+    const env = {
+      RAILWAY_ENVIRONMENT_NAME: 'production',
+      PROFESSIONAL_EMAIL_ALLOWLIST: 'only-one@allowed.com',
+    };
+    const lookup = async (email: string): Promise<PlatformAccessGrant | null> =>
+      email === 'admin@agendya.test' ? 'SUPER_ADMIN' : null;
+
+    await expect(
+      assertProfessionalEmailAllowed('admin@agendya.test', lookup, env),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertProfessionalEmailAllowed('ADMIN@agendya.test', lookup, env),
+    ).resolves.toBeUndefined();
+    await expect(
+      assertProfessionalEmailAllowed('other@agendya.co', lookup, env),
+    ).rejects.toThrow(ForbiddenException);
   });
 });

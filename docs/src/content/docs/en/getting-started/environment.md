@@ -32,7 +32,7 @@ boots.
 | `PORT` | `4000` | No (defaults `4000`) | API listen port |
 | `WEB_URL` | `http://localhost:5173` | No (defaults localhost) | Dashboard CORS origin, OAuth success redirect base |
 | `PUBLIC_WEB_URL` | *(empty)* | No | Public booking origin (`https://agendya.co`): extra CORS origin and cancel-link base. Falls back to `WEB_URL` |
-| `PROFESSIONAL_EMAIL_ALLOWLIST` | *(empty = open locally)* | No | Emails allowed to register/log in as a professional. Railway `production`/`dev` use built-in lists; this env overrides them. Empty = open |
+| `PROFESSIONAL_EMAIL_ALLOWLIST` | *(empty = open locally)* | No | Emails allowed to register/log in as a professional. Railway `production`/`dev` read `PlatformAccessEmail`; this env overrides that table. Empty = open |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (defaults `25000`) | Milliseconds between `event: ping` frames on the `GET /realtime/stream` SSE stream. Lower it if a reverse proxy drops idle connections sooner |
 | `VAPID_PUBLIC_KEY` | *(empty)* | No | With any of the three VAPID keys missing, Web Push is disabled: `GET /notifications/push/public-key` returns `null`, the dashboard hides the toggle, and the feed still delivers over SSE. Generate a pair with `npx web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | *(empty)* | No | Same as above |

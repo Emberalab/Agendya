@@ -11,6 +11,8 @@ import {
   isWaitlistRequiredError,
 } from '../../shared/api/getApiErrorMessage';
 import { AccessWaitlistForm } from './AccessWaitlistForm';
+import { FieldError } from './FieldError';
+import { postAuthPath } from './postAuthPath';
 import { useRegister } from './hooks/useRegister';
 
 const HERO_PHOTO =
@@ -21,23 +23,44 @@ export function RegisterPage() {
   const registerMutation = useRegister();
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
+  const [termsError, setTermsError] = useState<string | null>(null);
   const {
     control,
     handleSubmit,
     getValues,
-    formState: { errors },
-  } = useForm<RegisterInput>({ resolver: zodResolver(registerSchema) });
+    formState: { errors, isSubmitted },
+  } = useForm<RegisterInput>({
+    resolver: zodResolver(registerSchema),
+    defaultValues: { businessName: '', email: '', password: '' },
+  });
   const [searchParams] = useSearchParams();
   const waitlistEmail = searchParams.get('email') ?? '';
   const showWaitlist =
     searchParams.get('waitlist') === '1' ||
     isWaitlistRequiredError(registerMutation.error);
 
-  const onSubmit = handleSubmit((data) => {
-    registerMutation.mutate(data, {
-      onSuccess: () => navigate('/dashboard/profile', { replace: true }),
-    });
-  });
+  const onSubmit = handleSubmit(
+    (data) => {
+      if (!acceptTerms) {
+        setTermsError(
+          'Marca la casilla para aceptar los términos y poder crear la cuenta.',
+        );
+        return;
+      }
+      setTermsError(null);
+      registerMutation.mutate(data, {
+        onSuccess: (session) =>
+          navigate(postAuthPath(session.user), { replace: true }),
+      });
+    },
+    () => {
+      if (!acceptTerms) {
+        setTermsError(
+          'Marca la casilla para aceptar los términos y poder crear la cuenta.',
+        );
+      }
+    },
+  );
 
   const handleGoogleRegister = () => {
     window.location.href = `${apiBaseUrl}/auth/google`;
@@ -119,9 +142,9 @@ export function RegisterPage() {
                     style={{ paddingLeft: '12px', paddingRight: '12px' }}
                   />
                   {errors.businessName && (
-                    <FormGroup.Hint id="businessName-error" role="alert">
+                    <FieldError id="businessName-error">
                       {errors.businessName.message}
-                    </FormGroup.Hint>
+                    </FieldError>
                   )}
                 </FormGroup>
               )}
@@ -149,9 +172,9 @@ export function RegisterPage() {
                     style={{ paddingLeft: '12px', paddingRight: '12px' }}
                   />
                   {errors.email && (
-                    <FormGroup.Hint id="reg-email-error" role="alert">
+                    <FieldError id="reg-email-error">
                       {errors.email.message}
-                    </FormGroup.Hint>
+                    </FieldError>
                   )}
                 </FormGroup>
               )}
@@ -201,37 +224,59 @@ export function RegisterPage() {
                       )}
                     </button>
                   </div>
-                  <FormGroup.Hint
-                    id="reg-password-hint"
-                    role={errors.password ? 'alert' : undefined}
-                    style={{
-                      fontFamily: 'var(--font-mono)',
-                      fontSize: '12px',
-                      color: errors.password ? undefined : 'var(--color-text-muted)',
-                    }}
-                  >
-                    {errors.password ? errors.password.message : 'Debe contener 1 mayúscula, 1 número, mínimo 8 caracteres'}
-                  </FormGroup.Hint>
+                  {errors.password ? (
+                    <FieldError id="reg-password-hint">
+                      {errors.password.message}
+                    </FieldError>
+                  ) : (
+                    <p
+                      id="reg-password-hint"
+                      className="mt-1.5 text-xs"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        color: 'var(--color-text-muted)',
+                      }}
+                    >
+                      Debe tener al menos 8 caracteres.
+                    </p>
+                  )}
                 </FormGroup>
               )}
             />
 
-            <div className="flex items-start gap-2" style={{ margin: '20px 0' }}>
-              <Checkbox
-                checked={acceptTerms}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setAcceptTerms(e.target.checked)}
-                aria-label="Acepto los Términos de uso y la Política de privacidad"
-                required
-              />
-              <span
-                className="text-sm leading-snug"
-                style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
-              >
-                Acepto los{' '}
-                <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Términos de uso</span> y la{' '}
-                <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Política de privacidad</span>
-              </span>
+            <div className="flex flex-col gap-1" style={{ margin: '20px 0' }}>
+              <div className="flex items-start gap-2">
+                <Checkbox
+                  checked={acceptTerms}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setAcceptTerms(e.target.checked);
+                    if (e.target.checked) {
+                      setTermsError(null);
+                    }
+                  }}
+                  aria-label="Acepto los Términos de uso y la Política de privacidad"
+                  aria-invalid={!!termsError}
+                  aria-describedby={termsError ? 'reg-terms-error' : undefined}
+                />
+                <span
+                  className="text-sm leading-snug"
+                  style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
+                >
+                  Acepto los{' '}
+                  <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Términos de uso</span> y la{' '}
+                  <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Política de privacidad</span>
+                </span>
+              </div>
+              {termsError && <FieldError id="reg-terms-error">{termsError}</FieldError>}
             </div>
+
+            {(isSubmitted && Object.keys(errors).length > 0) || termsError ? (
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+                <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
+                  Revisa los campos marcados para poder continuar.
+                </p>
+              </div>
+            ) : null}
 
             {registerMutation.isError && (
               <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
@@ -247,7 +292,7 @@ export function RegisterPage() {
               context="brand"
               size="md"
               isFullWidth
-              disabled={registerMutation.isPending || !acceptTerms}
+              disabled={registerMutation.isPending}
             >
               {registerMutation.isPending ? 'Creando cuenta...' : 'Crear cuenta gratis'}
             </Button>

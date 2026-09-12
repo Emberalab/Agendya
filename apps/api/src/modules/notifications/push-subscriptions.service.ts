@@ -32,14 +32,10 @@ export class PushSubscriptionsService {
     const subject = config.get<string>('webPush.subject');
 
     this.enabled = Boolean(publicKey && privateKey && subject);
-    this.vapidPublicKey = this.enabled ? (publicKey as string) : null;
+    this.vapidPublicKey = this.enabled && publicKey ? publicKey : null;
 
-    if (this.enabled) {
-      webpush.setVapidDetails(
-        subject as string,
-        publicKey as string,
-        privateKey as string,
-      );
+    if (this.enabled && publicKey && privateKey && subject) {
+      webpush.setVapidDetails(subject, publicKey, privateKey);
     } else {
       this.logger.warn(
         'VAPID keys not configured — Web Push delivery is disabled. Set VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY / VAPID_SUBJECT to enable it.',

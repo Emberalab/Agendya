@@ -1,5 +1,6 @@
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../auth/authStore';
+import { isSuperAdmin } from '../auth/postAuthPath';
 import Group from '../../imports/LogoGroup';
 import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '../../shared/theme/ThemeToggle';
@@ -9,8 +10,89 @@ import { ToastHost } from '../../shared/notifications/ToastHost';
 import { Announcer } from '../../shared/a11y/announcer';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { useNotificationsRealtime } from '../notifications/hooks/useNotificationsRealtime';
+import { disablePush } from '../../shared/push/pushManager';
 
 export function DashboardLayout() {
+  const user = useAuthStore((state) => state.user);
+  const location = useLocation();
+
+  if (isSuperAdmin(user)) {
+    if (location.pathname !== '/dashboard') {
+      return <Navigate to="/dashboard" replace />;
+    }
+    return <SuperAdminShell />;
+  }
+
+  if (location.pathname === '/dashboard') {
+    return <Navigate to="/dashboard/profile" replace />;
+  }
+
+  return <ProfessionalDashboardShell />;
+}
+
+function SuperAdminShell() {
+  const clearSession = useAuthStore((state) => state.logout);
+
+  const logout = () => {
+    void disablePush().finally(() => clearSession());
+  };
+
+  return (
+    <div
+      className="flex min-h-screen flex-col"
+      style={{
+        fontFamily: 'var(--font-body)',
+        backgroundColor: 'var(--color-surface-soft)',
+      }}
+    >
+      <header
+        className="flex items-center justify-between px-4 py-4 lg:px-8"
+        style={{
+          backgroundColor: 'var(--color-surface)',
+          borderBottom: '1px solid var(--color-border)',
+        }}
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 relative">
+            <Group />
+          </div>
+          <span
+            style={{
+              fontFamily: 'var(--font-display)',
+              fontWeight: 700,
+              fontSize: '18px',
+              color: 'var(--color-text-brand)',
+            }}
+          >
+            agendya
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <ThemeToggle />
+          <button
+            type="button"
+            onClick={logout}
+            className="text-sm font-medium"
+            style={{
+              color: 'var(--color-text-muted)',
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontFamily: 'var(--font-body)',
+            }}
+          >
+            Cerrar sesión
+          </button>
+        </div>
+      </header>
+      <main id="main-content" tabIndex={-1} className="flex-1 w-full">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function ProfessionalDashboardShell() {
   const user = useAuthStore((state) => state.user);
   const initial = user?.businessName?.charAt(0).toUpperCase() ?? '?';
 

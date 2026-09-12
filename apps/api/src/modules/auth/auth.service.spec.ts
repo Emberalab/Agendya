@@ -16,6 +16,7 @@ type CreateCall = [
       passwordHash: string;
       businessName: string;
       slug: string;
+      role: string;
     };
   },
 ];
@@ -28,6 +29,9 @@ describe('AuthService', () => {
       findFirst: jest.Mock;
       create: jest.Mock;
     };
+    platformAccessEmail: {
+      findUnique: jest.Mock;
+    };
   };
   let jwtService: { sign: jest.Mock };
 
@@ -37,6 +41,9 @@ describe('AuthService', () => {
         findUnique: jest.fn(),
         findFirst: jest.fn(),
         create: jest.fn(),
+      },
+      platformAccessEmail: {
+        findUnique: jest.fn().mockResolvedValue(null),
       },
     };
     jwtService = { sign: jest.fn().mockReturnValue('signed-jwt') };
@@ -84,6 +91,7 @@ describe('AuthService', () => {
           email: 'maria@example.com',
           businessName: 'María Belleza',
           slug: 'maria-belleza',
+          role: 'INDEPENDENT',
         },
       });
     });
@@ -138,6 +146,73 @@ describe('AuthService', () => {
         .calls as CreateCall[];
       expect(createArgs.data.slug).toBe('maria-belleza-2');
     });
+
+    it('assigns INDEPENDENT role when there is no SUPER_ADMIN grant', async () => {
+      prisma.professional.findUnique.mockResolvedValue(null);
+      prisma.professional.findFirst.mockResolvedValue(null);
+      prisma.professional.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'prof-1', ...data }),
+      );
+
+      await authService.register({
+        email: 'regular@example.com',
+        password: 'supersecret',
+        businessName: 'Regular User',
+      });
+
+      const [[createArgs]] = prisma.professional.create.mock
+        .calls as CreateCall[];
+      expect(createArgs.data.role).toBe('INDEPENDENT');
+    });
+
+    it('assigns SUPER_ADMIN role from a PlatformAccessEmail grant', async () => {
+      prisma.platformAccessEmail.findUnique.mockResolvedValue({
+        access: 'SUPER_ADMIN',
+      });
+      prisma.professional.findUnique.mockResolvedValue(null);
+      prisma.professional.findFirst.mockResolvedValue(null);
+      prisma.professional.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'admin-1', ...data }),
+      );
+
+      await authService.register({
+        email: 'admin@agendya.test',
+        password: 'supersecret',
+        businessName: 'Agendya Admin',
+      });
+
+      const [[createArgs]] = prisma.professional.create.mock
+        .calls as CreateCall[];
+      expect(createArgs.data.role).toBe('SUPER_ADMIN');
+    });
+
+    it('bypasses the env allowlist for a SUPER_ADMIN grant', async () => {
+      const previous = process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+      process.env.PROFESSIONAL_EMAIL_ALLOWLIST = 'hjose0650@gmail.com';
+      prisma.platformAccessEmail.findUnique.mockResolvedValue({
+        access: 'SUPER_ADMIN',
+      });
+
+      prisma.professional.findUnique.mockResolvedValue(null);
+      prisma.professional.findFirst.mockResolvedValue(null);
+      prisma.professional.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'admin-1', ...data }),
+      );
+
+      await expect(
+        authService.register({
+          email: 'admin@agendya.test',
+          password: 'supersecret',
+          businessName: 'Agendya Admin',
+        }),
+      ).resolves.toBeDefined();
+
+      if (previous === undefined) {
+        delete process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+      } else {
+        process.env.PROFESSIONAL_EMAIL_ALLOWLIST = previous;
+      }
+    });
   });
 
   describe('login', () => {
@@ -148,6 +223,7 @@ describe('AuthService', () => {
         email: 'maria@example.com',
         businessName: 'María Belleza',
         slug: 'maria-belleza',
+        role: 'INDEPENDENT',
         passwordHash,
       });
 
@@ -158,6 +234,7 @@ describe('AuthService', () => {
 
       expect(result.accessToken).toBe('signed-jwt');
       expect(result.user.email).toBe('maria@example.com');
+      expect(result.user.role).toBe('INDEPENDENT');
     });
 
     it('throws unauthorized when the professional does not exist', async () => {
@@ -175,6 +252,7 @@ describe('AuthService', () => {
         email: 'maria@example.com',
         businessName: 'María Belleza',
         slug: 'maria-belleza',
+        role: 'INDEPENDENT',
         passwordHash,
       });
 

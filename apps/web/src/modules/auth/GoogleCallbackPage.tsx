@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from './authStore';
+import { postAuthPath } from './postAuthPath';
 import { apiBaseUrl } from '../../shared/api/apiClient';
 
 export function GoogleCallbackPage() {
@@ -33,6 +34,7 @@ export function GoogleCallbackPage() {
         email: payload.email,
         businessName: '', // We'll fetch this from /auth/me
         slug: '',
+        role: 'INDEPENDENT' as const,
       };
 
       setSession({ accessToken: token, user });
@@ -44,10 +46,10 @@ export function GoogleCallbackPage() {
         .then((res) => res.json())
         .then((fullUser) => {
           setSession({ accessToken: token, user: fullUser });
-          navigate('/dashboard/profile', { replace: true });
+          navigate(postAuthPath(fullUser), { replace: true });
         })
         .catch(() => {
-          navigate('/dashboard/profile', { replace: true });
+          navigate(postAuthPath(user), { replace: true });
         });
     } catch (error) {
       console.error('Failed to process token:', error);
