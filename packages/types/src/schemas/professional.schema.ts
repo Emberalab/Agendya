@@ -1,25 +1,5 @@
 import { z } from 'zod';
-
-export const PLANS = ['BASIC', 'PRO'] as const;
-export const planSchema = z.enum(PLANS);
-export type Plan = z.infer<typeof planSchema>;
-
-/** Max number of (non-deleted) services allowed per plan. `null` means unlimited. */
-export const PLAN_SERVICE_LIMITS: Record<Plan, number | null> = {
-  BASIC: 3,
-  PRO: null,
-};
-
-export const PLAN_LABELS: Record<Plan, string> = {
-  BASIC: 'Plan Gratuito',
-  PRO: 'Plan Pro',
-};
-
-/** Bookings allowed per calendar month. `null` means unlimited. */
-export const PLAN_MONTHLY_BOOKING_LIMITS: Record<Plan, number | null> = {
-  BASIC: 100,
-  PRO: null,
-};
+import { planSchema } from '../plans/catalog';
 
 export const CANCELLATION_POLICY_HOURS_OPTIONS = [1, 2, 3, 4, 6, 24] as const;
 
@@ -107,6 +87,8 @@ export const professionalProfileSchema = z.object({
   plan: planSchema,
   /** Non-cancelled bookings created in the current calendar month. */
   bookingsThisMonth: z.number(),
+  /** Non-deleted services — used for plan upsell, not a second list fetch. */
+  serviceCount: z.number(),
   /** Monthly booking allowance for the current plan; `null` means unlimited. */
   monthlyBookingLimit: z.number().nullable(),
   createdAt: z.string(),

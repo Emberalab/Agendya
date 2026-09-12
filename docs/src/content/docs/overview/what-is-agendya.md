@@ -75,8 +75,9 @@ flowchart LR
   reprogramación (al cliente y al profesional), cancelación. Se envía con
   Resend; se registra en consola cuando no está configurado.
   [Detalles](/features/notifications/)
-- **Planes** — `BASIC` (gratis): 3 servicios, 100 reservas/mes. `PRO`:
-  ilimitado. Se aplica en el servidor.
+- **Planes** — `FREE` / `BASIC` / `ADVANCED` / `BUSINESS`. Gratuito: 3
+  servicios, 100 reservas/mes. Básico: 10 servicios, reservas ilimitadas.
+  Flags en `FEATURE_CATALOG`. Se aplica en el servidor.
 
 ## Lo que *no* está en la Fase 1
 

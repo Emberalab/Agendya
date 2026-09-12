@@ -27,11 +27,22 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 
 `user` = `{ id, email, businessName, slug }`.
 
+## Admin — `modules/admin` (JWT + `SUPER_ADMIN`)
+
+| Método | Ruta | Cuerpo | Respuesta |
+| --- | --- | --- | --- |
+| `GET` | `/admin/allowlist` | — | `AllowlistEntry[]` |
+| `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` | `AllowlistEntry` · `409` si existe |
+| `PATCH` | `/admin/allowlist/:email` | `updateAllowlistEntrySchema` | `AllowlistEntry` · `403` si te bajas a ti mismo · `400` si queda 0 Super Admin |
+| `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · mismas reglas que el PATCH |
+| `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
+| `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | mismo objeto · `404` |
+
 ## Professionals — `modules/professionals`
 
 | Método | Ruta | Auth | Cuerpo / Query | Respuesta |
 | --- | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `monthlyBookingLimit`) |
+| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit`) |
 | `PATCH` | `/professionals/me` | JWT | parcial (`updateProfileSchema`) | `ProfessionalProfile` |
 | `GET` | `/professionals/check-slug` | JWT | `?slug` (`checkSlugQuerySchema`) | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | ninguna · 30/60s | — | `PublicProfessional` (perfil + servicios activos) |

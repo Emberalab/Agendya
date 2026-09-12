@@ -26,11 +26,22 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 
 `user` = `{ id, email, businessName, slug }`.
 
+## Admin — `modules/admin` (JWT + `SUPER_ADMIN`)
+
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| `GET` | `/admin/allowlist` | — | `AllowlistEntry[]` |
+| `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` | `AllowlistEntry` · `409` if it exists |
+| `PATCH` | `/admin/allowlist/:email` | `updateAllowlistEntrySchema` | `AllowlistEntry` · `403` if you downgrade yourself · `400` if zero Super Admins remain |
+| `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · same rules as PATCH |
+| `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
+| `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | same object · `404` |
+
 ## Professionals — `modules/professionals`
 
 | Method | Path | Auth | Body / Query | Response |
 | --- | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `monthlyBookingLimit`) |
+| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit`) |
 | `PATCH` | `/professionals/me` | JWT | partial (`updateProfileSchema`) | `ProfessionalProfile` |
 | `GET` | `/professionals/check-slug` | JWT | `?slug` (`checkSlugQuerySchema`) | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | none · 30/60s | — | `PublicProfessional` (profile + active services) |

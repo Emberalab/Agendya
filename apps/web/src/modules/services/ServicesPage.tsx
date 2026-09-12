@@ -275,7 +275,7 @@ export function ServicesPage() {
   const [limitOpen, setLimitOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
 
-  const plan = profile?.plan ?? 'BASIC';
+  const plan = profile?.plan ?? 'FREE';
   const limit = PLAN_SERVICE_LIMITS[plan];
   const used = services?.length ?? 0;
   const atLimit = limit != null && used >= limit;

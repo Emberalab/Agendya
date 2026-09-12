@@ -66,8 +66,9 @@ flash. The Zustand store then keeps things in sync.
 - Booking/availability queries are backed by composite indexes tuned in
   migration `20260907120000_optimize_booking_indexes` (see
   [Indexes](/en/database/indexes/)) so hot paths don't scan historical rows.
-- `getProfile` runs the profile fetch and the monthly-booking count with
-  `Promise.all`.
+- `getProfile` fetches the profile, this month's booking count, and
+  `serviceCount` in one `Promise.all` (the profile UI does not refetch
+  `/services`).
 - Prisma uses the `@prisma/adapter-pg` driver adapter over a `pg` pool.
 
 ## Build output

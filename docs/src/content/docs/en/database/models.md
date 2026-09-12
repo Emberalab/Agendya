@@ -24,7 +24,7 @@ The barber/stylist account.
 | `description` | `String?` | Free text, ≤ 500 chars (schema-enforced in Zod) |
 | `timezone` | `String @default("America/Bogota")` | IANA zone |
 | `cancellationPolicyHours` | `Int @default(24)` | Minimum notice for customer changes; UI restricts to `1,2,3,4,6,24` |
-| `plan` | `Plan @default(BASIC)` | `BASIC` \| `PRO` |
+| `plan` | `Plan @default(FREE)` | `FREE` \| `BASIC` \| `ADVANCED` \| `BUSINESS` |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rejects tokens for inactive accounts |
 
 Relations: `services`, `workingHours`, `scheduleExceptions`, `bookings`

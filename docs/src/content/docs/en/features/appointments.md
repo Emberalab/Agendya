@@ -46,7 +46,7 @@ sequenceDiagram
   Svc->>Svc: resolveServiceSelection — load services, sum duration,<br/>at-home requires address + homeServiceEnabled
   Svc->>Svc: reject startAt in the past (400)
   Svc->>DB: assertSlotWithinSchedule — fits a WorkingHour block? no ScheduleException? (409)
-  Svc->>DB: SERIALIZABLE tx — overlap findFirst → create; retry x3 on 40001/P2034
+  Svc->>DB: SERIALIZABLE tx — overlap + monthly plan cap → create;<br/>retry x3 on 40001/P2034
   DB-->>Svc: Booking (CONFIRMED, cancellationToken)
   Svc->>Svc: MailService.sendBookingConfirmation
   Svc-->>Ctl: PublicBooking DTO

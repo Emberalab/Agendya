@@ -16,14 +16,18 @@ export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
   const location = useLocation();
 
+  const isAdminRoute =
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/dashboard/admin');
+
   if (isSuperAdmin(user)) {
-    if (location.pathname !== '/dashboard') {
-      return <Navigate to="/dashboard" replace />;
+    if (isAdminRoute) {
+      return <SuperAdminShell />;
     }
-    return <SuperAdminShell />;
+    return <Navigate to="/dashboard" replace />;
   }
 
-  if (location.pathname === '/dashboard') {
+  if (isAdminRoute) {
     return <Navigate to="/dashboard/profile" replace />;
   }
 
@@ -85,7 +89,11 @@ function SuperAdminShell() {
           </button>
         </div>
       </header>
-      <main id="main-content" tabIndex={-1} className="flex-1 w-full">
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="flex-1 w-full px-4 py-6 lg:px-8 lg:py-8"
+      >
         <Outlet />
       </main>
     </div>

@@ -17,6 +17,7 @@ const PROFESSIONAL = {
   businessName: 'María Belleza',
   timezone: 'America/Bogota',
   cancellationPolicyHours: 24,
+  plan: 'FREE',
 };
 
 const SERVICE = {
@@ -36,6 +37,7 @@ const CREATE_INPUT = {
   customerName: 'Ana',
   customerEmail: 'ana@example.com',
   customerPhone: '+57 300 1234567',
+  atHome: false,
 };
 
 describe('BookingsService', () => {
@@ -50,6 +52,7 @@ describe('BookingsService', () => {
       findFirst: jest.Mock;
       findMany: jest.Mock;
       update: jest.Mock;
+      count: jest.Mock;
     };
     $transaction: jest.Mock;
   };
@@ -64,6 +67,7 @@ describe('BookingsService', () => {
     findFirst: jest.Mock;
     create: jest.Mock;
     update: jest.Mock;
+    count: jest.Mock;
   };
   let notificationsService: { notifyAppointmentCreated: jest.Mock };
 
@@ -72,6 +76,7 @@ describe('BookingsService', () => {
       findFirst: jest.fn().mockResolvedValue(null),
       create: jest.fn(),
       update: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
     };
     prisma = {
       professional: {
@@ -90,6 +95,7 @@ describe('BookingsService', () => {
         findFirst: jest.fn(),
         findMany: jest.fn().mockResolvedValue([]),
         update: jest.fn(),
+        count: jest.fn().mockResolvedValue(0),
       },
       $transaction: jest
         .fn()
@@ -180,6 +186,46 @@ describe('BookingsService', () => {
         service.createPublicBooking('maria-belleza', CREATE_INPUT),
       ).rejects.toThrow(ConflictException);
       expect(txBooking.create).not.toHaveBeenCalled();
+    });
+
+    it('rejects when the free plan has already used its monthly bookings', async () => {
+      txBooking.count.mockResolvedValue(100);
+
+      await expect(
+        service.createPublicBooking('maria-belleza', CREATE_INPUT),
+      ).rejects.toThrow(ForbiddenException);
+      expect(txBooking.create).not.toHaveBeenCalled();
+    });
+
+    it('does not apply a monthly cap on paid plans', async () => {
+      prisma.professional.findFirst.mockResolvedValue({
+        ...PROFESSIONAL,
+        plan: 'BASIC',
+      });
+      txBooking.count.mockResolvedValue(100);
+      txBooking.create.mockResolvedValue({
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        serviceId: 'service-1',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        customerName: 'Ana',
+        customerEmail: 'ana@example.com',
+        customerPhone: '+57 300 1234567',
+        customerNote: null,
+        atHome: false,
+        customerAddress: null,
+        startAt: new Date('2026-08-03T14:00:00.000Z'),
+        endAt: new Date('2026-08-03T14:30:00.000Z'),
+        status: 'CONFIRMED',
+        cancellationToken: 'token-abc',
+      });
+
+      await expect(
+        service.createPublicBooking('maria-belleza', CREATE_INPUT),
+      ).resolves.toBeDefined();
+      expect(txBooking.count).not.toHaveBeenCalled();
+      expect(txBooking.create).toHaveBeenCalled();
     });
 
     it('creates the booking and sends a confirmation email', async () => {
@@ -430,6 +476,7 @@ describe('BookingsService', () => {
       customerName: 'Ana Actualizada',
       customerEmail: 'ana@example.com',
       customerPhone: '+57 300 1234567',
+      atHome: false,
     };
 
     const updatedRow = (overrides: Record<string, unknown> = {}) => ({

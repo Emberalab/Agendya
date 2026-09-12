@@ -146,7 +146,7 @@ describe('Services (e2e)', () => {
     expect(body.sortOrder).toBe(2);
   });
 
-  it('rejects creating a service past the BASIC plan limit', async () => {
+  it('rejects creating a service past the FREE plan limit', async () => {
     await request(app.getHttpServer())
       .post('/services')
       .set('Authorization', `Bearer ${accessToken}`)

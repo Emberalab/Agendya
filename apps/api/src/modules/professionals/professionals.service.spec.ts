@@ -17,7 +17,9 @@ const BASE_PROFESSIONAL = {
   description: null,
   timezone: 'America/Bogota',
   cancellationPolicyHours: 24,
-  plan: 'BASIC',
+  plan: 'FREE' as const,
+  googleId: null,
+  role: 'INDEPENDENT' as const,
   isActive: true,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -32,6 +34,7 @@ describe('ProfessionalsService', () => {
       update: jest.Mock;
     };
     booking: { count: jest.Mock };
+    service: { count: jest.Mock };
   };
 
   beforeEach(async () => {
@@ -42,6 +45,7 @@ describe('ProfessionalsService', () => {
         update: jest.fn(),
       },
       booking: { count: jest.fn().mockResolvedValue(0) },
+      service: { count: jest.fn().mockResolvedValue(0) },
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -71,8 +75,9 @@ describe('ProfessionalsService', () => {
         description: null,
         timezone: 'America/Bogota',
         cancellationPolicyHours: 24,
-        plan: 'BASIC',
+        plan: 'FREE',
         bookingsThisMonth: 12,
+        serviceCount: 0,
         monthlyBookingLimit: 100,
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-02T00:00:00.000Z',
@@ -80,9 +85,9 @@ describe('ProfessionalsService', () => {
       expect(profile).not.toHaveProperty('passwordHash');
     });
 
-    it('reports an unlimited monthly allowance for the PRO plan', () => {
+    it('reports an unlimited monthly allowance from Básico upward', () => {
       const profile = service.toProfile(
-        { ...BASE_PROFESSIONAL, plan: 'PRO' },
+        { ...BASE_PROFESSIONAL, plan: 'BASIC' },
         999,
       );
       expect(profile.monthlyBookingLimit).toBeNull();
@@ -92,6 +97,7 @@ describe('ProfessionalsService', () => {
   describe('getProfile', () => {
     it('loads the professional and this month’s booking count', async () => {
       prisma.booking.count.mockResolvedValue(7);
+      prisma.service.count.mockResolvedValue(3);
 
       const profile = await service.getProfile('prof-1');
 
@@ -107,7 +113,11 @@ describe('ProfessionalsService', () => {
         status: { not: 'CANCELLED' },
       });
       expect(countArgs.where.createdAt.gte).toBeInstanceOf(Date);
+      expect(prisma.service.count).toHaveBeenCalledWith({
+        where: { professionalId: 'prof-1', deletedAt: null },
+      });
       expect(profile.bookingsThisMonth).toBe(7);
+      expect(profile.serviceCount).toBe(3);
     });
   });
 

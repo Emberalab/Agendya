@@ -26,7 +26,7 @@ test('blocks creation with a plan-limit dialog once at the limit', async ({
   page,
   api,
 }) => {
-  // BASIC allows 3 services; seed exactly 3.
+  // FREE allows 3 services; seed exactly 3.
   const services = makeServices();
   api.setServices([
     ...services,

@@ -1,3 +1,5 @@
+export * from './plans/catalog';
+export * from './schemas/admin.schema';
 export * from './schemas/auth.schema';
 export * from './schemas/professional.schema';
 export * from './schemas/service.schema';

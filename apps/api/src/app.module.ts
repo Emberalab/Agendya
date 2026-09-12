@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
@@ -24,6 +25,7 @@ import configuration from './config/configuration';
     DatabaseModule,
     RealtimeModule,
     NotificationsModule,
+    AdminModule,
     AuthModule,
     ProfessionalsModule,
     ServicesModule,

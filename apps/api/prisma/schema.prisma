@@ -32,9 +32,12 @@ enum BookingStatus {
   EXPIRED
 }
 
+// Subscription tier (what the account pays for). Distinct from PlatformRole.
 enum Plan {
+  FREE
   BASIC
-  PRO
+  ADVANCED
+  BUSINESS
 }
 
 enum PlatformRole {
@@ -77,7 +80,7 @@ model Professional {
   description             String?
   timezone                String       @default("America/Bogota")
   cancellationPolicyHours Int          @default(24)
-  plan                    Plan         @default(BASIC)
+  plan                    Plan         @default(FREE)
   role                    PlatformRole @default(INDEPENDENT)
   isActive                Boolean      @default(true)
   createdAt               DateTime     @default(now())

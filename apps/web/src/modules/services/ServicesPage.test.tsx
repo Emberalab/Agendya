@@ -30,7 +30,7 @@ function makeService(overrides: Partial<Service>): Service {
   return { ...BASE_SERVICE, ...overrides };
 }
 
-function setProfilePlan(plan: 'BASIC' | 'PRO') {
+function setProfilePlan(plan: 'FREE' | 'BASIC' | 'ADVANCED' | 'BUSINESS') {
   vi.mocked(profileApi.getMyProfile).mockResolvedValue({
     id: 'prof-1',
     email: 'pro@example.com',
@@ -46,7 +46,8 @@ function setProfilePlan(plan: 'BASIC' | 'PRO') {
     cancellationPolicyHours: 24,
     plan,
     bookingsThisMonth: 0,
-    monthlyBookingLimit: plan === 'PRO' ? null : 100,
+    serviceCount: 0,
+    monthlyBookingLimit: plan === 'FREE' ? 100 : null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });
@@ -70,7 +71,7 @@ function renderPage() {
 
 describe('ServicesPage', () => {
   beforeEach(() => {
-    setProfilePlan('BASIC');
+    setProfilePlan('FREE');
     vi.mocked(api.listServices).mockResolvedValue([BASE_SERVICE]);
   });
 

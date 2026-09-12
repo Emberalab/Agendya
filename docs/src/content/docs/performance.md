@@ -70,8 +70,9 @@ sincronía.
   ajustados en la migración `20260907120000_optimize_booking_indexes` (ver
   [Índices](/database/indexes/)) para que los caminos calientes no escaneen
   filas históricas.
-- `getProfile` ejecuta la obtención del perfil y el conteo de reservas del mes
-  con `Promise.all`.
+- `getProfile` obtiene el perfil, el conteo de reservas del mes y
+  `serviceCount` en un solo `Promise.all` (la UI de perfil no vuelve a pedir
+  `/services`).
 - Prisma usa el driver adapter `@prisma/adapter-pg` sobre un pool de `pg`.
 
 ## Salida del build

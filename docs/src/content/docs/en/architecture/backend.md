@@ -56,10 +56,11 @@ what production runs.
 | Module | Controllers | Service highlights |
 | --- | --- | --- |
 | `auth` | `AuthController` (`/auth`) | `register` / `login` (bcrypt, `SALT_ROUNDS=10`), `googleLogin` (link-by-googleId → link-by-email → create), `buildAuthResponse` signs the JWT |
-| `professionals` | `ProfessionalsController` (`/professionals`, JWT), `ProfessionalsPublicController` (`/public/professionals/:slug`) | `getProfile` (+ `bookingsThisMonth` count), `updateProfile` (partial, slug-uniqueness), `isSlugAvailable`, `findPublicBySlug` (active services only) |
+| `admin` | `AdminController` (`/admin`, JWT + `SuperAdminGuard`) | `PlatformAccessEmail` CRUD; lookup/change `Professional.plan` by email; does not touch `role` |
+| `professionals` | `ProfessionalsController` (`/professionals`, JWT), `ProfessionalsPublicController` (`/public/professionals/:slug`) | `getProfile` (+ `bookingsThisMonth` / `serviceCount`), `updateProfile` (partial, slug-uniqueness), `isSlugAvailable`, `findPublicBySlug` (active services only) |
 | `services` | `ServicesController` (`/services`, JWT) | CRUD + `duplicate`; `assertWithinPlanLimit` (`PLAN_SERVICE_LIMITS`); `softDelete` sets `deletedAt` + `isActive=false`; every mutation re-checks `findOwnedOrThrow` |
 | `schedules` | `SchedulesController` (`/schedules`, JWT), `AvailabilityController` (`/public/professionals/:slug/availability`) | `setWorkingHours` = delete-all + `createMany` in one `$transaction`; `createException` maps Prisma `P2002` → `409`; `AvailabilityService.getAvailableSlots` is the grid algorithm |
-| `bookings` | `BookingsController` (`/bookings`, JWT), `BookingsCreateController` (`/public/professionals/:slug/bookings`), `BookingsTokenController` (`/public/bookings/:token`) | `createPublicBooking`, `updatePublicBooking`, `reschedule*`, `cancel*`, `listAgenda`, `completeByProfessional`; `assertModifiable` is the single mutation gate; `commitBookingSlot` / `commitReschedule` run `Serializable` + retry |
+| `bookings` | `BookingsController` (`/bookings`, JWT), `BookingsCreateController` (`/public/professionals/:slug/bookings`), `BookingsTokenController` (`/public/bookings/:token`) | `createPublicBooking` (`assertWithinMonthlyBookingLimit`), `updatePublicBooking`, `reschedule*`, `cancel*`, `listAgenda`, `completeByProfessional`; `assertModifiable` is the single mutation gate; `commitBookingSlot` / `commitReschedule` run `Serializable` + retry |
 | `upload` | `UploadController` (`/upload/image`, JWT) | MIME allow-list (no SVG), per-variant size caps, streams to Cloudinary (`agendya-logos` / `agendya-covers`) |
 
 ## Shared infrastructure

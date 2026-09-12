@@ -19,6 +19,7 @@ export class ProfessionalsService {
   toProfile(
     professional: Professional,
     bookingsThisMonth = 0,
+    serviceCount = 0,
   ): ProfessionalProfile {
     return {
       id: professional.id,
@@ -35,6 +36,7 @@ export class ProfessionalsService {
       cancellationPolicyHours: professional.cancellationPolicyHours,
       plan: professional.plan,
       bookingsThisMonth,
+      serviceCount,
       monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[professional.plan],
       createdAt: professional.createdAt.toISOString(),
       updatedAt: professional.updatedAt.toISOString(),
@@ -56,14 +58,21 @@ export class ProfessionalsService {
     });
   }
 
+  async countServices(professionalId: string): Promise<number> {
+    return this.prisma.service.count({
+      where: { professionalId, deletedAt: null },
+    });
+  }
+
   async getProfile(professionalId: string): Promise<ProfessionalProfile> {
-    const [professional, bookingsThisMonth] = await Promise.all([
+    const [professional, bookingsThisMonth, serviceCount] = await Promise.all([
       this.prisma.professional.findUniqueOrThrow({
         where: { id: professionalId },
       }),
       this.countBookingsThisMonth(professionalId),
+      this.countServices(professionalId),
     ]);
-    return this.toProfile(professional, bookingsThisMonth);
+    return this.toProfile(professional, bookingsThisMonth, serviceCount);
   }
 
   async updateProfile(
@@ -103,8 +112,11 @@ export class ProfessionalsService {
       },
     });
 
-    const bookingsThisMonth = await this.countBookingsThisMonth(professionalId);
-    return this.toProfile(professional, bookingsThisMonth);
+    const [bookingsThisMonth, serviceCount] = await Promise.all([
+      this.countBookingsThisMonth(professionalId),
+      this.countServices(professionalId),
+    ]);
+    return this.toProfile(professional, bookingsThisMonth, serviceCount);
   }
 
   async isSlugAvailable(

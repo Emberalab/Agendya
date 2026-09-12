@@ -33,7 +33,7 @@ erDiagram
     string description "nullable"
     string timezone "default America/Bogota"
     int cancellationPolicyHours "default 24"
-    enum plan "BASIC | PRO, default BASIC"
+    enum plan "FREE | BASIC | ADVANCED | BUSINESS, default FREE"
     boolean isActive "default true"
     datetime createdAt
     datetime updatedAt
@@ -139,7 +139,7 @@ erDiagram
 | --- | --- |
 | `Weekday` | `SUNDAY`, `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY` |
 | `BookingStatus` | `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, `EXPIRED` |
-| `Plan` | `BASIC`, `PRO` |
+| `Plan` | `FREE`, `BASIC`, `ADVANCED`, `BUSINESS` |
 | `NotificationType` | `APPOINTMENT_CREATED` (the only one emitted today; the enum will grow) |
 
 ## Design notes

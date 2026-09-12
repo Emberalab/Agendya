@@ -8,6 +8,7 @@ import {
   PLAN_LABELS,
   cancellationPolicyHoursSchema,
   hexColorSchema,
+  pickMissingFeatures,
   slugSchema,
   type ProfessionalProfile,
 } from '@agendya/types';
@@ -47,11 +48,6 @@ const COMPLETION_FIELDS: (keyof ProfileFormValues)[] = [
   'brandColor',
 ];
 
-const PLAN_PERKS = [
-  'Programación automática',
-  'Notificaciones por SMS',
-  'Informes y estadísticas',
-];
 
 function toFormValues(profile: ProfessionalProfile): ProfileFormValues {
   return {
@@ -130,6 +126,14 @@ export function ProfilePage() {
       { onSuccess: () => reset(data) },
     );
   });
+
+  const missingFeatures = profile
+    ? pickMissingFeatures(profile.plan, {
+        serviceCount: profile.serviceCount,
+        bookingsThisMonth: profile.bookingsThisMonth,
+        seed: profile.id,
+      })
+    : [];
 
   if (isLoading || !profile) {
     return (
@@ -515,7 +519,7 @@ export function ProfilePage() {
             </div>
           </div>
 
-          {profile.plan === 'BASIC' && (
+          {missingFeatures.length > 0 && (
             <>
               <p
                 className="mt-6 mb-3"
@@ -528,9 +532,9 @@ export function ProfilePage() {
                 Te falta:
               </p>
               <ul className="flex flex-col gap-3.5">
-                {PLAN_PERKS.map((perk) => (
+                {missingFeatures.map((perk) => (
                   <li
-                    key={perk}
+                    key={perk.id}
                     className="flex items-center gap-3"
                     style={{
                       fontSize: '15px',
@@ -560,7 +564,7 @@ export function ProfilePage() {
                         strokeLinecap="round"
                       />
                     </svg>
-                    {perk}
+                    {perk.label}
                   </li>
                 ))}
               </ul>

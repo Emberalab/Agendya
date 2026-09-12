@@ -49,7 +49,7 @@ slug reports available.
 
 | Method | Path | Auth | Purpose |
 | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | Full profile + `bookingsThisMonth` + `monthlyBookingLimit` |
+| `GET` | `/professionals/me` | JWT | Full profile + `bookingsThisMonth` + `serviceCount` + `monthlyBookingLimit` |
 | `PATCH` | `/professionals/me` | JWT | Partial update; slug uniqueness re-checked |
 | `GET` | `/professionals/check-slug?slug=` | JWT | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | none · `@Throttle 30/60s` | Public profile + active services |
@@ -70,9 +70,10 @@ slug reports available.
   "description": "…",
   "timezone": "America/Bogota",
   "cancellationPolicyHours": 24,
-  "plan": "BASIC",
+  "plan": "FREE",
   "bookingsThisMonth": 12,      // non-cancelled bookings created since the 1st (UTC)
-  "monthlyBookingLimit": 100,   // null on PRO
+  "serviceCount": 3,            // non-deleted services (upsell; no second list fetch)
+  "monthlyBookingLimit": 100,   // null from BASIC upward
   "createdAt": "…",
   "updatedAt": "…"
 }
@@ -87,11 +88,17 @@ what a customer should see: `businessName`, `slug`, `category`, images,
 
 ## Plans
 
-| | `BASIC` (`Plan Gratuito`) | `PRO` (`Plan Pro`) |
-| --- | --- | --- |
-| Services | 3 | unlimited |
-| Bookings / month | 100 | unlimited |
+`Professional.plan`: `FREE` (default) · `BASIC` · `ADVANCED` · `BUSINESS`.
+New signups (including the waitlist) land on **FREE**. There is no billing
+yet — a paid plan is assigned in the database.
 
-Constants live in `@agendya/types` (`PLAN_SERVICE_LIMITS`,
-`PLAN_MONTHLY_BOOKING_LIMITS`, `PLAN_LABELS`). There is **no billing/upgrade
-flow** — `plan` is only ever `BASIC` unless changed directly in the database.
+Feature flags live in `@agendya/types` (`FEATURE_CATALOG`). The API **enforces**
+service and monthly-booking limits today. Everything else is `enforced: false`
+(upsell copy + ready to gate later).
+
+| | Free | Basic | Advanced | Business |
+| --- | --- | --- | --- | --- |
+| Services | 3 | 10 | unlimited | unlimited |
+| Bookings / month | 100 | unlimited | unlimited | unlimited |
+
+Migration: former `BASIC` → `FREE`; former `PRO` → `ADVANCED`.

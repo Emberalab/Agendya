@@ -23,7 +23,7 @@ La cuenta del barbero/peluquero.
 | `description` | `String?` | Texto libre, ≤ 500 caracteres (impuesto en Zod) |
 | `timezone` | `String @default("America/Bogota")` | Zona IANA |
 | `cancellationPolicyHours` | `Int @default(24)` | Antelación mínima para cambios del cliente; la UI restringe a `1,2,3,4,6,24` |
-| `plan` | `Plan @default(BASIC)` | `BASIC` \| `PRO` |
+| `plan` | `Plan @default(FREE)` | `FREE` \| `BASIC` \| `ADVANCED` \| `BUSINESS` |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rechaza tokens de cuentas inactivas |
 
 Relaciones: `services`, `workingHours`, `scheduleExceptions`, `bookings`
