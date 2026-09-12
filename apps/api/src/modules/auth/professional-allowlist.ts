@@ -5,9 +5,7 @@ export const WAITLIST_REQUIRED_CODE = 'WAITLIST_REQUIRED';
 export type PlatformAccessGrant = 'SUPER_ADMIN' | 'ALLOWLISTED';
 
 export type AllowlistPolicy =
-  | { mode: 'open' }
-  | { mode: 'env'; emails: string[] }
-  | { mode: 'database' };
+  { mode: 'open' } | { mode: 'env'; emails: string[] } | { mode: 'database' };
 
 /**
  * Closed beta: Railway `start:prod` runs in both environments, so we key off
@@ -36,7 +34,9 @@ export function resolveAllowlistPolicy(
 ): AllowlistPolicy {
   if (env.PROFESSIONAL_EMAIL_ALLOWLIST !== undefined) {
     const parsed = parseEmailAllowlist(env.PROFESSIONAL_EMAIL_ALLOWLIST);
-    return parsed.length > 0 ? { mode: 'env', emails: parsed } : { mode: 'open' };
+    return parsed.length > 0
+      ? { mode: 'env', emails: parsed }
+      : { mode: 'open' };
   }
 
   const railwayEnv = env.RAILWAY_ENVIRONMENT_NAME ?? '';
@@ -47,9 +47,13 @@ export function resolveAllowlistPolicy(
   return { mode: 'open' };
 }
 
+export type GrantLookup = (
+  normalizedEmail: string,
+) => PlatformAccessGrant | null | Promise<PlatformAccessGrant | null>;
+
 export async function assertProfessionalEmailAllowed(
   email: string,
-  lookupGrant: (normalizedEmail: string) => Promise<PlatformAccessGrant | null>,
+  lookupGrant: GrantLookup,
   env: NodeJS.ProcessEnv = process.env,
 ): Promise<void> {
   const normalizedEmail = email.trim().toLowerCase();
@@ -79,7 +83,6 @@ export async function assertProfessionalEmailAllowed(
 function throwWaitlistRequired(): never {
   throw new ForbiddenException({
     code: WAITLIST_REQUIRED_CODE,
-    message:
-      'El acceso está en periodo de prueba. Únete a la lista de espera.',
+    message: 'El acceso está en periodo de prueba. Únete a la lista de espera.',
   });
 }

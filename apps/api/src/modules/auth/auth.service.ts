@@ -45,7 +45,7 @@ export class AuthService {
 
   async register(input: RegisterInput): Promise<AuthResponse> {
     const grant = await this.lookupAccessGrant(input.email);
-    await assertProfessionalEmailAllowed(input.email, async () => grant);
+    await assertProfessionalEmailAllowed(input.email, () => grant);
 
     const existing = await this.prisma.professional.findUnique({
       where: { email: input.email },
@@ -75,7 +75,7 @@ export class AuthService {
 
   async login(input: LoginInput): Promise<AuthResponse> {
     const grant = await this.lookupAccessGrant(input.email);
-    await assertProfessionalEmailAllowed(input.email, async () => grant);
+    await assertProfessionalEmailAllowed(input.email, () => grant);
 
     const professional = await this.prisma.professional.findUnique({
       where: { email: input.email },
@@ -103,7 +103,7 @@ export class AuthService {
 
   async googleLogin(googleUser: GoogleUser): Promise<AuthResponse> {
     const grant = await this.lookupAccessGrant(googleUser.email);
-    await assertProfessionalEmailAllowed(googleUser.email, async () => grant);
+    await assertProfessionalEmailAllowed(googleUser.email, () => grant);
 
     let professional = await this.prisma.professional.findUnique({
       where: { googleId: googleUser.googleId },

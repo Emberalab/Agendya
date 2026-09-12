@@ -7,7 +7,7 @@ import {
 } from './professional-allowlist';
 
 describe('professional-allowlist', () => {
-  const noGrant = async () => null;
+  const noGrant = () => null;
 
   it('parses a comma-separated list case-insensitively', () => {
     expect(parseEmailAllowlist('  A@X.com, b@y.com ')).toEqual([
@@ -24,9 +24,9 @@ describe('professional-allowlist', () => {
     expect(
       resolveAllowlistPolicy({ RAILWAY_ENVIRONMENT_NAME: 'production' }),
     ).toEqual({ mode: 'database' });
-    expect(
-      resolveAllowlistPolicy({ RAILWAY_ENVIRONMENT_NAME: 'dev' }),
-    ).toEqual({ mode: 'database' });
+    expect(resolveAllowlistPolicy({ RAILWAY_ENVIRONMENT_NAME: 'dev' })).toEqual(
+      { mode: 'database' },
+    );
   });
 
   it('lets PROFESSIONAL_EMAIL_ALLOWLIST override the database', () => {
@@ -62,7 +62,7 @@ describe('professional-allowlist', () => {
 
   it('allows a database ALLOWLISTED grant on Railway', async () => {
     const env = { RAILWAY_ENVIRONMENT_NAME: 'production' };
-    const lookup = async (email: string): Promise<PlatformAccessGrant | null> =>
+    const lookup = (email: string): PlatformAccessGrant | null =>
       email === 'beta@agendya.test' ? 'ALLOWLISTED' : null;
 
     await expect(
@@ -78,7 +78,7 @@ describe('professional-allowlist', () => {
       RAILWAY_ENVIRONMENT_NAME: 'production',
       PROFESSIONAL_EMAIL_ALLOWLIST: 'only-one@allowed.com',
     };
-    const lookup = async (email: string): Promise<PlatformAccessGrant | null> =>
+    const lookup = (email: string): PlatformAccessGrant | null =>
       email === 'admin@agendya.test' ? 'SUPER_ADMIN' : null;
 
     await expect(

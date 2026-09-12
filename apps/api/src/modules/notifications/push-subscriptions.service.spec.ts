@@ -13,7 +13,7 @@ jest.mock('web-push', () => ({
   },
 }));
 
-const mockedWebpush = webpush;
+const mockedWebpush = jest.mocked(webpush);
 
 const VAPID = {
   'webPush.publicKey': 'pub-key',
