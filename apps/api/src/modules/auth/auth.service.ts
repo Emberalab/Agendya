@@ -5,10 +5,18 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import type { AuthResponse, LoginInput, RegisterInput } from '@agendya/types';
+import type {
+  AuthResponse,
+  LoginInput,
+  PlatformRole,
+  RegisterInput,
+} from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { ensureUniqueSlug, slugify } from '../../common/utils/slug.util';
-import { assertProfessionalEmailAllowed } from './professional-allowlist';
+import {
+  assertProfessionalEmailAllowed,
+  type PlatformAccessGrant,
+} from './professional-allowlist';
 
 const SALT_ROUNDS = 10;
 
@@ -17,6 +25,7 @@ interface ProfessionalIdentity {
   email: string;
   businessName: string;
   slug: string;
+  role: PlatformRole;
 }
 
 export interface GoogleUser {
@@ -35,7 +44,8 @@ export class AuthService {
   ) {}
 
   async register(input: RegisterInput): Promise<AuthResponse> {
-    assertProfessionalEmailAllowed(input.email);
+    const grant = await this.lookupAccessGrant(input.email);
+    await assertProfessionalEmailAllowed(input.email, () => grant);
 
     const existing = await this.prisma.professional.findUnique({
       where: { email: input.email },
@@ -56,6 +66,7 @@ export class AuthService {
         passwordHash,
         businessName: input.businessName,
         slug,
+        role: roleFromGrant(grant),
       },
     });
 
@@ -63,7 +74,8 @@ export class AuthService {
   }
 
   async login(input: LoginInput): Promise<AuthResponse> {
-    assertProfessionalEmailAllowed(input.email);
+    const grant = await this.lookupAccessGrant(input.email);
+    await assertProfessionalEmailAllowed(input.email, () => grant);
 
     const professional = await this.prisma.professional.findUnique({
       where: { email: input.email },
@@ -90,7 +102,8 @@ export class AuthService {
   }
 
   async googleLogin(googleUser: GoogleUser): Promise<AuthResponse> {
-    assertProfessionalEmailAllowed(googleUser.email);
+    const grant = await this.lookupAccessGrant(googleUser.email);
+    await assertProfessionalEmailAllowed(googleUser.email, () => grant);
 
     let professional = await this.prisma.professional.findUnique({
       where: { googleId: googleUser.googleId },
@@ -117,12 +130,23 @@ export class AuthService {
             businessName,
             slug,
             photoUrl: googleUser.photoUrl,
+            role: roleFromGrant(grant),
           },
         });
       }
     }
 
     return this.buildAuthResponse(professional);
+  }
+
+  private async lookupAccessGrant(
+    email: string,
+  ): Promise<PlatformAccessGrant | null> {
+    const row = await this.prisma.platformAccessEmail.findUnique({
+      where: { email: email.trim().toLowerCase() },
+      select: { access: true },
+    });
+    return row?.access ?? null;
   }
 
   private buildAuthResponse(professional: ProfessionalIdentity): AuthResponse {
@@ -138,7 +162,12 @@ export class AuthService {
         email: professional.email,
         businessName: professional.businessName,
         slug: professional.slug,
+        role: professional.role,
       },
     };
   }
+}
+
+function roleFromGrant(grant: PlatformAccessGrant | null): PlatformRole {
+  return grant === 'SUPER_ADMIN' ? 'SUPER_ADMIN' : 'INDEPENDENT';
 }

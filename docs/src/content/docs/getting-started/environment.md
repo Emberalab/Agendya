@@ -32,7 +32,7 @@ arranque.
 | `PORT` | `4000` | No (por defecto `4000`) | Puerto de escucha de la API |
 | `WEB_URL` | `http://localhost:5173` | No (por defecto localhost) | Origen de CORS del dashboard, redirección de OAuth |
 | `PUBLIC_WEB_URL` | *(vacío)* | No | Origen público (`https://agendya.co`): CORS extra y base de los enlaces de cancelación. Si falta, se usa `WEB_URL` |
-| `PROFESSIONAL_EMAIL_ALLOWLIST` | *(vacío = abierto en local)* | No | Correos que pueden registrar/entrar como profesional. En Railway `production`/`dev` hay listas por defecto; esta variable las pisa. Vacía = abierto |
+| `PROFESSIONAL_EMAIL_ALLOWLIST` | *(vacío = abierto en local)* | No | Correos que pueden registrar/entrar como profesional. En Railway `production`/`dev` la fuente es la tabla `PlatformAccessEmail`; esta variable la pisa. Vacía = abierto |
 | `REALTIME_HEARTBEAT_MS` | `25000` | No (por defecto `25000`) | Milisegundos entre frames `event: ping` en el stream SSE `GET /realtime/stream`. Bájalo si un proxy inverso corta antes las conexiones inactivas |
 | `VAPID_PUBLIC_KEY` | *(vacío)* | No | Sin las tres claves VAPID, Web Push se desactiva: `GET /notifications/push/public-key` devuelve `null`, el dashboard oculta el interruptor y el feed sigue por SSE. Genera un par con `npx web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | *(vacío)* | No | Igual que arriba |

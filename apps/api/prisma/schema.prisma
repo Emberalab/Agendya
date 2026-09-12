@@ -37,6 +37,20 @@ enum Plan {
   PRO
 }
 
+enum PlatformRole {
+  SUPER_ADMIN
+  // Reserved: multi-location / business-owner accounts. Unused in Phase 1.
+  BUSINESS_ADMIN
+  INDEPENDENT
+}
+
+// Who may register/log in during closed beta, and who is SUPER_ADMIN.
+// Source of truth lives here — not hardcoded emails in the API/web.
+enum PlatformAccessKind {
+  SUPER_ADMIN
+  ALLOWLISTED
+}
+
 // In-app notification feed for a professional. Persisted so the dashboard's
 // notification centre survives page reloads, offline periods, and missed
 // real-time events. Real-time (SSE) delivery is a separate, best-effort channel
@@ -49,24 +63,25 @@ enum NotificationType {
 }
 
 model Professional {
-  id                      String   @id @default(uuid())
-  email                   String   @unique
+  id                      String       @id @default(uuid())
+  email                   String       @unique
   passwordHash            String?
-  googleId                String?  @unique
+  googleId                String?      @unique
   businessName            String
-  slug                    String   @unique
+  slug                    String       @unique
   category                String?
   photoUrl                String?
   logoUrl                 String?
   coverImageUrl           String?
-  brandColor              String?  @default("#4F46E5")
+  brandColor              String?      @default("#4F46E5")
   description             String?
-  timezone                String   @default("America/Bogota")
-  cancellationPolicyHours Int      @default(24)
-  plan                    Plan     @default(BASIC)
-  isActive                Boolean  @default(true)
-  createdAt               DateTime @default(now())
-  updatedAt               DateTime @updatedAt
+  timezone                String       @default("America/Bogota")
+  cancellationPolicyHours Int          @default(24)
+  plan                    Plan         @default(BASIC)
+  role                    PlatformRole @default(INDEPENDENT)
+  isActive                Boolean      @default(true)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
   services           Service[]
   workingHours       WorkingHour[]
@@ -78,6 +93,13 @@ model Professional {
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
   // secondary @@index is needed here.
+}
+
+model PlatformAccessEmail {
+  id        String             @id @default(uuid())
+  email     String             @unique
+  access    PlatformAccessKind
+  createdAt DateTime           @default(now())
 }
 
 model Service {

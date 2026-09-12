@@ -8,7 +8,10 @@ description: >-
 Dos formas de entrar, una sola salida: un **JWT** firmado (`{ sub, email }`,
 `expiresIn` por defecto `7d`) que la app web guarda en `localStorage`
 (`agendya-auth`) y envía como `Authorization: Bearer <token>` en cada petición
-autenticada.
+autenticada. Cada profesional tiene un `role`: `INDEPENDENT` (por defecto),
+`SUPER_ADMIN` lo marca una fila en `PlatformAccessEmail` (`access =
+SUPER_ADMIN`), no un correo hardcodeado. `BUSINESS_ADMIN` existe en el enum
+y no se usa todavía.
 
 La API es **sin estado** — sin almacén de sesión, sin cookie de autenticación.
 La única cookie del sistema es la cookie efímera de `state` de OAuth que se
@@ -44,10 +47,11 @@ sequenceDiagram
     Svc->>Svc: bcrypt.compare  → 401 si no coincide
   end
   Svc->>JS: sign({ sub: id, email })
-  Svc-->>Ctl: { accessToken, user: { id, email, businessName, slug } }
+  Svc-->>Ctl: { accessToken, user: { id, email, businessName, slug, role } }
   Ctl-->>AC: 200 / 201
   AC->>W: authStore.setSession(...)  → persistido en localStorage
-  W->>U: navegar a /dashboard/profile
+  W->>W: if user.role === SUPER_ADMIN → /dashboard else /dashboard/profile
+  W->>U: navegar
 ```
 
 ## Google OAuth 2.0
@@ -82,7 +86,7 @@ sequenceDiagram
   U->>CB: GoogleCallbackPage lee location.hash
   CB->>CB: history.replaceState (quita el token de la URL)
   CB->>Ctl: GET /auth/me con el bearer token → rellenar businessName/slug
-  CB->>U: navegar a /dashboard/profile
+  CB->>W: if user.role === SUPER_ADMIN → /dashboard else /dashboard/profile
 ```
 
 Por qué el token vuelve en el **fragmento** de la URL (`#token=`), no en un

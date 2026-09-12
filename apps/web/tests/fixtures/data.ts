@@ -19,6 +19,7 @@ export const TEST_USER: AuthUser = {
   email: process.env.E2E_USER_EMAIL ?? 'e2e@agendya.test',
   businessName: process.env.E2E_USER_BUSINESS_NAME ?? 'Barbería E2E',
   slug: 'barberia-e2e',
+  role: 'INDEPENDENT',
 };
 
 export const TEST_ACCESS_TOKEN =

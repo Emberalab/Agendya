@@ -53,6 +53,7 @@ export class AuthController {
       email: user.email,
       businessName: user.businessName,
       slug: user.slug,
+      role: user.role,
     };
   }
 
