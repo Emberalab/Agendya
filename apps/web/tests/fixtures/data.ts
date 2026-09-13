@@ -45,6 +45,8 @@ export function makeProfile(
     timezone: 'America/Bogota',
     cancellationPolicyHours: 24,
     plan: 'FREE',
+    billingInterval: null,
+    planExpiresAt: null,
     bookingsThisMonth: 12,
     serviceCount: 3,
     monthlyBookingLimit: 100,

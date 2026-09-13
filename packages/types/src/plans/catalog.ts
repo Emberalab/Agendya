@@ -4,6 +4,10 @@ export const PLANS = ['FREE', 'BASIC', 'ADVANCED', 'BUSINESS'] as const;
 export const planSchema = z.enum(PLANS);
 export type Plan = z.infer<typeof planSchema>;
 
+export const PAID_PLANS = ['BASIC', 'ADVANCED', 'BUSINESS'] as const;
+export const paidPlanSchema = z.enum(PAID_PLANS);
+export type PaidPlan = z.infer<typeof paidPlanSchema>;
+
 export const PLAN_LABELS: Record<Plan, string> = {
   FREE: 'Gratuito',
   BASIC: 'Básico',

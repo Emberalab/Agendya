@@ -6,13 +6,22 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
-import type {
-  AllowlistEntry,
-  CreateAllowlistEntryInput,
-  Plan,
-  ProfessionalForPlanChange,
-  UpdateAllowlistEntryInput,
+import {
+  planPeriodStart,
+  type AllowlistEntry,
+  type BillingInterval,
+  type CreateAllowlistEntryInput,
+  type Plan,
+  type ProfessionalForPlanChange,
+  type UpdateAllowlistEntryInput,
 } from '@agendya/types';
+
+type AllowlistPlanSnapshot = {
+  plan: Plan;
+  billingInterval: BillingInterval | null;
+  planStartedAt: Date | null;
+  planExpiresAt: Date | null;
+};
 
 @Injectable()
 export class AdminService {
@@ -22,7 +31,10 @@ export class AdminService {
     const rows = await this.prisma.platformAccessEmail.findMany({
       orderBy: { createdAt: 'desc' },
     });
-    return rows.map((row) => this.toAllowlistEntry(row));
+    const plans = await this.plansByEmail(rows.map((row) => row.email));
+    return rows.map((row) =>
+      this.toAllowlistEntry(row, plans.get(row.email) ?? null),
+    );
   }
 
   async createAllowlistEntry(
@@ -39,7 +51,7 @@ export class AdminService {
     const row = await this.prisma.platformAccessEmail.create({
       data: { email, access: input.access },
     });
-    return this.toAllowlistEntry(row);
+    return this.toAllowlistEntry(row, await this.planForEmail(email));
   }
 
   async updateAllowlistEntry(
@@ -67,7 +79,10 @@ export class AdminService {
       where: { email: normalizedEmail },
       data: { access: input.access },
     });
-    return this.toAllowlistEntry(updated);
+    return this.toAllowlistEntry(
+      updated,
+      await this.planForEmail(normalizedEmail),
+    );
   }
 
   async deleteAllowlistEntry(email: string, actorEmail: string): Promise<void> {
@@ -98,6 +113,8 @@ export class AdminService {
         businessName: true,
         slug: true,
         plan: true,
+        billingInterval: true,
+        planExpiresAt: true,
       },
     });
     if (!professional) {
@@ -105,7 +122,7 @@ export class AdminService {
         `No se encontró un profesional con el correo: ${email}`,
       );
     }
-    return professional;
+    return this.toPlanChange(professional);
   }
 
   async changeProfessionalPlan(
@@ -113,17 +130,76 @@ export class AdminService {
     plan: Plan,
   ): Promise<ProfessionalForPlanChange> {
     await this.getProfessionalByEmail(email);
-    return this.prisma.professional.update({
+    const updated = await this.prisma.professional.update({
       where: { email: email.trim().toLowerCase() },
-      data: { plan },
+      data: {
+        plan,
+        billingInterval: null,
+        planStartedAt: null,
+        planExpiresAt: null,
+      },
       select: {
         id: true,
         email: true,
         businessName: true,
         slug: true,
         plan: true,
+        billingInterval: true,
+        planExpiresAt: true,
       },
     });
+    return this.toPlanChange(updated);
+  }
+
+  private async plansByEmail(
+    emails: string[],
+  ): Promise<Map<string, AllowlistPlanSnapshot>> {
+    if (emails.length === 0) {
+      return new Map();
+    }
+    const professionals = await this.prisma.professional.findMany({
+      where: { email: { in: emails } },
+      select: {
+        email: true,
+        plan: true,
+        billingInterval: true,
+        planStartedAt: true,
+        planExpiresAt: true,
+      },
+    });
+    return new Map(
+      professionals.map((row) => [
+        row.email,
+        {
+          plan: row.plan,
+          billingInterval: row.billingInterval,
+          planStartedAt: row.planStartedAt,
+          planExpiresAt: row.planExpiresAt,
+        },
+      ]),
+    );
+  }
+
+  private async planForEmail(
+    email: string,
+  ): Promise<AllowlistPlanSnapshot | null> {
+    const professional = await this.prisma.professional.findUnique({
+      where: { email },
+      select: {
+        plan: true,
+        billingInterval: true,
+        planStartedAt: true,
+        planExpiresAt: true,
+      },
+    });
+    return professional
+      ? {
+          plan: professional.plan,
+          billingInterval: professional.billingInterval,
+          planStartedAt: professional.planStartedAt,
+          planExpiresAt: professional.planExpiresAt,
+        }
+      : null;
   }
 
   private async requireAllowlistEntry(email: string) {
@@ -147,17 +223,62 @@ export class AdminService {
     }
   }
 
-  private toAllowlistEntry(row: {
-    id: string;
-    email: string;
-    access: AllowlistEntry['access'];
-    createdAt: Date;
-  }): AllowlistEntry {
+  private toAllowlistEntry(
+    row: {
+      id: string;
+      email: string;
+      access: AllowlistEntry['access'];
+      createdAt: Date;
+    },
+    snapshot: AllowlistPlanSnapshot | null,
+  ): AllowlistEntry {
     return {
       id: row.id,
       email: row.email,
       access: row.access,
       createdAt: row.createdAt.toISOString(),
+      plan: snapshot?.plan ?? null,
+      billingInterval: snapshot?.billingInterval ?? null,
+      planStartedAt: resolvePlanStartedAt(snapshot),
+      planExpiresAt: snapshot?.planExpiresAt?.toISOString() ?? null,
     };
   }
+
+  private toPlanChange(row: {
+    id: string;
+    email: string;
+    businessName: string;
+    slug: string;
+    plan: Plan;
+    billingInterval: BillingInterval | null;
+    planExpiresAt: Date | null;
+  }): ProfessionalForPlanChange {
+    return {
+      id: row.id,
+      email: row.email,
+      businessName: row.businessName,
+      slug: row.slug,
+      plan: row.plan,
+      billingInterval: row.billingInterval,
+      planExpiresAt: row.planExpiresAt?.toISOString() ?? null,
+    };
+  }
+}
+
+function resolvePlanStartedAt(
+  snapshot: AllowlistPlanSnapshot | null,
+): string | null {
+  if (!snapshot) {
+    return null;
+  }
+  if (snapshot.planStartedAt) {
+    return snapshot.planStartedAt.toISOString();
+  }
+  if (snapshot.planExpiresAt && snapshot.billingInterval) {
+    return planPeriodStart(
+      snapshot.planExpiresAt,
+      snapshot.billingInterval,
+    ).toISOString();
+  }
+  return null;
 }

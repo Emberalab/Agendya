@@ -18,7 +18,10 @@ Tabla `PlatformAccessEmail` (`ALLOWLISTED` | `SUPER_ADMIN`). En Railway
 `production`/`dev` es quien puede registrarse; local/CI está abierto. Ver
 [Autenticación](/features/authentication/).
 
-- Listar, crear (email en minúsculas), cambiar grant, eliminar.
+- Listar, crear (email en minúsculas), cambiar grant, eliminar. Cada fila
+  incluye el `plan` del `Professional` si ya se registró (`null` = solo está
+  en la lista), más `billingInterval` (mensual/anual), `planStartedAt`
+  (comprado) y `planExpiresAt` (vence) cuando el ciclo vino de un pago Wompi.
 - No puedes bajarte ni borrarte a ti mismo (`403`).
 - No puedes dejar 0 grants `SUPER_ADMIN` (`400`), ni por PATCH ni por DELETE.
 - Cambiar un grant a `SUPER_ADMIN` **no** promueve una cuenta ya creada.
@@ -28,6 +31,21 @@ Tabla `PlatformAccessEmail` (`ALLOWLISTED` | `SUPER_ADMIN`). En Railway
 Vista de solo lectura de `FEATURE_CATALOG` (`@agendya/types`). No se persiste
 ni se edita desde el panel. `enforced: true` hoy solo en `maxServices` y
 `maxBookingsPerMonth`.
+
+## Precios e ingresos
+
+Pestaña **Precios**: tabla de lo que paga el profesional, comisión Wompi y
+neto. Fuente: `packages/types/src/plans/billing.ts`. El primer cobro lo hace el profesional
+con el Widget en Perfil; el cargo recurrente aún no corre.
+
+Tarifa asumida: Wompi plan avanzado agregador, **2,65% + $700 + IVA 19% sobre
+la comisión**. Básico se publicó a $19.900; el precio de lista es **$21.900 /
+mes** para que el neto no baje de eso. Si pagan el año de una vez (Básico
+**$254.900**) se ahorran **$7.900** frente a 12 mensualidades.
+
+Medios: tarjeta, Nequi, Bancolombia. Si el cobro falla, el plan de pago
+sigue **3 días**; sin `APPROVED`, baja a Gratuito. Super Admin puede
+reasignar a mano.
 
 ## Cambiar plan
 

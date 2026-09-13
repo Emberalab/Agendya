@@ -95,7 +95,11 @@ describe('Admin (e2e)', () => {
 
       expect(Array.isArray(res.body)).toBe(true);
       const entries = res.body as AllowlistEntry[];
-      expect(entries.some((e) => e.email === adminEmail)).toBe(true);
+      const admin = entries.find((e) => e.email === adminEmail);
+      expect(admin).toBeDefined();
+      expect(admin?.plan).toBe('FREE');
+      const independent = entries.find((e) => e.email === independentEmail);
+      expect(independent?.plan).toBe('FREE');
     });
   });
 
@@ -119,6 +123,7 @@ describe('Admin (e2e)', () => {
       const created = res.body as AllowlistEntry;
       expect(created.email).toBe(newEmail);
       expect(created.access).toBe('ALLOWLISTED');
+      expect(created.plan).toBeNull();
 
       // Cleanup
       await prisma.platformAccessEmail.delete({ where: { email: newEmail } });

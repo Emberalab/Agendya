@@ -40,6 +40,12 @@ enum Plan {
   BUSINESS
 }
 
+// Paid-period length written by Wompi checkout. Null on FREE or admin comps.
+enum BillingInterval {
+  monthly
+  annual
+}
+
 enum PlatformRole {
   SUPER_ADMIN
   // Reserved: multi-location / business-owner accounts. Unused in Phase 1.
@@ -80,8 +86,12 @@ model Professional {
   description             String?
   timezone                String       @default("America/Bogota")
   cancellationPolicyHours Int          @default(24)
-  plan                    Plan         @default(FREE)
-  role                    PlatformRole @default(INDEPENDENT)
+  plan                    Plan              @default(FREE)
+  billingInterval         BillingInterval?
+  planStartedAt           DateTime?
+  planExpiresAt           DateTime?
+  lastWompiTransactionId  String?           @unique
+  role                    PlatformRole      @default(INDEPENDENT)
   isActive                Boolean      @default(true)
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt

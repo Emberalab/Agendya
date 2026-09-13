@@ -5,7 +5,7 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   CANCELLATION_POLICY_HOURS_OPTIONS,
-  PLAN_LABELS,
+  formatPlanWithInterval,
   cancellationPolicyHoursSchema,
   hexColorSchema,
   pickMissingFeatures,
@@ -16,8 +16,11 @@ import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { publicBookingUrl } from '../../shared/config/publicSiteUrl';
 import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
 import { checkSlugAvailability, uploadImage } from './api';
+import { useBillingRedirect } from './hooks/useBillingRedirect';
 import { useProfile } from './hooks/useProfile';
 import { useUpdateProfile } from './hooks/useUpdateProfile';
+import { UpgradePlanDialog } from './UpgradePlanDialog';
+import { UpgradeSuccessDialog } from './UpgradeSuccessDialog';
 import { hexToHue, hueToHex } from './color';
 import { downscaleImage } from './image';
 
@@ -70,6 +73,15 @@ function cancellationLabel(hours: number): string {
 export function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const {
+    notice: billingNotice,
+    upgradeOpen,
+    setUpgradeOpen,
+    showSuccess,
+    setShowSuccess,
+    upgradedPlan,
+    upgradedInterval,
+  } = useBillingRedirect();
   const checkSlug = useMutation({ mutationFn: checkSlugAvailability });
   const uploadLogo = useMutation({
     mutationFn: (file: File) => uploadImage(file, 'logo'),
@@ -471,7 +483,10 @@ export function ProfilePage() {
                   color: 'var(--color-text-primary)',
                 }}
               >
-                {PLAN_LABELS[profile.plan]}
+                {formatPlanWithInterval(
+                  profile.plan,
+                  profile.billingInterval,
+                )}
               </p>
               <p
                 style={{
@@ -480,7 +495,9 @@ export function ProfilePage() {
                   marginTop: '2px',
                 }}
               >
-                Accede a más funcionalidades mejorando tu plan.
+                {profile.planExpiresAt
+                  ? `Vence el ${new Date(profile.planExpiresAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}.`
+                  : 'Accede a más funcionalidades mejorando tu plan.'}
               </p>
             </div>
             <div className="min-w-[180px]">
@@ -571,36 +588,65 @@ export function ProfilePage() {
             </>
           )}
 
-          <div className="flex justify-end mt-5">
-            <button
-              type="button"
-              className="rounded-xl px-9 py-4 font-semibold"
-              style={{
-                background:
-                  'linear-gradient(135deg, #6366F1 0%, var(--color-brand-primary) 100%)',
-                color: '#fff',
-                border: 'none',
-                cursor: 'pointer',
-                fontSize: '15px',
-                boxShadow:
-                  '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)',
-                transition: 'box-shadow 0.15s, transform 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow =
-                  '0 18px 34px -8px rgba(79, 70, 229, 0.6), 0 8px 16px -6px rgba(79, 70, 229, 0.45)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow =
-                  '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
+          {billingNotice && !showSuccess && (
+            <p
+              className="mt-4"
+              role="status"
+              style={{ fontSize: '13px', color: 'var(--color-success)' }}
             >
-              Mejorar plan
-            </button>
-          </div>
+              {billingNotice}
+            </p>
+          )}
+
+          {profile.plan !== 'BUSINESS' && (
+            <div className="flex justify-end mt-5">
+              <button
+                type="button"
+                className="rounded-xl px-9 py-4 font-semibold"
+                style={{
+                  background:
+                    'linear-gradient(135deg, #6366F1 0%, var(--color-brand-primary) 100%)',
+                  color: '#fff',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: '15px',
+                  boxShadow:
+                    '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)',
+                  transition: 'box-shadow 0.15s, transform 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    '0 18px 34px -8px rgba(79, 70, 229, 0.6), 0 8px 16px -6px rgba(79, 70, 229, 0.45)';
+                  e.currentTarget.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow =
+                    '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)';
+                  e.currentTarget.style.transform = 'translateY(0)';
+                }}
+                onClick={() => setUpgradeOpen(true)}
+              >
+                Mejorar plan
+              </button>
+            </div>
+          )}
         </Section>
+
+        {upgradeOpen && (
+          <UpgradePlanDialog
+            currentPlan={profile.plan}
+            currentInterval={profile.billingInterval}
+            onClose={() => setUpgradeOpen(false)}
+          />
+        )}
+
+        {showSuccess && upgradedPlan && upgradedInterval && (
+          <UpgradeSuccessDialog
+            plan={upgradedPlan}
+            interval={upgradedInterval}
+            onClose={() => setShowSuccess(false)}
+          />
+        )}
 
         {/* Configuración */}
         <Section

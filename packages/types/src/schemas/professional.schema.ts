@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BILLING_INTERVALS } from '../plans/billing';
 import { planSchema } from '../plans/catalog';
 
 export const CANCELLATION_POLICY_HOURS_OPTIONS = [1, 2, 3, 4, 6, 24] as const;
@@ -85,6 +86,8 @@ export const professionalProfileSchema = z.object({
   timezone: z.string(),
   cancellationPolicyHours: z.number(),
   plan: planSchema,
+  billingInterval: z.enum(BILLING_INTERVALS).nullable(),
+  planExpiresAt: z.string().datetime().nullable(),
   /** Non-cancelled bookings created in the current calendar month. */
   bookingsThisMonth: z.number(),
   /** Non-deleted services — used for plan upsell, not a second list fetch. */

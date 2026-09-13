@@ -89,8 +89,14 @@ what a customer should see: `businessName`, `slug`, `category`, images,
 ## Plans
 
 `Professional.plan`: `FREE` (default) · `BASIC` · `ADVANCED` · `BUSINESS`.
-New signups (including the waitlist) land on **FREE**. There is no billing
-yet — a paid plan is assigned in the database.
+New signups (including the waitlist) land on **FREE**. The professional pays
+the first period with the Wompi Widget from Profile → **Upgrade plan**
+(`POST /billing/checkout` + `POST /billing/sync`). `POST /webhooks/wompi`
+(SHA256 checksum with `WOMPI_EVENTS_SECRET`) writes `Professional.plan`,
+`billingInterval`, and `planExpiresAt` only when the event is `APPROVED` and
+the amount matches `PLAN_PRICE_COP`. Super Admin can still assign a plan by
+hand (no cycle or expiry). Recurring charges are not wired yet.
+List prices and net-after-fee live in `PLAN_PRICE_COP` / `wompiFeeBreakdown`.
 
 Feature flags live in `@agendya/types` (`FEATURE_CATALOG`). The API **enforces**
 service and monthly-booking limits today. Everything else is `enforced: false`
@@ -98,6 +104,8 @@ service and monthly-booking limits today. Everything else is `enforced: false`
 
 | | Free | Basic | Advanced | Business |
 | --- | --- | --- | --- | --- |
+| Price / month | $0 | $21,900 | $44,900 | $89,900 |
+| If they pay the year | — | $254,900 (saves $7,900 vs 12 months) | $529,900 (saves $8,900) | $1,069,900 (saves $8,900) |
 | Services | 3 | 10 | unlimited | unlimited |
 | Bookings / month | 100 | unlimited | unlimited | unlimited |
 

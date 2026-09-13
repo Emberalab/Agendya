@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { BILLING_INTERVALS } from '../plans/billing';
 import { planSchema } from '../plans/catalog';
 
 // PlatformAccessEmail CRUD schemas
@@ -28,6 +29,11 @@ export const allowlistEntrySchema = z.object({
   email: z.string().email(),
   access: platformAccessKindSchema,
   createdAt: z.string().datetime(),
+  /** Null when the email is allowlisted but has not registered yet. */
+  plan: planSchema.nullable(),
+  billingInterval: z.enum(BILLING_INTERVALS).nullable(),
+  planStartedAt: z.string().datetime().nullable(),
+  planExpiresAt: z.string().datetime().nullable(),
 });
 
 export type AllowlistEntry = z.infer<typeof allowlistEntrySchema>;
@@ -46,6 +52,8 @@ export const professionalForPlanChangeSchema = z.object({
   businessName: z.string(),
   slug: z.string(),
   plan: planSchema,
+  billingInterval: z.enum(BILLING_INTERVALS).nullable(),
+  planExpiresAt: z.string().datetime().nullable(),
 });
 
 export type ProfessionalForPlanChange = z.infer<typeof professionalForPlanChangeSchema>;

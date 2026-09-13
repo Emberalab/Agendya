@@ -34,6 +34,7 @@ describe('AdminService', () => {
     };
     professional: {
       findUnique: jest.Mock;
+      findMany: jest.Mock;
       update: jest.Mock;
     };
   };
@@ -50,6 +51,7 @@ describe('AdminService', () => {
       },
       professional: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
         update: jest.fn(),
       },
     };
@@ -125,6 +127,63 @@ describe('AdminService', () => {
         service.deleteAllowlistEntry('other@agendya.co', 'admin@agendya.co'),
       ).rejects.toThrow(BadRequestException);
       expect(prisma.platformAccessEmail.delete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('listAllowlist', () => {
+    it('includes the professional plan when the email already has an account', async () => {
+      prisma.platformAccessEmail.findMany.mockResolvedValue([SUPER_ADMIN_ROW]);
+      prisma.professional.findMany.mockResolvedValue([
+        {
+          email: SUPER_ADMIN_ROW.email,
+          plan: 'BASIC',
+          billingInterval: 'monthly',
+          planStartedAt: new Date('2026-09-12T00:00:00.000Z'),
+          planExpiresAt: new Date('2026-10-12T00:00:00.000Z'),
+        },
+      ]);
+
+      const result = await service.listAllowlist();
+
+      expect(result).toEqual([
+        {
+          id: SUPER_ADMIN_ROW.id,
+          email: SUPER_ADMIN_ROW.email,
+          access: 'SUPER_ADMIN',
+          createdAt: SUPER_ADMIN_ROW.createdAt.toISOString(),
+          plan: 'BASIC',
+          billingInterval: 'monthly',
+          planStartedAt: '2026-09-12T00:00:00.000Z',
+          planExpiresAt: '2026-10-12T00:00:00.000Z',
+        },
+      ]);
+    });
+
+    it('infers purchase date from expiry when planStartedAt is missing', async () => {
+      prisma.platformAccessEmail.findMany.mockResolvedValue([SUPER_ADMIN_ROW]);
+      prisma.professional.findMany.mockResolvedValue([
+        {
+          email: SUPER_ADMIN_ROW.email,
+          plan: 'BASIC',
+          billingInterval: 'monthly',
+          planStartedAt: null,
+          planExpiresAt: new Date('2026-10-12T20:00:00.000Z'),
+        },
+      ]);
+
+      const result = await service.listAllowlist();
+
+      expect(result[0]?.planStartedAt).toBe('2026-09-12T20:00:00.000Z');
+      expect(result[0]?.planExpiresAt).toBe('2026-10-12T20:00:00.000Z');
+    });
+
+    it('returns a null plan when the email has not registered yet', async () => {
+      prisma.platformAccessEmail.findMany.mockResolvedValue([SUPER_ADMIN_ROW]);
+      prisma.professional.findMany.mockResolvedValue([]);
+
+      const result = await service.listAllowlist();
+
+      expect(result[0]?.plan).toBeNull();
     });
   });
 

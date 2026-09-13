@@ -16,6 +16,7 @@ schema comments and reproduced here.
 | `Professional` | `email @unique` | Login identity; also serves equality lookup |
 | `Professional` | `slug @unique` | Public URL resolution (`findFirst({ slug, isActive })`) |
 | `Professional` | `googleId @unique` | OAuth account linking |
+| `Professional` | `lastWompiTransactionId @unique` | Billing webhook/sync idempotency |
 | `Booking` | `cancellationToken @unique` | Public token routes (`/public/bookings/:token`) |
 | `ScheduleException` | `@@unique([professionalId, date])` | One block per calendar day; Prisma `P2002` → `409 "Ya existe un bloqueo para esa fecha."` |
 

@@ -31,12 +31,25 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 
 | Método | Ruta | Cuerpo | Respuesta |
 | --- | --- | --- | --- |
-| `GET` | `/admin/allowlist` | — | `AllowlistEntry[]` |
+| `GET` | `/admin/allowlist` | — | `AllowlistEntry[]` (`plan` del profesional o `null` si aún no se registró) |
 | `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` | `AllowlistEntry` · `409` si existe |
 | `PATCH` | `/admin/allowlist/:email` | `updateAllowlistEntrySchema` | `AllowlistEntry` · `403` si te bajas a ti mismo · `400` si queda 0 Super Admin |
 | `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · mismas reglas que el PATCH |
 | `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | mismo objeto · `404` |
+
+## Billing — `modules/billing`
+
+| Método | Ruta | Auth | Cuerpo | Respuesta |
+| --- | --- | --- | --- | --- |
+| `POST` | `/billing/checkout` | JWT · 10/60s | `createBillingCheckoutSchema` `{ plan, interval }` | `{ publicKey, currency: "COP", amountInCents, reference, integrity, redirectUrl, customerEmail }` · `400` si el plan es más barato que el actual · `503` si faltan llaves Wompi |
+| `POST` | `/billing/sync` | JWT · 20/60s | `syncBillingTransactionSchema` `{ transactionId }` o `{ reference }` | `{ applied, status, plan, interval }` — consulta la transacción en Wompi y, si `APPROVED` y el monto/referencia cuadran, escribe `plan`, `billingInterval` y `planExpiresAt` · `403` si la referencia es de otra cuenta |
+| `POST` | `/webhooks/wompi` | ninguna (firma del evento) | JSON de Wompi `transaction.updated` | `200 { received: true }` · `401` si el checksum SHA256 no coincide · `503` si falta `WOMPI_EVENTS_SECRET` |
+
+La firma de integridad del widget se calcula en el servidor
+(`reference + amountInCents + COP + WOMPI_INTEGRITY_KEY`). El plan **no** se
+confía del callback del widget: solo de un evento autenticado o de
+`GET sandbox/production.wompi.co/v1/transactions/:id`.
 
 ## Professionals — `modules/professionals`
 

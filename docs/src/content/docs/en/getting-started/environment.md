@@ -9,7 +9,7 @@ description: >-
 `.env` is gitignored for both apps. Keep `.env.example` in sync when you add a
 variable, but only with placeholder values. Share real `RESEND_API_KEY` /
 `CLOUDINARY_URL` / Google credentials through a password manager, never plain
-text or a PR.
+text or a PR. Same for Wompi keys.
 :::
 
 ## API — `apps/api/.env`
@@ -37,6 +37,11 @@ boots.
 | `VAPID_PUBLIC_KEY` | *(empty)* | No | With any of the three VAPID keys missing, Web Push is disabled: `GET /notifications/push/public-key` returns `null`, the dashboard hides the toggle, and the feed still delivers over SSE. Generate a pair with `npx web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | *(empty)* | No | Same as above |
 | `VAPID_SUBJECT` | `mailto:soporte@agendya.app` | No (defaults `mailto:`) | Contact URI (`mailto:` or `https:`) the push service uses to reach you about a bad payload |
+| `WOMPI_PUBLIC_KEY` | *(empty)* | No | Widget public key (`pub_test_` / `pub_prod_`). Without it + the integrity secret, `POST /billing/checkout` returns `503` |
+| `WOMPI_PRIVATE_KEY` | *(empty)* | No | Reserved for recurring charges. The widget + webhook path does not use it |
+| `WOMPI_INTEGRITY_KEY` | *(empty)* | No | Secret used to sign `reference + amount + COP` (SHA256). Never sent to the browser in the clear |
+| `WOMPI_EVENTS_SECRET` | *(empty)* | No | Secret used to verify `POST /webhooks/wompi`. Without it the webhook returns `503` |
+| `WOMPI_SANDBOX` | `true` | No | Fallback when the public key has no `pub_test_` / `pub_prod_` prefix. `false` points at `production.wompi.co` |
 
 ### Test-only
 

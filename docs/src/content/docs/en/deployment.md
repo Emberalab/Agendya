@@ -37,7 +37,8 @@ description: Production build, migrations, CI, and what the repository does and 
   `WEB_URL` (dashboard: CORS and OAuth), `PUBLIC_WEB_URL` (public booking
   apex and cancel-link base). Optional: `JWT_EXPIRES_IN`, `PORT`, `SLOT_GRID_MINUTES`,
   `RESEND_API_KEY`, `CLOUDINARY_URL`, `GOOGLE_CLIENT_ID` /
-  `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL`. See
+  `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL`, `WOMPI_PUBLIC_KEY` /
+  `WOMPI_INTEGRITY_KEY` / `WOMPI_EVENTS_SECRET` (plan checkout). See
   [Environment variables](/en/getting-started/environment/).
 - A reachable PostgreSQL. The in-process cron jobs (`RemindersScheduler`,
   `ExpirationScheduler`) run wherever the API process runs — **run exactly one

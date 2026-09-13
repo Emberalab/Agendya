@@ -1,7 +1,22 @@
 import { useEffect, useState } from 'react';
-import type { AllowlistEntry, PlatformAccessKind } from '@agendya/types';
+import {
+  formatPlanWithInterval,
+  type AllowlistEntry,
+  type PlatformAccessKind,
+} from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+
+function formatAdminDate(iso: string | null): string {
+  if (!iso) {
+    return '—';
+  }
+  return new Date(iso).toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 export function AllowlistManager() {
   const [entries, setEntries] = useState<AllowlistEntry[]>([]);
@@ -100,7 +115,7 @@ export function AllowlistManager() {
   };
 
   return (
-    <div className="max-w-4xl" style={{ fontFamily: 'var(--font-body)' }}>
+    <div className="max-w-6xl" style={{ fontFamily: 'var(--font-body)' }}>
       <div className="flex items-center justify-between mb-6">
         <h2
           className="text-2xl font-bold"
@@ -227,7 +242,13 @@ export function AllowlistManager() {
                   Acceso
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">
-                  Fecha
+                  Plan
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">
+                  Comprado
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">
+                  Vence
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-semibold">
                   Acciones
@@ -265,7 +286,24 @@ export function AllowlistManager() {
                     className="px-4 py-3 text-sm"
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
-                    {new Date(entry.createdAt).toLocaleDateString('es-CO')}
+                    {entry.plan
+                      ? formatPlanWithInterval(
+                          entry.plan,
+                          entry.billingInterval,
+                        )
+                      : 'Sin cuenta'}
+                  </td>
+                  <td
+                    className="px-4 py-3 text-sm"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {formatAdminDate(entry.planStartedAt)}
+                  </td>
+                  <td
+                    className="px-4 py-3 text-sm"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    {formatAdminDate(entry.planExpiresAt)}
                   </td>
                   <td className="px-4 py-3 text-sm text-right space-x-2">
                     <button

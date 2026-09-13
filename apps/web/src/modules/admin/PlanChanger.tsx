@@ -1,5 +1,11 @@
 import { useState } from 'react';
-import { PLAN_LABELS, PLANS, type Plan, type ProfessionalForPlanChange } from '@agendya/types';
+import {
+  formatPlanWithInterval,
+  PLAN_LABELS,
+  PLANS,
+  type Plan,
+  type ProfessionalForPlanChange,
+} from '@agendya/types';
 import { apiClient, isApiError } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 
@@ -197,8 +203,27 @@ export function PlanChanger() {
                     color: 'var(--color-text-on-brand)',
                   }}
                 >
-                  {PLAN_LABELS[professional.plan]}
+                  {formatPlanWithInterval(
+                    professional.plan,
+                    professional.billingInterval,
+                  )}
                 </span>
+                {professional.planExpiresAt ? (
+                  <p
+                    className="mt-1 text-xs"
+                    style={{ color: 'var(--color-text-secondary)' }}
+                  >
+                    Vence{' '}
+                    {new Date(professional.planExpiresAt).toLocaleDateString(
+                      'es-CO',
+                      {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                      },
+                    )}
+                  </p>
+                ) : null}
               </dd>
             </div>
           </dl>

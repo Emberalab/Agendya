@@ -19,7 +19,10 @@ Role is assigned **on register** when a `PlatformAccessEmail` row has
 `production`/`dev` this is who may register; local/CI is open. See
 [Authentication](/en/features/authentication/).
 
-- List, create (lowercased email), change grant, delete.
+- List, create (lowercased email), change grant, delete. Each row includes
+  the `Professional.plan` when that email already registered (`null` = list
+  only), plus `billingInterval` (monthly/annual), `planStartedAt` (purchased)
+  and `planExpiresAt` (expires) when the cycle came from a Wompi payment.
 - You cannot downgrade or delete yourself (`403`).
 - You cannot leave zero `SUPER_ADMIN` grants (`400`), via PATCH or DELETE.
 - Changing a grant to `SUPER_ADMIN` does **not** promote an existing account.
@@ -29,6 +32,21 @@ Role is assigned **on register** when a `PlatformAccessEmail` row has
 Read-only view of `FEATURE_CATALOG` (`@agendya/types`). Not persisted and not
 editable in the panel. `enforced: true` today only on `maxServices` and
 `maxBookingsPerMonth`.
+
+## Prices and net
+
+**Prices** tab: what the professional pays, Wompi’s cut, and our net. Source:
+`packages/types/src/plans/billing.ts`. The first charge is the Wompi Widget
+on Profile; recurring charges are not wired yet.
+
+Assumed rate: Wompi Advanced aggregator, **2.65% + COP $700 + 19% VAT on the
+fee**. Basic was mocked at $19,900; list price is **$21,900 / month** so net
+stays at or above that. Paying the year upfront (Basic **$254,900**) saves
+**$7,900** versus 12 monthly charges.
+
+Methods: card, Nequi, Bancolombia. After a failed charge the paid plan stays
+**3 days**; without `APPROVED` it drops to Free. Super Admin can still assign
+a plan by hand.
 
 ## Change plan
 

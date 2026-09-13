@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { AllowlistManager } from './AllowlistManager';
+import { BillingTable } from './BillingTable';
 import { FeatureComparison } from './FeatureComparison';
 import { PlanChanger } from './PlanChanger';
 
-type Tab = 'allowlist' | 'features' | 'plans';
+type Tab = 'allowlist' | 'features' | 'plans' | 'billing';
 
 export function AdminPanel() {
   const [activeTab, setActiveTab] = useState<Tab>('allowlist');
@@ -12,6 +13,7 @@ export function AdminPanel() {
     { id: 'allowlist', label: 'Lista de Acceso' },
     { id: 'features', label: 'Funcionalidades' },
     { id: 'plans', label: 'Cambiar Plan' },
+    { id: 'billing', label: 'Precios' },
   ];
 
   return (
@@ -64,6 +66,7 @@ export function AdminPanel() {
         {activeTab === 'allowlist' && <AllowlistManager />}
         {activeTab === 'features' && <FeatureComparison />}
         {activeTab === 'plans' && <PlanChanger />}
+        {activeTab === 'billing' && <BillingTable />}
       </div>
     </div>
   );

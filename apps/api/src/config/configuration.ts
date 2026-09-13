@@ -29,4 +29,15 @@ export default () => ({
     // misbehaves — required by the Web Push spec.
     subject: process.env.VAPID_SUBJECT ?? 'mailto:soporte@agendya.app',
   },
+  // Wompi checkout. Public key prefix (`pub_test_` / `pub_prod_`) decides
+  // sandbox vs live; WOMPI_SANDBOX is only a fallback when the prefix is
+  // missing. Private key is unused by the widget + webhook path (kept for
+  // later recurring charges).
+  wompi: {
+    publicKey: process.env.WOMPI_PUBLIC_KEY ?? '',
+    privateKey: process.env.WOMPI_PRIVATE_KEY ?? '',
+    integrityKey: process.env.WOMPI_INTEGRITY_KEY ?? '',
+    eventsSecret: process.env.WOMPI_EVENTS_SECRET ?? '',
+    sandbox: process.env.WOMPI_SANDBOX !== 'false',
+  },
 });

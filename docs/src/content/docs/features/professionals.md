@@ -90,8 +90,15 @@ por `sortOrder` — sin email, plan, timezone ni conteos.
 
 `Professional.plan`: `FREE` (Gratuito, default) · `BASIC` (Básico) ·
 `ADVANCED` (Avanzado) · `BUSINESS` (Negocios). Quien se registra (incl. la
-lista de espera) entra en **Gratuito**. No hay cobro todavía: un plan de
-pago se asigna en la base.
+lista de espera) entra en **Gratuito**. El profesional paga el primer periodo
+con el Widget de Wompi desde Perfil → **Mejorar plan** (`POST /billing/checkout`
++ `POST /billing/sync`). El webhook `POST /webhooks/wompi` (firma SHA256 con
+`WOMPI_EVENTS_SECRET`) escribe `Professional.plan`, `billingInterval` y
+`planExpiresAt` solo si el evento es
+`APPROVED` y el monto coincide con `PLAN_PRICE_COP`. Super Admin sigue
+pudiendo asignar el plan a mano (sin ciclo ni vencimiento). El cargo
+recurrente (cada mes) aún no corre.
+Precios y neto tras comisión viven en `PLAN_PRICE_COP` / `wompiFeeBreakdown`.
 
 El catálogo de flags está en `@agendya/types` (`FEATURE_CATALOG`). Hoy se
 **aplican** en el servidor solo los límites de servicios y reservas/mes.
@@ -100,6 +107,8 @@ features sin tocar el enum.
 
 | | Gratuito | Básico | Avanzado | Negocios |
 | --- | --- | --- | --- | --- |
+| Precio / mes | $0 | $21.900 | $44.900 | $89.900 |
+| Si paga el año | — | $254.900 (ahorra $7.900 vs 12 meses) | $529.900 (ahorra $8.900) | $1.069.900 (ahorra $8.900) |
 | Servicios | 3 | 10 | ilimitado | ilimitado |
 | Reservas / mes | 100 | ilimitado | ilimitado | ilimitado |
 

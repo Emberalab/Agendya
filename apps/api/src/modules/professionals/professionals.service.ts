@@ -35,6 +35,8 @@ export class ProfessionalsService {
       timezone: professional.timezone,
       cancellationPolicyHours: professional.cancellationPolicyHours,
       plan: professional.plan,
+      billingInterval: professional.billingInterval,
+      planExpiresAt: professional.planExpiresAt?.toISOString() ?? null,
       bookingsThisMonth,
       serviceCount,
       monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[professional.plan],

@@ -8,6 +8,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { BillingModule } from './modules/billing/billing.module';
 import { BookingsModule } from './modules/bookings/bookings.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ProfessionalsModule } from './modules/professionals/professionals.module';
@@ -27,6 +28,7 @@ import configuration from './config/configuration';
     NotificationsModule,
     AdminModule,
     AuthModule,
+    BillingModule,
     ProfessionalsModule,
     ServicesModule,
     SchedulesModule,

@@ -34,6 +34,10 @@ erDiagram
     string timezone "default America/Bogota"
     int cancellationPolicyHours "default 24"
     enum plan "FREE | BASIC | ADVANCED | BUSINESS, default FREE"
+    enum billingInterval "monthly | annual, nullable"
+    datetime planStartedAt "nullable"
+    datetime planExpiresAt "nullable"
+    string lastWompiTransactionId UK "nullable"
     boolean isActive "default true"
     datetime createdAt
     datetime updatedAt

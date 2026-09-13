@@ -45,6 +45,8 @@ function setProfilePlan(plan: 'FREE' | 'BASIC' | 'ADVANCED' | 'BUSINESS') {
     timezone: 'America/Bogota',
     cancellationPolicyHours: 24,
     plan,
+    billingInterval: null,
+    planExpiresAt: null,
     bookingsThisMonth: 0,
     serviceCount: 0,
     monthlyBookingLimit: plan === 'FREE' ? 100 : null,

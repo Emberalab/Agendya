@@ -26,6 +26,10 @@ description: Authentication, authorization, input validation, headers, CORS, OAu
 - Public/token routes carry their own scoping: `/public/professionals/:slug`
   exposes only public fields; `/public/bookings/:token` requires the
   unguessable `cancellationToken` (uuid v4, `@unique`).
+- `POST /webhooks/wompi` is public but requires Wompi's SHA256 checksum
+  (`properties` + `timestamp` + `WOMPI_EVENTS_SECRET`). An `APPROVED` event
+  writes `plan` only when the reference is ours and the amount matches
+  `PLAN_PRICE_COP`.
 
 ## Input validation
 

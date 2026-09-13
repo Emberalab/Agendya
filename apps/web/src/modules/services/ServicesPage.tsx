@@ -794,7 +794,7 @@ export function ServicesPage() {
           onClose={() => setLimitOpen(false)}
           onSeePlans={() => {
             setLimitOpen(false);
-            navigate('/dashboard/profile');
+            navigate('/dashboard/profile?upgrade=1');
           }}
         />
       )}
