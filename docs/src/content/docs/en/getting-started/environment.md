@@ -62,6 +62,7 @@ unique secret before any real deployment.
 | `VITE_API_URL` | *(unset)* → `http://<page-host>:4000` | Base URL the browser calls for the API. Leave unset for localhost **and** LAN testing (`npm run dev:web:host`); set it only to target a different backend (e.g. staging). |
 | `VITE_PUBLIC_SITE_URL` | *(unset)* → `window.location.origin` | Public page origin (`/{slug}`). Prod: `https://agendya.co`. Hosted-dev: `https://app-dev.agendya.co`. |
 | `VITE_WAITLIST_URL` | *(unset)* | Waitlist form POST. Hosted: Actions secret `VITE_WAITLIST_URL`. Without it the submit is a no-op |
+| `VITE_GIT_SHA` / `VITE_GIT_BRANCH` / `VITE_BUILT_AT` | injected by Vite at bundle time (git or `GITHUB_SHA`) | Deploy stamp. `console.info` on boot and `window.__AGENDYA_BUILD__`. Do not set these in `.env` |
 
 `apiClient` resolves it as:
 
