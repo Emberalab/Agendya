@@ -1,10 +1,52 @@
+import { execSync } from 'node:child_process';
 import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
+function gitOutput(args: string): string | undefined {
+  try {
+    const value = execSync(`git ${args}`, {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+    return value || undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function resolveAppBuild(): {
+  sha: string;
+  branch: string;
+  builtAt: string;
+} {
+  const fullSha =
+    process.env.VITE_GIT_SHA ||
+    process.env.GITHUB_SHA ||
+    gitOutput('rev-parse HEAD') ||
+    'unknown';
+  const branch =
+    process.env.VITE_GIT_BRANCH ||
+    process.env.GITHUB_REF_NAME ||
+    gitOutput('rev-parse --abbrev-ref HEAD') ||
+    'unknown';
+  return {
+    sha: fullSha.slice(0, 7),
+    branch,
+    builtAt: new Date().toISOString(),
+  };
+}
+
+const appBuild = resolveAppBuild();
+
 // https://vite.dev/config/
 export default defineConfig({
+  define: {
+    'import.meta.env.VITE_GIT_SHA': JSON.stringify(appBuild.sha),
+    'import.meta.env.VITE_GIT_BRANCH': JSON.stringify(appBuild.branch),
+    'import.meta.env.VITE_BUILT_AT': JSON.stringify(appBuild.builtAt),
+  },
   server: {
     // Vite blocks unrecognized Host headers by default (CVE-2025-30208-style
     // DNS-rebinding protection). Dev-only tunnels (Cloudflare's
