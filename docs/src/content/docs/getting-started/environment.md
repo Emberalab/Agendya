@@ -8,7 +8,7 @@ description: >-
 :::danger[Nunca subas secretos]
 `.env` está en `.gitignore` para ambas apps. Mantén `.env.example` al día cuando
 agregues una variable, pero solo con valores de ejemplo. Comparte los valores
-reales de `RESEND_API_KEY` / `CLOUDINARY_URL` / credenciales de Google por un
+reales de `RESEND_API_KEY` / `CLOUDINARY_URL` / credenciales de Google / llaves Wompi por un
 gestor de contraseñas, nunca en texto plano ni en un PR.
 :::
 
@@ -37,6 +37,11 @@ arranque.
 | `VAPID_PUBLIC_KEY` | *(vacío)* | No | Sin las tres claves VAPID, Web Push se desactiva: `GET /notifications/push/public-key` devuelve `null`, el dashboard oculta el interruptor y el feed sigue por SSE. Genera un par con `npx web-push generate-vapid-keys` |
 | `VAPID_PRIVATE_KEY` | *(vacío)* | No | Igual que arriba |
 | `VAPID_SUBJECT` | `mailto:soporte@agendya.app` | No (por defecto `mailto:`) | URI de contacto (`mailto:` o `https:`) que el servicio de push usa para avisar de un payload problemático |
+| `WOMPI_PUBLIC_KEY` | *(vacío)* | No | Llave pública del widget (`pub_test_` / `pub_prod_`). Sin ella + integridad, `POST /billing/checkout` responde `503` |
+| `WOMPI_PRIVATE_KEY` | *(vacío)* | No | Reservada para cobros recurrentes. El widget + webhook no la usan |
+| `WOMPI_INTEGRITY_KEY` | *(vacío)* | No | Secreto para firmar `reference + amount + COP` (SHA256). Nunca va al front en claro |
+| `WOMPI_EVENTS_SECRET` | *(vacío)* | No | Secreto para validar `POST /webhooks/wompi`. Sin él el webhook responde `503` |
+| `WOMPI_SANDBOX` | `true` | No | Fallback si la llave pública no trae prefijo `pub_test_` / `pub_prod_`. `false` apunta a `production.wompi.co` |
 
 ### Solo para pruebas
 

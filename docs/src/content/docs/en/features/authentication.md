@@ -50,8 +50,9 @@ lands on `/dashboard` without the professional nav.
 - `isActive = false` disables an account: `JwtStrategy.validate` rejects its
   tokens with `401`.
 - `role`: `INDEPENDENT` by default; `SUPER_ADMIN` when the email has a
-  `PlatformAccessEmail` row with `access = SUPER_ADMIN` (the initial migration
-  seeds `info@agendya.co`). `BUSINESS_ADMIN` is in the enum and unused.
+  `PlatformAccessEmail` row with `access = SUPER_ADMIN` (the seed includes
+  `info@agendya.co` and `afz.0228@gmail.com`). `BUSINESS_ADMIN` is in the enum
+  and unused.
 
 ## Closed beta (waitlist)
 

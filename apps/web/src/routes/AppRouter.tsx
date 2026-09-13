@@ -39,6 +39,11 @@ const SuperAdminHome = lazy(() =>
     default: m.SuperAdminHome,
   })),
 );
+const AdminPanel = lazy(() =>
+  import('../modules/admin/AdminPanel').then((m) => ({
+    default: m.AdminPanel,
+  })),
+);
 const ProfilePage = lazy(() =>
   import('../modules/professionals/ProfilePage').then((m) => ({
     default: m.ProfilePage,
@@ -109,6 +114,7 @@ export function AppRouter() {
           <Route element={<PrivateRoute />}>
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<SuperAdminHome />} />
+              <Route path="/dashboard/admin" element={<AdminPanel />} />
               <Route path="/dashboard/profile" element={<ProfilePage />} />
               <Route path="/dashboard/services" element={<ServicesPage />} />
               <Route

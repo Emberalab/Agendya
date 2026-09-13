@@ -219,6 +219,11 @@ export default defineConfig({
               slug: 'features/authentication',
             },
             {
+              label: 'Panel de administrador',
+              translations: { en: 'Admin panel' },
+              slug: 'features/admin-panel',
+            },
+            {
               label: 'Profesionales y perfil',
               translations: { en: 'Professionals & profile' },
               slug: 'features/professionals',

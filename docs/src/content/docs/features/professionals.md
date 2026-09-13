@@ -49,7 +49,7 @@ slug sin cambios lo reporta como disponible.
 
 | Método | Ruta | Auth | Propósito |
 | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | Perfil completo + `bookingsThisMonth` + `monthlyBookingLimit` |
+| `GET` | `/professionals/me` | JWT | Perfil completo + `bookingsThisMonth` + `serviceCount` + `monthlyBookingLimit` |
 | `PATCH` | `/professionals/me` | JWT | Actualización parcial; se revalida la unicidad del slug |
 | `GET` | `/professionals/check-slug?slug=` | JWT | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | ninguna · `@Throttle 30/60s` | Perfil público + servicios activos |
@@ -70,9 +70,10 @@ slug sin cambios lo reporta como disponible.
   "description": "…",
   "timezone": "America/Bogota",
   "cancellationPolicyHours": 24,
-  "plan": "BASIC",
+  "plan": "FREE",
   "bookingsThisMonth": 12,      // reservas no canceladas creadas desde el día 1 (UTC)
-  "monthlyBookingLimit": 100,   // null en PRO
+  "serviceCount": 3,            // servicios no borrados (para el upsell, sin segundo fetch)
+  "monthlyBookingLimit": 100,   // null desde Básico hacia arriba
   "createdAt": "…",
   "updatedAt": "…"
 }
@@ -87,12 +88,28 @@ por `sortOrder` — sin email, plan, timezone ni conteos.
 
 ## Planes
 
-| | `BASIC` (`Plan Gratuito`) | `PRO` (`Plan Pro`) |
-| --- | --- | --- |
-| Servicios | 3 | ilimitado |
-| Reservas / mes | 100 | ilimitado |
+`Professional.plan`: `FREE` (Gratuito, default) · `BASIC` (Básico) ·
+`ADVANCED` (Avanzado) · `BUSINESS` (Negocios). Quien se registra (incl. la
+lista de espera) entra en **Gratuito**. El profesional paga el primer periodo
+con el Widget de Wompi desde Perfil → **Mejorar plan** (`POST /billing/checkout`
++ `POST /billing/sync`). El webhook `POST /webhooks/wompi` (firma SHA256 con
+`WOMPI_EVENTS_SECRET`) escribe `Professional.plan`, `billingInterval` y
+`planExpiresAt` solo si el evento es
+`APPROVED` y el monto coincide con `PLAN_PRICE_COP`. Super Admin sigue
+pudiendo asignar el plan a mano (sin ciclo ni vencimiento). El cargo
+recurrente (cada mes) aún no corre.
+Precios y neto tras comisión viven en `PLAN_PRICE_COP` / `wompiFeeBreakdown`.
 
-Las constantes viven en `@agendya/types` (`PLAN_SERVICE_LIMITS`,
-`PLAN_MONTHLY_BOOKING_LIMITS`, `PLAN_LABELS`). **No hay flujo de
-facturación/upgrade** — `plan` solo es `BASIC` a menos que se cambie
-directamente en la base de datos.
+El catálogo de flags está en `@agendya/types` (`FEATURE_CATALOG`). Hoy se
+**aplican** en el servidor solo los límites de servicios y reservas/mes.
+El resto (`enforced: false`) sirve para “Te falta” y para ir encendiendo
+features sin tocar el enum.
+
+| | Gratuito | Básico | Avanzado | Negocios |
+| --- | --- | --- | --- | --- |
+| Precio / mes | $0 | $21.900 | $44.900 | $89.900 |
+| Si paga el año | — | $254.900 (ahorra $7.900 vs 12 meses) | $529.900 (ahorra $8.900) | $1.069.900 (ahorra $8.900) |
+| Servicios | 3 | 10 | ilimitado | ilimitado |
+| Reservas / mes | 100 | ilimitado | ilimitado | ilimitado |
+
+Migración: el antiguo `BASIC` pasó a `FREE`; el antiguo `PRO` a `ADVANCED`.

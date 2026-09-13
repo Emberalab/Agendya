@@ -56,10 +56,11 @@ ejercitan exactamente lo que corre en producción.
 | Módulo | Controladores | Puntos destacados del servicio |
 | --- | --- | --- |
 | `auth` | `AuthController` (`/auth`) | `register` / `login` (bcrypt, `SALT_ROUNDS=10`), `googleLogin` (enlazar-por-googleId → enlazar-por-email → crear), `buildAuthResponse` firma el JWT |
-| `professionals` | `ProfessionalsController` (`/professionals`, JWT), `ProfessionalsPublicController` (`/public/professionals/:slug`) | `getProfile` (+ conteo `bookingsThisMonth`), `updateProfile` (parcial, unicidad del slug), `isSlugAvailable`, `findPublicBySlug` (solo servicios activos) |
+| `admin` | `AdminController` (`/admin`, JWT + `SuperAdminGuard`) | CRUD de `PlatformAccessEmail`; busca/cambia `Professional.plan` por email; no toca `role` |
+| `professionals` | `ProfessionalsController` (`/professionals`, JWT), `ProfessionalsPublicController` (`/public/professionals/:slug`) | `getProfile` (+ conteos `bookingsThisMonth` / `serviceCount`), `updateProfile` (parcial, unicidad del slug), `isSlugAvailable`, `findPublicBySlug` (solo servicios activos) |
 | `services` | `ServicesController` (`/services`, JWT) | CRUD + `duplicate`; `assertWithinPlanLimit` (`PLAN_SERVICE_LIMITS`); `softDelete` pone `deletedAt` + `isActive=false`; cada mutación revalida `findOwnedOrThrow` |
 | `schedules` | `SchedulesController` (`/schedules`, JWT), `AvailabilityController` (`/public/professionals/:slug/availability`) | `setWorkingHours` = borrar-todo + `createMany` en un `$transaction`; `createException` mapea Prisma `P2002` → `409`; `AvailabilityService.getAvailableSlots` es el algoritmo de grilla |
-| `bookings` | `BookingsController` (`/bookings`, JWT), `BookingsCreateController` (`/public/professionals/:slug/bookings`), `BookingsTokenController` (`/public/bookings/:token`) | `createPublicBooking`, `updatePublicBooking`, `reschedule*`, `cancel*`, `listAgenda`, `completeByProfessional`; `assertModifiable` es la única puerta de mutación; `commitBookingSlot` / `commitReschedule` corren `Serializable` + reintento |
+| `bookings` | `BookingsController` (`/bookings`, JWT), `BookingsCreateController` (`/public/professionals/:slug/bookings`), `BookingsTokenController` (`/public/bookings/:token`) | `createPublicBooking` (`assertWithinMonthlyBookingLimit`), `updatePublicBooking`, `reschedule*`, `cancel*`, `listAgenda`, `completeByProfessional`; `assertModifiable` es la única puerta de mutación; `commitBookingSlot` / `commitReschedule` corren `Serializable` + reintento |
 | `upload` | `UploadController` (`/upload/image`, JWT) | Lista blanca de MIME (sin SVG), topes de tamaño por variante, stream a Cloudinary (`agendya-logos` / `agendya-covers`) |
 
 ## Infraestructura compartida

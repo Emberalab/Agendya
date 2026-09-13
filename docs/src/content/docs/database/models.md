@@ -23,7 +23,11 @@ La cuenta del barbero/peluquero.
 | `description` | `String?` | Texto libre, ≤ 500 caracteres (impuesto en Zod) |
 | `timezone` | `String @default("America/Bogota")` | Zona IANA |
 | `cancellationPolicyHours` | `Int @default(24)` | Antelación mínima para cambios del cliente; la UI restringe a `1,2,3,4,6,24` |
-| `plan` | `Plan @default(BASIC)` | `BASIC` \| `PRO` |
+| `plan` | `Plan @default(FREE)` | `FREE` \| `BASIC` \| `ADVANCED` \| `BUSINESS` |
+| `billingInterval` | `BillingInterval?` | `monthly` \| `annual`. Lo escribe un pago Wompi. `null` en Gratuito o si Super Admin asignó el plan a mano |
+| `planStartedAt` | `DateTime?` | Momento del pago Wompi que abrió el periodo actual |
+| `planExpiresAt` | `DateTime?` | Fin del periodo pagado (UTC). Mensual = +1 mes, anual = +1 año. Aún no hay job que baje a FREE |
+| `lastWompiTransactionId` | `String? @unique` | Idempotencia: el mismo `tx` de Wompi no vuelve a alargar el periodo |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rechaza tokens de cuentas inactivas |
 
 Relaciones: `services`, `workingHours`, `scheduleExceptions`, `bookings`

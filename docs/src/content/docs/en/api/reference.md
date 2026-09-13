@@ -26,11 +26,35 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 
 `user` = `{ id, email, businessName, slug }`.
 
+## Admin — `modules/admin` (JWT + `SUPER_ADMIN`)
+
+| Method | Path | Body | Response |
+| --- | --- | --- | --- |
+| `GET` | `/admin/allowlist` | — | `AllowlistEntry[]` (`plan` of the professional, or `null` if they have not registered) |
+| `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` | `AllowlistEntry` · `409` if it exists |
+| `PATCH` | `/admin/allowlist/:email` | `updateAllowlistEntrySchema` | `AllowlistEntry` · `403` if you downgrade yourself · `400` if zero Super Admins remain |
+| `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · same rules as PATCH |
+| `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
+| `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | same object · `404` |
+
+## Billing — `modules/billing`
+
+| Method | Path | Auth | Body | Response |
+| --- | --- | --- | --- | --- |
+| `POST` | `/billing/checkout` | JWT · 10/60s | `createBillingCheckoutSchema` `{ plan, interval }` | `{ publicKey, currency: "COP", amountInCents, reference, integrity, redirectUrl, customerEmail }` · `400` if the plan is cheaper than the current one · `503` if Wompi keys are missing |
+| `POST` | `/billing/sync` | JWT · 20/60s | `syncBillingTransactionSchema` `{ transactionId }` or `{ reference }` | `{ applied, status, plan, interval }` — fetches the transaction from Wompi and, if `APPROVED` and amount/reference match, writes `plan`, `billingInterval`, and `planExpiresAt` · `403` if the reference belongs to another account |
+| `POST` | `/webhooks/wompi` | none (event signature) | Wompi `transaction.updated` JSON | `200 { received: true }` · `401` if the SHA256 checksum does not match · `503` if `WOMPI_EVENTS_SECRET` is missing |
+
+The widget integrity hash is computed on the server
+(`reference + amountInCents + COP + WOMPI_INTEGRITY_KEY`). The plan is **not**
+taken from the widget callback — only from an authenticated event or
+`GET sandbox/production.wompi.co/v1/transactions/:id`.
+
 ## Professionals — `modules/professionals`
 
 | Method | Path | Auth | Body / Query | Response |
 | --- | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `monthlyBookingLimit`) |
+| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit`) |
 | `PATCH` | `/professionals/me` | JWT | partial (`updateProfileSchema`) | `ProfessionalProfile` |
 | `GET` | `/professionals/check-slug` | JWT | `?slug` (`checkSlugQuerySchema`) | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | none · 30/60s | — | `PublicProfessional` (profile + active services) |

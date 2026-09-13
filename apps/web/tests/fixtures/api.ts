@@ -91,7 +91,7 @@ export class ApiMock {
 
   setPlan(plan: ProfessionalProfile['plan']): void {
     this.profile.plan = plan;
-    this.profile.monthlyBookingLimit = plan === 'PRO' ? null : 100;
+    this.profile.monthlyBookingLimit = plan === 'FREE' ? 100 : null;
   }
 
   setServices(services: Service[]): void {

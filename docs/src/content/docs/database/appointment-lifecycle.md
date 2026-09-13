@@ -62,7 +62,7 @@ stateDiagram-v2
 
 | Desde | Hacia | Disparador | Guarda |
 | --- | --- | --- | --- |
-| *(ninguno)* | `CONFIRMED` | `createPublicBooking` | el espacio cabe en el horario, sin excepción, sin solapamiento (serializable) |
+| *(ninguno)* | `CONFIRMED` | `createPublicBooking` | el espacio cabe en el horario, sin excepción, sin solapamiento, bajo el tope mensual del plan (serializable) |
 | `CONFIRMED` | `CONFIRMED` | `reschedule*` / `updatePublicBooking` | `assertModifiable`: sigue confirmada, no pasada, fuera de `cancellationPolicyHours`; el nuevo espacio libre |
 | `CONFIRMED` | `CANCELLED` | `cancelPublicBooking` (token) / `cancelByProfessional` (agenda) | `assertModifiable`; establece `cancelledAt`, `cancelledBy` |
 | `CONFIRMED` / `EXPIRED` | `COMPLETED` | `completeByProfessional` | el estado debe ser `CONFIRMED` o `EXPIRED` |

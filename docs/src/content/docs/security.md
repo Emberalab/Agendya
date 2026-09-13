@@ -27,6 +27,10 @@ description: Autenticación, autorización, validación de entrada, cabeceras, C
   `/public/professionals/:slug` expone solo campos públicos;
   `/public/bookings/:token` requiere el `cancellationToken` inadivinable
   (uuid v4, `@unique`).
+- `POST /webhooks/wompi` es público pero exige el checksum SHA256 de Wompi
+  (`properties` + `timestamp` + `WOMPI_EVENTS_SECRET`). Un evento `APPROVED`
+  solo escribe `plan` si la referencia es nuestra y el monto coincide con
+  `PLAN_PRICE_COP`.
 
 ## Validación de entrada
 

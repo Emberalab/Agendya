@@ -38,7 +38,7 @@ The product was renamed from "Ronda" to "Agendya" early on. Infra/config, CI, an
 
 ## Domain model (`apps/api/prisma/schema.prisma`)
 
-- **Professional** — the barber/stylist account: `slug` (public booking URL), `timezone` (default `America/Bogota`), `cancellationPolicyHours`, `plan` (BASIC/PRO), branding fields (logo/cover/brandColor), Google OAuth or password login.
+- **Professional** — the barber/stylist account: `slug` (public booking URL), `timezone` (default `America/Bogota`), `cancellationPolicyHours`, `plan` (FREE/BASIC/ADVANCED/BUSINESS), branding fields (logo/cover/brandColor), Google OAuth or password login.
 - **Service** — an offering: `durationMinutes`, `priceCents`, optional home-service variant (`homeServiceEnabled`/`homeDurationMinutes`/`homePriceCents`), soft-deleted via `deletedAt`.
 - **WorkingHour** — weekly recurring availability per professional (`dayOfWeek` + `startMinute`/`endMinute`).
 - **ScheduleException** — one-off closed dates per professional.

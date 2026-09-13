@@ -58,9 +58,9 @@ stateDiagram-v2
 flowchart LR
   C["POST /services  o  /duplicate"] --> A["assertWithinPlanLimit(professionalId)"]
   A --> P{"plan"}
-  P -->|PRO| OK["límite = null → permitir"]
-  P -->|BASIC| N["contar servicios no borrados"]
-  N --> G{"¿conteo ≥ 3 ?"}
+  P -->|ADVANCED / BUSINESS| OK["límite = null → permitir"]
+  P -->|FREE / BASIC| N["contar servicios no borrados"]
+  N --> G{"¿conteo ≥ límite del plan?"}
   G -->|sí| E["403 'Alcanzaste el límite de servicios de tu plan.'"]
   G -->|no| OK
 ```

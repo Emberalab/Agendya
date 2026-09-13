@@ -1,5 +1,8 @@
 import type {
+  BillingCheckoutResponse,
+  BillingSyncResult,
   CheckSlugResponse,
+  CreateBillingCheckoutInput,
   ProfessionalProfile,
   UpdateProfileInput,
 } from '@agendya/types';
@@ -29,6 +32,26 @@ export async function checkSlugAvailability(
     {
       params: { slug },
     },
+  );
+  return data;
+}
+
+export async function createBillingCheckout(
+  input: CreateBillingCheckoutInput,
+): Promise<BillingCheckoutResponse> {
+  const { data } = await apiClient.post<BillingCheckoutResponse>(
+    '/billing/checkout',
+    input,
+  );
+  return data;
+}
+
+export async function syncBillingTransaction(
+  input: { transactionId: string } | { reference: string },
+): Promise<BillingSyncResult> {
+  const { data } = await apiClient.post<BillingSyncResult>(
+    '/billing/sync',
+    input,
   );
   return data;
 }

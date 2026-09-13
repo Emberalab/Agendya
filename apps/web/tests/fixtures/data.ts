@@ -44,8 +44,11 @@ export function makeProfile(
     description: 'Cortes clásicos y modernos en el centro de la ciudad.',
     timezone: 'America/Bogota',
     cancellationPolicyHours: 24,
-    plan: 'BASIC',
+    plan: 'FREE',
+    billingInterval: null,
+    planExpiresAt: null,
     bookingsThisMonth: 12,
+    serviceCount: 3,
     monthlyBookingLimit: 100,
     createdAt: ISO,
     updatedAt: ISO,
@@ -72,7 +75,7 @@ function makeService(
   };
 }
 
-/** Two services — deliberately under the BASIC plan limit of 3. */
+/** Two services — deliberately under the FREE plan limit of 3. */
 export function makeServices(): Service[] {
   return [
     makeService({

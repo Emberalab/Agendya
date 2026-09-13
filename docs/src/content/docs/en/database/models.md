@@ -24,7 +24,11 @@ The barber/stylist account.
 | `description` | `String?` | Free text, ≤ 500 chars (schema-enforced in Zod) |
 | `timezone` | `String @default("America/Bogota")` | IANA zone |
 | `cancellationPolicyHours` | `Int @default(24)` | Minimum notice for customer changes; UI restricts to `1,2,3,4,6,24` |
-| `plan` | `Plan @default(BASIC)` | `BASIC` \| `PRO` |
+| `plan` | `Plan @default(FREE)` | `FREE` \| `BASIC` \| `ADVANCED` \| `BUSINESS` |
+| `billingInterval` | `BillingInterval?` | `monthly` \| `annual`. Set by a Wompi payment. `null` on FREE or when Super Admin assigns the plan by hand |
+| `planStartedAt` | `DateTime?` | Wompi payment that opened the current period |
+| `planExpiresAt` | `DateTime?` | End of the paid window (UTC). Monthly = +1 month, annual = +1 year. No job demotes to FREE yet |
+| `lastWompiTransactionId` | `String? @unique` | Idempotency: the same Wompi `tx` does not extend the period again |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rejects tokens for inactive accounts |
 
 Relations: `services`, `workingHours`, `scheduleExceptions`, `bookings`

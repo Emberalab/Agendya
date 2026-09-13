@@ -71,8 +71,9 @@ flowchart LR
 - **Transactional email** — confirmation, reminder (24h & 2h), reschedule
   (to customer and professional), cancellation. Sent via Resend; logged to
   console when unconfigured. [Details](/en/features/notifications/)
-- **Plans** — `BASIC` (free): 3 services, 100 bookings/month. `PRO`:
-  unlimited. Enforced server-side.
+- **Plans** — `FREE` / `BASIC` / `ADVANCED` / `BUSINESS`. Free: 3 services,
+  100 bookings/month. Basic: 10 services, unlimited bookings. Flags in
+  `FEATURE_CATALOG`. Enforced server-side.
 
 ## What is *not* in Phase 1
 

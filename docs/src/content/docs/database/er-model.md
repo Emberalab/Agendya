@@ -33,7 +33,11 @@ erDiagram
     string description "nullable"
     string timezone "default America/Bogota"
     int cancellationPolicyHours "default 24"
-    enum plan "BASIC | PRO, default BASIC"
+    enum plan "FREE | BASIC | ADVANCED | BUSINESS, default FREE"
+    enum billingInterval "monthly | annual, nullable"
+    datetime planStartedAt "nullable"
+    datetime planExpiresAt "nullable"
+    string lastWompiTransactionId UK "nullable"
     boolean isActive "default true"
     datetime createdAt
     datetime updatedAt
@@ -139,7 +143,7 @@ erDiagram
 | --- | --- |
 | `Weekday` | `SUNDAY`, `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY` |
 | `BookingStatus` | `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, `EXPIRED` |
-| `Plan` | `BASIC`, `PRO` |
+| `Plan` | `FREE`, `BASIC`, `ADVANCED`, `BUSINESS` |
 | `NotificationType` | `APPOINTMENT_CREATED` (único emitido hoy; el enum se ampliará) |
 
 ## Notas de diseño

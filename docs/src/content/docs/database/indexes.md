@@ -16,6 +16,7 @@ comentarios del esquema y se reproduce aquí.
 | `Professional` | `email @unique` | Identidad de login; también sirve la búsqueda por igualdad |
 | `Professional` | `slug @unique` | Resolución de la URL pública (`findFirst({ slug, isActive })`) |
 | `Professional` | `googleId @unique` | Enlace de cuenta OAuth |
+| `Professional` | `lastWompiTransactionId @unique` | Idempotencia del webhook/sync de billing |
 | `Booking` | `cancellationToken @unique` | Rutas públicas con token (`/public/bookings/:token`) |
 | `ScheduleException` | `@@unique([professionalId, date])` | Un bloqueo por día de calendario; Prisma `P2002` → `409 "Ya existe un bloqueo para esa fecha."` |
 

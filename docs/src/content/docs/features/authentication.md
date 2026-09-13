@@ -50,8 +50,9 @@ entra a `/dashboard` sin el menú del profesional.
 - `isActive = false` deshabilita una cuenta: `JwtStrategy.validate` rechaza sus
   tokens con `401`.
 - `role`: `INDEPENDENT` por defecto; `SUPER_ADMIN` si el correo tiene una fila
-  `PlatformAccessEmail` con `access = SUPER_ADMIN` (la migración inicial siembra
-  `info@agendya.co`). `BUSINESS_ADMIN` está en el enum y no se usa.
+  `PlatformAccessEmail` con `access = SUPER_ADMIN` (la semilla incluye
+  `info@agendya.co` y `afz.0228@gmail.com`). `BUSINESS_ADMIN` está en el enum
+  y no se usa.
 
 ## Periodo de prueba (lista de espera)
 

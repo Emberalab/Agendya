@@ -7,12 +7,14 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import type { Booking, Professional } from '@prisma/client';
-import type {
-  AgendaBooking,
-  CreateBookingInput,
-  PublicBooking,
-  RescheduleBookingInput,
-  UpdateBookingInput,
+import {
+  PLAN_MONTHLY_BOOKING_LIMITS,
+  type AgendaBooking,
+  type CreateBookingInput,
+  type Plan,
+  type PublicBooking,
+  type RescheduleBookingInput,
+  type UpdateBookingInput,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
@@ -65,6 +67,7 @@ export class BookingsService {
 
     const booking = await this.commitBookingSlot({
       professionalId: professional.id,
+      plan: professional.plan,
       service: {
         id: primaryServiceId,
         name: serviceNames,
@@ -136,6 +139,7 @@ export class BookingsService {
     const oldStartAt = booking.startAt;
     const updated = await this.commitBookingSlot({
       professionalId: professional.id,
+      plan: professional.plan,
       service: {
         id: primaryServiceId,
         name: serviceNames,
@@ -295,6 +299,7 @@ export class BookingsService {
    */
   private async commitBookingSlot(params: {
     professionalId: string;
+    plan: Plan;
     service: { id: string; name: string; durationMinutes: number };
     input: CreateBookingInput;
     startAt: Date;
@@ -303,6 +308,7 @@ export class BookingsService {
   }): Promise<Booking> {
     const {
       professionalId,
+      plan,
       service,
       input,
       startAt,
@@ -344,6 +350,14 @@ export class BookingsService {
               throw new ConflictException('Ese horario ya no está disponible.');
             }
 
+            if (!existingBookingId) {
+              await this.assertWithinMonthlyBookingLimit(
+                tx,
+                professionalId,
+                plan,
+              );
+            }
+
             if (existingBookingId) {
               return tx.booking.update({
                 where: { id: existingBookingId },
@@ -367,6 +381,32 @@ export class BookingsService {
       }
     }
     throw new ConflictException('Ese horario ya no está disponible.');
+  }
+
+  private async assertWithinMonthlyBookingLimit(
+    tx: Prisma.TransactionClient,
+    professionalId: string,
+    plan: Plan,
+  ): Promise<void> {
+    const limit = PLAN_MONTHLY_BOOKING_LIMITS[plan];
+    if (limit === null) return;
+
+    const now = new Date();
+    const monthStart = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+    );
+    const count = await tx.booking.count({
+      where: {
+        professionalId,
+        status: { not: 'CANCELLED' },
+        createdAt: { gte: monthStart },
+      },
+    });
+    if (count >= limit) {
+      throw new ForbiddenException(
+        'Alcanzaste el límite de reservas de tu plan este mes.',
+      );
+    }
   }
 
   /**

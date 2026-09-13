@@ -61,7 +61,7 @@ stateDiagram-v2
 
 | From | To | Trigger | Guard |
 | --- | --- | --- | --- |
-| *(none)* | `CONFIRMED` | `createPublicBooking` | slot fits working hours, no exception, no overlap (serializable) |
+| *(none)* | `CONFIRMED` | `createPublicBooking` | slot fits working hours, no exception, no overlap, under the monthly plan cap (serializable) |
 | `CONFIRMED` | `CONFIRMED` | `reschedule*` / `updatePublicBooking` | `assertModifiable`: still confirmed, not past, outside `cancellationPolicyHours`; new slot free |
 | `CONFIRMED` | `CANCELLED` | `cancelPublicBooking` (token) / `cancelByProfessional` (agenda) | `assertModifiable`; sets `cancelledAt`, `cancelledBy` |
 | `CONFIRMED` / `EXPIRED` | `COMPLETED` | `completeByProfessional` | status must be `CONFIRMED` or `EXPIRED` |

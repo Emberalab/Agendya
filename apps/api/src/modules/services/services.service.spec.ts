@@ -45,7 +45,7 @@ describe('ServicesService', () => {
         update: jest.fn(),
       },
       professional: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({ plan: 'BASIC' }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ plan: 'FREE' }),
       },
     };
 
@@ -104,6 +104,8 @@ describe('ServicesService', () => {
         name: 'Manicure',
         durationMinutes: 45,
         priceCents: 1500000,
+        isActive: true,
+        homeServiceEnabled: false,
       });
 
       type CreateCall = [{ data: Record<string, unknown> }];
@@ -120,7 +122,7 @@ describe('ServicesService', () => {
 
     it('rejects creating a service past the plan limit', async () => {
       prisma.professional.findUniqueOrThrow.mockResolvedValue({
-        plan: 'BASIC',
+        plan: 'FREE',
       });
       prisma.service.count.mockResolvedValue(3);
 
@@ -129,13 +131,17 @@ describe('ServicesService', () => {
           name: 'Cuarto servicio',
           durationMinutes: 30,
           priceCents: 1000000,
+          isActive: true,
+          homeServiceEnabled: false,
         }),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.service.create).not.toHaveBeenCalled();
     });
 
-    it('allows unlimited services on the PRO plan', async () => {
-      prisma.professional.findUniqueOrThrow.mockResolvedValue({ plan: 'PRO' });
+    it('allows unlimited services on the ADVANCED plan', async () => {
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({
+        plan: 'ADVANCED',
+      });
       prisma.service.count.mockResolvedValue(50);
       prisma.service.create.mockImplementation(({ data }) =>
         Promise.resolve({ ...BASE_SERVICE, ...data, id: 'service-51' }),
@@ -146,6 +152,8 @@ describe('ServicesService', () => {
           name: 'Servicio 51',
           durationMinutes: 30,
           priceCents: 1000000,
+          isActive: true,
+          homeServiceEnabled: false,
         }),
       ).resolves.toBeDefined();
     });
@@ -257,7 +265,7 @@ describe('ServicesService', () => {
     it('rejects duplicating past the plan limit', async () => {
       prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
       prisma.professional.findUniqueOrThrow.mockResolvedValue({
-        plan: 'BASIC',
+        plan: 'FREE',
       });
       prisma.service.count.mockResolvedValue(3);
 

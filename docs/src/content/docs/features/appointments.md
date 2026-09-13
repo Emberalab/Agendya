@@ -46,7 +46,7 @@ sequenceDiagram
   Svc->>Svc: resolveServiceSelection — cargar servicios, sumar duración,<br/>a domicilio requiere dirección + homeServiceEnabled
   Svc->>Svc: rechazar startAt en el pasado (400)
   Svc->>DB: assertSlotWithinSchedule — ¿cabe en un bloque WorkingHour? ¿sin ScheduleException? (409)
-  Svc->>DB: tx SERIALIZABLE — findFirst de solapamiento → create; reintento x3 ante 40001/P2034
+  Svc->>DB: tx SERIALIZABLE — solapamiento + tope mensual del plan → create;<br/>reintento x3 ante 40001/P2034
   DB-->>Svc: Booking (CONFIRMED, cancellationToken)
   Svc->>Svc: MailService.sendBookingConfirmation
   Svc-->>Ctl: DTO PublicBooking
