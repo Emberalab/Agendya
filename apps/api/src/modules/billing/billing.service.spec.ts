@@ -206,20 +206,26 @@ describe('BillingService', () => {
         timestamp,
       });
 
-      expect(prisma.professional.update).toHaveBeenCalledWith({
-        where: { id: PROFESSIONAL_ID },
-        data: expect.objectContaining({
-          plan: 'BASIC',
-          billingInterval: 'monthly',
-          lastWompiTransactionId: 'tx-approved',
-        }),
-      });
-      const startedAt = prisma.professional.update.mock.calls[0][0].data
-        .planStartedAt as Date;
-      expect(startedAt).toBeInstanceOf(Date);
-      const expiresAt = prisma.professional.update.mock.calls[0][0].data
-        .planExpiresAt as Date;
-      expect(expiresAt).toBeInstanceOf(Date);
+      expect(prisma.professional.update).toHaveBeenCalled();
+      const calls = prisma.professional.update.mock.calls as [
+        {
+          where: { id: string };
+          data: {
+            plan: string;
+            billingInterval: string;
+            lastWompiTransactionId: string;
+            planStartedAt: Date;
+            planExpiresAt: Date;
+          };
+        },
+      ][];
+      const updateArg = calls[0][0];
+      expect(updateArg.where).toEqual({ id: PROFESSIONAL_ID });
+      expect(updateArg.data.plan).toBe('BASIC');
+      expect(updateArg.data.billingInterval).toBe('monthly');
+      expect(updateArg.data.lastWompiTransactionId).toBe('tx-approved');
+      expect(updateArg.data.planStartedAt).toBeInstanceOf(Date);
+      expect(updateArg.data.planExpiresAt).toBeInstanceOf(Date);
     });
 
     it('ignores an approved event whose amount does not match the catalog', async () => {

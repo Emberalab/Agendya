@@ -1,12 +1,11 @@
 import type { Page, Route } from '@playwright/test';
-import {
-  PLAN_MONTHLY_BOOKING_LIMITS,
-  type AgendaBooking,
-  type Notification,
-  type ProfessionalProfile,
-  type PublicBooking,
-  type Service,
-  type WorkingHour,
+import type {
+  AgendaBooking,
+  Notification,
+  ProfessionalProfile,
+  PublicBooking,
+  Service,
+  WorkingHour,
 } from '@agendya/types';
 import {
   PUBLIC_SLUG,
@@ -92,8 +91,7 @@ export class ApiMock {
 
   setPlan(plan: ProfessionalProfile['plan']): void {
     this.profile.plan = plan;
-    this.profile.monthlyBookingLimit =
-      plan === 'FREE' ? 100 : PLAN_MONTHLY_BOOKING_LIMITS[plan];
+    this.profile.monthlyBookingLimit = plan === 'FREE' ? 100 : null;
   }
 
   setServices(services: Service[]): void {
