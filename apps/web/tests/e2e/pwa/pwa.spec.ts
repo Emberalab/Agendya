@@ -64,18 +64,26 @@ test.describe('PWA', () => {
   }) => {
     await page.goto('/');
 
-    await page.waitForFunction(
-      async () => {
-        const reg = await navigator.serviceWorker.getRegistration();
-        return Boolean(reg && reg.active);
-      },
-      null,
-      { timeout: 20_000 },
-    );
-
+    // `serviceWorker.ready` + a `statechange` listener, not polling
+    // `getRegistration()` from the Node side: `ready` can resolve while the
+    // worker is still "activating", and a separate follow-up round trip to
+    // re-read it leaves a gap where `reg.active` can transiently go null
+    // mid-update. Waiting for "activated" inside the same evaluation removes
+    // that gap entirely.
     const info = await page.evaluate(async () => {
-      const reg = await navigator.serviceWorker.getRegistration();
-      return { scope: reg?.scope, state: reg?.active?.state };
+      const reg = await navigator.serviceWorker.ready;
+      const active = reg.active;
+      if (active && active.state !== 'activated') {
+        await new Promise<void>((resolve) => {
+          active.addEventListener('statechange', function onChange() {
+            if (active.state === 'activated') {
+              active.removeEventListener('statechange', onChange);
+              resolve();
+            }
+          });
+        });
+      }
+      return { scope: reg.scope, state: active?.state };
     });
     expect(info.scope).toBe(new URL('/', page.url()).toString());
     expect(info.state).toBe('activated');

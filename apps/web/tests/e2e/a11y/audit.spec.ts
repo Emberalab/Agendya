@@ -11,10 +11,17 @@ import { PUBLIC_SLUG, makeHomeServiceAgendaBooking } from '../../fixtures/data';
  * floor, not a ceiling: things axe can't verify (focus trapping, Escape
  * behavior, logical focus order, restoring focus on close) are covered by the
  * interaction assertions in the other e2e specs instead.
+ *
+ * `meta-viewport` is disabled deliberately, not overlooked: index.html sets
+ * `maximum-scale=1.0, user-scalable=no` on purpose, to keep the app/PWA from
+ * pinch-zooming like a webpage. That's the one, known, product-chosen
+ * departure from WCAG 1.4.4 (Resize Text) — every other rule in these tag
+ * sets still runs at full strength on every page below.
  */
 async function expectNoViolations(page: Page) {
   const results = await new AxeBuilder({ page })
     .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+    .disableRules(['meta-viewport'])
     .analyze();
 
   const summary = results.violations
