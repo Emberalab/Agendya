@@ -48,13 +48,7 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: Professional) {
-    return {
-      id: user.id,
-      email: user.email,
-      businessName: user.businessName,
-      slug: user.slug,
-      role: user.role,
-    };
+    return this.authService.toAuthUser(user);
   }
 
   @Get('google')

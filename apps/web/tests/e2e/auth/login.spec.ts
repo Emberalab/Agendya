@@ -52,4 +52,33 @@ test.describe('Email + password login', () => {
     ).toBeVisible();
     await expect(page).toHaveURL(/\/login$/);
   });
+
+  test('stays on login and offers a register CTA for an unknown email', async ({
+    page,
+    api,
+  }) => {
+    await api.overrideOnce('POST', /^\/auth\/login$/, {
+      status: 401,
+      body: {
+        code: 'ACCOUNT_NOT_FOUND',
+        message: 'No hay una cuenta con este correo.',
+      },
+    });
+
+    await page.goto('/login');
+    await page.getByLabel('Correo electrónico *').fill('nuevo@salon.com');
+    await page.getByLabel('Contraseña *').fill('whatever1');
+    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
+
+    await expect(page).toHaveURL(/\/login$/);
+    await expect(
+      page.getByText(/no tenemos una cuenta con este correo/i),
+    ).toBeVisible();
+
+    await page.getByRole('link', { name: 'Crear cuenta' }).click();
+    await expect(page).toHaveURL(/\/register\?email=nuevo%40salon\.com/);
+    await expect(page.getByLabel('Correo electrónico *')).toHaveValue(
+      'nuevo@salon.com',
+    );
+  });
 });

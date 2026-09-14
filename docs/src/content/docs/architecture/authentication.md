@@ -47,7 +47,7 @@ sequenceDiagram
     Svc->>Svc: bcrypt.compare  → 401 si no coincide
   end
   Svc->>JS: sign({ sub: id, email })
-  Svc-->>Ctl: { accessToken, user: { id, email, businessName, slug, role } }
+  Svc-->>Ctl: { accessToken, user: { id, email, businessName, slug, role, accessStatus } }
   Ctl-->>AC: 200 / 201
   AC->>W: authStore.setSession(...)  → persistido en localStorage
   W->>W: if user.role === SUPER_ADMIN → /dashboard else /dashboard/profile

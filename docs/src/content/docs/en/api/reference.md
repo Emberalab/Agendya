@@ -18,13 +18,13 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 
 | Method | Path | Auth | Body / Query | Response |
 | --- | --- | --- | --- | --- |
-| `POST` | `/auth/register` | none · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `403 { code: "WAITLIST_REQUIRED" }` on Railway if the email is not on the closed-beta list |
-| `POST` | `/auth/login` | none · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · same waitlist `403` |
-| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
+| `POST` | `/auth/register` | none · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `user.accessStatus` is `PENDING` in closed beta if the email is not on the list |
+| `POST` | `/auth/login` | none · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · `401 { code: "ACCOUNT_NOT_FOUND" }` if the email has no account (the web stays on `/login` with a register CTA) · `403 { code: "ACCESS_DECLINED" }` if Super Admin declined |
+| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role, accessStatus }` |
 | `GET` | `/auth/google` | none | — | `302` → Google (sets `oauth_state` cookie) |
-| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · email not allowed: `{WEB_URL}/register?waitlist=1` · invalid `state`: `{WEB_URL}/login?error=oauth` |
+| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · declined account: `{WEB_URL}/login?error=declined` · invalid `state`: `{WEB_URL}/login?error=oauth` |
 
-`user` = `{ id, email, businessName, slug }`.
+`user` = `{ id, email, businessName, slug, role, accessStatus }`.
 
 ## Admin — `modules/admin` (JWT + `SUPER_ADMIN`)
 
@@ -34,6 +34,8 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 | `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` | `AllowlistEntry` · `409` if it exists |
 | `PATCH` | `/admin/allowlist/:email` | `updateAllowlistEntrySchema` | `AllowlistEntry` · `403` if you downgrade yourself · `400` if zero Super Admins remain |
 | `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · same rules as PATCH |
+| `GET` | `/admin/registrations` | — | `RegistrationEntry[]` (every `Professional` account) |
+| `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` | `RegistrationEntry` · `403` if declining a Super Admin |
 | `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | same object · `404` |
 

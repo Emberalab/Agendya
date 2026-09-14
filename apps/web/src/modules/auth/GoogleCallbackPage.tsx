@@ -35,6 +35,7 @@ export function GoogleCallbackPage() {
         businessName: '', // We'll fetch this from /auth/me
         slug: '',
         role: 'INDEPENDENT' as const,
+        accessStatus: 'PENDING' as const,
       };
 
       setSession({ accessToken: token, user });

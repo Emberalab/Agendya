@@ -7,6 +7,11 @@ process.env.DISABLE_SCHEDULED_JOBS = 'true';
 process.env.JWT_SECRET = process.env.JWT_SECRET ?? 'test-jwt-secret';
 process.env.JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN ?? '7d';
 
+// E2E suites exercise dashboard APIs. New signups are PENDING until approved;
+// the empty allowlist is the product kill switch so effective access is APPROVED
+// and ApprovedAccessGuard does not 403 every protected route.
+process.env.PROFESSIONAL_EMAIL_ALLOWLIST = '';
+
 // The e2e suite must not hit the real Resend API (a local .env may carry a live
 // key, and test bookings use @example.com addresses Resend rejects with a 422).
 // Set to empty rather than delete: ConfigModule/dotenv only fills vars that are

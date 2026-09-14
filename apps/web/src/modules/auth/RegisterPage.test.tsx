@@ -14,13 +14,13 @@ vi.mock('./hooks/useRegister', () => ({
   }),
 }));
 
-function renderPage() {
+function renderPage(initialEntry = '/register') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <RegisterPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -79,5 +79,13 @@ describe('RegisterPage', () => {
     expect(
       await screen.findByText(/marca la casilla para aceptar los términos/i),
     ).toBeInTheDocument();
+  });
+
+  it('prefills the email from the query string', () => {
+    renderPage('/register?email=mimiyin%40ynnord.top');
+
+    expect(screen.getByLabelText('Correo electrónico *')).toHaveValue(
+      'mimiyin@ynnord.top',
+    );
   });
 });

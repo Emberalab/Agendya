@@ -18,4 +18,10 @@ describe('postAuthPath', () => {
     expect(postAuthPath({ role: 'INDEPENDENT' })).toBe('/dashboard/profile');
     expect(postAuthPath(null)).toBe('/dashboard/profile');
   });
+
+  it('sends pending accounts to the waiting page', () => {
+    expect(
+      postAuthPath({ role: 'INDEPENDENT', accessStatus: 'PENDING' }),
+    ).toBe('/acceso-pendiente');
+  });
 });

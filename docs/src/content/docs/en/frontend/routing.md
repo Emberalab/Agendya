@@ -14,6 +14,7 @@ single `<Routes>` block wrapped in one `<Suspense fallback={<RouteFallback/>}>`.
 | `/register` | `RegisterPage` | `<PublicRoute>` | lazy |
 | `/forgot-password` | `ForgotPasswordPage` | `<PublicRoute>` | lazy · *(no API behind it yet)* |
 | `/auth/callback` | `GoogleCallbackPage` | none | lazy |
+| `/acceso-pendiente` | `PendingAccessPage` | `<PrivateRoute>` | lazy |
 | `/dashboard/profile` | `ProfilePage` | `<PrivateRoute>` → `<DashboardLayout>` | lazy |
 | `/dashboard/services` | `ServicesPage` | `<PrivateRoute>` → `<DashboardLayout>` | lazy |
 | `/dashboard/services/new` | `ServiceFormPage` | ″ | lazy |

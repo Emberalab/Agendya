@@ -13,6 +13,16 @@ An independent professional hitting that path is sent back to
 Role is assigned **on register** when a `PlatformAccessEmail` row has
 `access = SUPER_ADMIN`. Login does not escalate or downgrade role.
 
+## Registrations
+
+Lists **every** `Professional` account (email, business, `accessStatus`, plan,
+created date). **Accept** sets `APPROVED` and upserts `ALLOWLISTED` on
+`PlatformAccessEmail`. **Decline** sets `DECLINED` (the row is not deleted).
+You cannot decline a Super Admin.
+
+This tab is the source of truth for who signed up. The access list below is
+still for inviting emails **before** they register.
+
 ## Access list
 
 `PlatformAccessEmail` (`ALLOWLISTED` | `SUPER_ADMIN`). On Railway
@@ -23,6 +33,8 @@ Role is assigned **on register** when a `PlatformAccessEmail` row has
   the `Professional.plan` when that email already registered (`null` = list
   only), plus `billingInterval` (monthly/annual), `planStartedAt` (purchased)
   and `planExpiresAt` (expires) when the cycle came from a Wompi payment.
+- Deleting a grant also sets `accessStatus = PENDING` on an existing account
+  (does not delete the `Professional`; they lose dashboard access).
 - You cannot downgrade or delete yourself (`403`).
 - You cannot leave zero `SUPER_ADMIN` grants (`400`), via PATCH or DELETE.
 - Changing a grant to `SUPER_ADMIN` does **not** promote an existing account.
@@ -64,5 +76,7 @@ All: JWT + `SUPER_ADMIN`.
 | `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` · `409` if the email exists |
 | `PATCH` | `/admin/allowlist/:email` | `{ access }` · `403`/`400` per the rules above |
 | `DELETE` | `/admin/allowlist/:email` | `{ deleted: true }` |
+| `GET` | `/admin/registrations` | `RegistrationEntry[]` |
+| `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` · `403` if declining a Super Admin |
 | `GET` | `/admin/professionals/:email` | `{ id, email, businessName, slug, plan }` · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `{ plan }` (`planSchema`) · `404` |

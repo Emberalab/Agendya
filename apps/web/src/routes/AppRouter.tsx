@@ -29,6 +29,11 @@ const GoogleCallbackPage = lazy(() =>
     default: m.GoogleCallbackPage,
   })),
 );
+const PendingAccessPage = lazy(() =>
+  import('../modules/auth/PendingAccessPage').then((m) => ({
+    default: m.PendingAccessPage,
+  })),
+);
 const DashboardLayout = lazy(() =>
   import('../modules/dashboard/DashboardLayout').then((m) => ({
     default: m.DashboardLayout,
@@ -112,6 +117,7 @@ export function AppRouter() {
           <Route path="/auth/callback" element={<GoogleCallbackPage />} />
 
           <Route element={<PrivateRoute />}>
+            <Route path="/acceso-pendiente" element={<PendingAccessPage />} />
             <Route element={<DashboardLayout />}>
               <Route path="/dashboard" element={<SuperAdminHome />} />
               <Route path="/dashboard/admin" element={<AdminPanel />} />

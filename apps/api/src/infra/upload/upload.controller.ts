@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../../modules/auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../../modules/auth/guards/approved-access.guard';
 import { UploadService } from './upload.service';
 
 // The web app downscales images before upload; these are just abuse guards.
@@ -32,7 +33,7 @@ const ALLOWED_MIME_TYPES = new Set([
 ]);
 
 @Controller('upload')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ApprovedAccessGuard)
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
 

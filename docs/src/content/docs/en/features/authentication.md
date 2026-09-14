@@ -29,13 +29,14 @@ unfinished work, not a documented feature.
 | Method | Path | Auth | Body / params | Response |
 | --- | --- | --- | --- | --- |
 | `POST` | `/auth/register` | none · `@Throttle 5/60s` | `{ email, password, businessName }` (`registerSchema`) | `{ accessToken, user }` |
-| `POST` | `/auth/login` | none · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` |
-| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role }` |
+| `POST` | `/auth/login` | none · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` · `401 ACCOUNT_NOT_FOUND` stays on `/login` with a register CTA |
+| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role, accessStatus }` |
 | `GET` | `/auth/google` | none | — | 302 to Google (+ sets `oauth_state` cookie) |
-| `GET` | `/auth/google/callback` | `state` cookie + Google | `?code&state` | 302 to `{WEB_URL}/auth/callback#token=<JWT>` · waitlist: `/register?waitlist=1` · invalid `state`: `/login?error=oauth` |
+| `GET` | `/auth/google/callback` | `state` cookie + Google | `?code&state` | 302 to `{WEB_URL}/auth/callback#token=<JWT>` · declined: `/login?error=declined` · invalid `state`: `/login?error=oauth` |
 
-`user` shape: `{ id, email, businessName, slug, role }`. `SUPER_ADMIN`
-lands on `/dashboard` without the professional nav.
+`user` shape: `{ id, email, businessName, slug, role, accessStatus }`. `PENDING`
+lands on `/acceso-pendiente`. `SUPER_ADMIN` lands on `/dashboard` without the
+professional nav.
 
 ## Account model
 
@@ -49,20 +50,26 @@ lands on `/dashboard` without the professional nav.
   `"First Last"`.
 - `isActive = false` disables an account: `JwtStrategy.validate` rejects its
   tokens with `401`.
+- `accessStatus`: `PENDING` \| `APPROVED` \| `DECLINED`. Sign-up always creates
+  the row. Without a grant in closed beta it is `PENDING` (session yes, dashboard
+  no). `DECLINED` cannot sign in. `JwtStrategy` rejects `DECLINED` and allows
+  `PENDING`.
 - `role`: `INDEPENDENT` by default; `SUPER_ADMIN` when the email has a
   `PlatformAccessEmail` row with `access = SUPER_ADMIN` (the seed includes
   `info@agendya.co` and `afz.0228@gmail.com`). `BUSINESS_ADMIN` is in the enum
   and unused.
 
-## Closed beta (waitlist)
+## Closed beta (pending access)
 
-On Railway (`RAILWAY_ENVIRONMENT_NAME` = `production` or `dev`) only emails in
-`PlatformAccessEmail` may register or log in as a professional. Anyone else
-gets `403 { code: "WAITLIST_REQUIRED" }` and the web app shows the same
-waitlist form as [launch.agendya.co](https://launch.agendya.co). Local and CI
-leave signup open. `PROFESSIONAL_EMAIL_ALLOWLIST` overrides the table; empty =
-open. A `SUPER_ADMIN` grant always gets in, even if the env list omits it.
-Public `/:slug` booking is unchanged.
+Registration **always** creates a `Professional`. Without a
+`PlatformAccessEmail` grant (or a `PROFESSIONAL_EMAIL_ALLOWLIST` match)
+`accessStatus` is `PENDING` and the web sends them to `/acceso-pendiente`.
+Super Admin sees every account under **Registros** and can Accept / Decline.
+
+`PROFESSIONAL_EMAIL_ALLOWLIST=""` (empty string) opens the product: stored
+`PENDING` can enter the dashboard with no mass update (`DECLINED` stays out).
+A `SUPER_ADMIN` or `ALLOWLISTED` grant is born `APPROVED`. Public `/:slug`
+pages only show `APPROVED` accounts while the kill switch is off.
 
 ## Session lifecycle (web)
 

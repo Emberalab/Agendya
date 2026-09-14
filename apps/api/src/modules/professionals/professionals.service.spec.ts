@@ -207,7 +207,11 @@ describe('ProfessionalsService', () => {
       const result = await service.findPublicBySlug('maria-belleza');
 
       expect(prisma.professional.findFirst).toHaveBeenCalledWith({
-        where: { slug: 'maria-belleza', isActive: true },
+        where: {
+          slug: 'maria-belleza',
+          isActive: true,
+          accessStatus: 'APPROVED',
+        },
         include: {
           services: {
             where: { isActive: true, deletedAt: null },

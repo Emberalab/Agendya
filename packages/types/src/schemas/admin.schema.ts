@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BILLING_INTERVALS } from '../plans/billing';
 import { planSchema } from '../plans/catalog';
+import { accessStatusSchema, platformRoleSchema } from './auth.schema';
 
 // PlatformAccessEmail CRUD schemas
 
@@ -57,3 +58,24 @@ export const professionalForPlanChangeSchema = z.object({
 });
 
 export type ProfessionalForPlanChange = z.infer<typeof professionalForPlanChangeSchema>;
+
+export const registrationEntrySchema = z.object({
+  id: z.string().uuid(),
+  email: z.string().email(),
+  businessName: z.string(),
+  slug: z.string(),
+  accessStatus: accessStatusSchema,
+  role: platformRoleSchema,
+  plan: planSchema,
+  createdAt: z.string().datetime(),
+});
+
+export type RegistrationEntry = z.infer<typeof registrationEntrySchema>;
+
+export const updateRegistrationStatusSchema = z.object({
+  status: z.enum(['APPROVED', 'DECLINED']),
+});
+
+export type UpdateRegistrationStatusInput = z.infer<
+  typeof updateRegistrationStatusSchema
+>;

@@ -3,6 +3,7 @@ import type { Professional } from '@prisma/client';
 import { Observable } from 'rxjs';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { RealtimeService } from './realtime.service';
 
 @Controller('realtime')
@@ -21,7 +22,7 @@ export class RealtimeController {
    * receive another professional's events.
    */
   @Sse('stream')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, ApprovedAccessGuard)
   stream(@CurrentUser() user: Professional): Observable<MessageEvent> {
     return this.realtime.subscribe(user.id);
   }
