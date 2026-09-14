@@ -213,6 +213,18 @@ h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
 }
 
+/* Moon Design System's own text-size utilities (.text-xs/sm/md/lg/xl/2xl.../9xl,
+   .text-2xs) each bake in `font-family: var(--font-default)` ("DM Sans"), which this
+   app never loads — only Inter/Outfit/Plus Jakarta Sans are in the Google Fonts link.
+   Any element sized with a bare Tailwind text-* class (no inline font override) gets
+   an unavailable font and the browser falls back to its default serif. This rule sits
+   outside any @layer, so it outranks Moon's/Tailwind's layered utilities regardless of
+   source order, restoring normal inheritance from body/h1-h6 above. */
+.text-2xs, .text-xs, .text-sm, .text-md, .text-lg, .text-xl,
+.text-2xl, .text-3xl, .text-4xl, .text-5xl, .text-6xl, .text-7xl, .text-8xl, .text-9xl {
+  font-family: inherit;
+}
+
 .agendia-label {
   font-family: var(--font-mono);
   font-size: 0.75rem;
