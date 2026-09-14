@@ -8,7 +8,10 @@ import './main.scss';
 // ever rendered. index.html already set it before first paint to avoid a
 // flash; this keeps the store in sync from here on.
 import './shared/theme/themeStore';
+import { logAppBuild } from './shared/config/appBuild';
 import App from './App.tsx';
+
+logAppBuild();
 
 const queryClient = new QueryClient();
 

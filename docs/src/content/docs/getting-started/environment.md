@@ -62,6 +62,7 @@ fuerte y único antes de cualquier despliegue real.
 | `VITE_API_URL` | *(sin definir)* → `http://<host-de-la-página>:4000` | URL base que el navegador llama para la API. Déjala sin definir para localhost **y** para pruebas por LAN (`npm run dev:web:host`); defínela solo para apuntar a otro backend (p. ej. staging). |
 | `VITE_PUBLIC_SITE_URL` | *(sin definir)* → `window.location.origin` | Origen de la página pública (`/{slug}`). En prod: `https://agendya.co`. En `app-dev`: `https://app-dev.agendya.co`. |
 | `VITE_WAITLIST_URL` | *(sin definir)* | POST del formulario de cupo. En hosted: secret de Actions `VITE_WAITLIST_URL`. Sin ella el envío no sale |
+| `VITE_GIT_SHA` / `VITE_GIT_BRANCH` / `VITE_BUILT_AT` | las inyecta Vite al bundlear (git o `GITHUB_SHA`) | Sello del deploy. `console.info` al arrancar y `window.__AGENDYA_BUILD__`. No las pongas en `.env` |
 
 `apiClient` la resuelve así:
 
