@@ -14,6 +14,7 @@ function renderAt(path: string) {
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
+          <Route path="/acceso-pendiente" element={<h1>Acceso pendiente</h1>} />
           <Route element={<DashboardLayout />}>
             <Route path="/dashboard" element={<SuperAdminHome />} />
             <Route path="/dashboard/admin" element={<h1>Admin</h1>} />
@@ -38,6 +39,7 @@ describe('DashboardLayout', () => {
         email: 'info@agendya.co',
         businessName: 'Agendya',
         slug: 'agendya',
+        accessStatus: 'APPROVED',
         role: 'SUPER_ADMIN',
       },
     });
@@ -60,6 +62,7 @@ describe('DashboardLayout', () => {
         email: 'info@agendya.co',
         businessName: 'Agendya',
         slug: 'agendya',
+        accessStatus: 'APPROVED',
         role: 'SUPER_ADMIN',
       },
     });
@@ -77,6 +80,7 @@ describe('DashboardLayout', () => {
         email: 'pro@salon.com',
         businessName: 'Salón',
         slug: 'salon',
+        accessStatus: 'APPROVED',
         role: 'INDEPENDENT',
       },
     });
@@ -97,6 +101,7 @@ describe('DashboardLayout', () => {
         email: 'pro@salon.com',
         businessName: 'Salón',
         slug: 'salon',
+        accessStatus: 'APPROVED',
         role: 'INDEPENDENT',
       },
     });
@@ -105,5 +110,26 @@ describe('DashboardLayout', () => {
 
     expect(screen.getByRole('heading', { name: 'Perfil' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Admin' })).toBeNull();
+  });
+
+  it('sends a pending account to the waiting page', () => {
+    useAuthStore.setState({
+      accessToken: 'token',
+      user: {
+        id: '00000000-0000-4000-8000-000000000001',
+        email: 'pro@salon.com',
+        businessName: 'Salón',
+        slug: 'salon',
+        accessStatus: 'PENDING',
+        role: 'INDEPENDENT',
+      },
+    });
+
+    renderAt('/dashboard/profile');
+
+    expect(
+      screen.getByRole('heading', { name: 'Acceso pendiente' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Perfil' })).toBeNull();
   });
 });

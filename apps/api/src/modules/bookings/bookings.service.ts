@@ -19,6 +19,7 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
 import {
   dateOnlyUtc,
   weekdayFromDateString,
@@ -44,7 +45,7 @@ export class BookingsService {
     input: CreateBookingInput,
   ): Promise<PublicBooking> {
     const professional = await this.prisma.professional.findFirst({
-      where: { slug, isActive: true },
+      where: { slug, isActive: true, ...publicProfessionalAccessFilter() },
     });
     if (!professional) {
       throw new NotFoundException('Profesional no encontrado.');

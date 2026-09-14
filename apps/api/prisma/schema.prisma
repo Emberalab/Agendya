@@ -60,6 +60,16 @@ enum PlatformAccessKind {
   ALLOWLISTED
 }
 
+// Closed-beta gate on the Professional row. Distinct from `isActive` so a
+// pending account can hold a session (waiting page) without appearing on the
+// public booking page. Existing rows default to APPROVED. DECLINED stays out
+// even if signup is later opened.
+enum AccessStatus {
+  PENDING
+  APPROVED
+  DECLINED
+}
+
 // In-app notification feed for a professional. Persisted so the dashboard's
 // notification centre survives page reloads, offline periods, and missed
 // real-time events. Real-time (SSE) delivery is a separate, best-effort channel
@@ -92,6 +102,7 @@ model Professional {
   planExpiresAt           DateTime?
   lastWompiTransactionId  String?           @unique
   role                    PlatformRole      @default(INDEPENDENT)
+  accessStatus            AccessStatus      @default(APPROVED)
   isActive                Boolean      @default(true)
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
@@ -106,6 +117,7 @@ model Professional {
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
   // secondary @@index is needed here.
+  @@index([accessStatus])
 }
 
 model PlatformAccessEmail {

@@ -12,7 +12,9 @@ import {
   type BillingInterval,
   type CreateAllowlistEntryInput,
   type Plan,
+  type PlatformRole,
   type ProfessionalForPlanChange,
+  type RegistrationEntry,
   type UpdateAllowlistEntryInput,
 } from '@agendya/types';
 
@@ -35,6 +37,79 @@ export class AdminService {
     return rows.map((row) =>
       this.toAllowlistEntry(row, plans.get(row.email) ?? null),
     );
+  }
+
+  async listRegistrations(): Promise<RegistrationEntry[]> {
+    const rows = await this.prisma.professional.findMany({
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        email: true,
+        businessName: true,
+        slug: true,
+        accessStatus: true,
+        role: true,
+        plan: true,
+        createdAt: true,
+      },
+    });
+    return rows.map((row) => this.toRegistration(row));
+  }
+
+  async updateRegistrationStatus(
+    email: string,
+    status: 'APPROVED' | 'DECLINED',
+  ): Promise<RegistrationEntry> {
+    const normalizedEmail = email.trim().toLowerCase();
+    const professional = await this.prisma.professional.findUnique({
+      where: { email: normalizedEmail },
+      select: {
+        id: true,
+        email: true,
+        role: true,
+      },
+    });
+    if (!professional) {
+      throw new NotFoundException(
+        `No se encontró un profesional con el correo: ${email}`,
+      );
+    }
+
+    if (professional.role === 'SUPER_ADMIN' && status === 'DECLINED') {
+      throw new ForbiddenException(
+        'No puedes declinar a un Super Admin.',
+      );
+    }
+
+    const updated = await this.prisma.professional.update({
+      where: { id: professional.id },
+      data: { accessStatus: status },
+      select: {
+        id: true,
+        email: true,
+        businessName: true,
+        slug: true,
+        accessStatus: true,
+        role: true,
+        plan: true,
+        createdAt: true,
+      },
+    });
+
+    if (status === 'APPROVED') {
+      await this.prisma.platformAccessEmail.upsert({
+        where: { email: professional.email },
+        create: { email: professional.email, access: 'ALLOWLISTED' },
+        update: {},
+      });
+    } else {
+      // Keep Lista de acceso in sync: declined accounts drop ALLOWLISTED grants.
+      await this.prisma.platformAccessEmail.deleteMany({
+        where: { email: professional.email, access: 'ALLOWLISTED' },
+      });
+    }
+
+    return this.toRegistration(updated);
   }
 
   async createAllowlistEntry(
@@ -99,6 +174,17 @@ export class AdminService {
 
     await this.prisma.platformAccessEmail.delete({
       where: { email: normalizedEmail },
+    });
+
+    // Revoke dashboard access if they already registered. Keep the Professional
+    // row in Registros as PENDING (do not delete the account).
+    await this.prisma.professional.updateMany({
+      where: {
+        email: normalizedEmail,
+        role: { not: 'SUPER_ADMIN' },
+        accessStatus: { not: 'DECLINED' },
+      },
+      data: { accessStatus: 'PENDING' },
     });
   }
 
@@ -261,6 +347,28 @@ export class AdminService {
       plan: row.plan,
       billingInterval: row.billingInterval,
       planExpiresAt: row.planExpiresAt?.toISOString() ?? null,
+    };
+  }
+
+  private toRegistration(row: {
+    id: string;
+    email: string;
+    businessName: string;
+    slug: string;
+    accessStatus: RegistrationEntry['accessStatus'];
+    role: PlatformRole;
+    plan: Plan;
+    createdAt: Date;
+  }): RegistrationEntry {
+    return {
+      id: row.id,
+      email: row.email,
+      businessName: row.businessName,
+      slug: row.slug,
+      accessStatus: row.accessStatus,
+      role: row.role,
+      plan: row.plan,
+      createdAt: row.createdAt.toISOString(),
     };
   }
 }

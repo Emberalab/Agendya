@@ -32,7 +32,7 @@ else the fallback.
 | `302` | Redirect | `GET /auth/google*` |
 | `400 Bad Request` | Validation failed; or a semantic bad request | `ZodValidationPipe`; past `startAt`; at-home without address; non-image upload |
 | `401 Unauthorized` | Missing/invalid/expired JWT; bad credentials; password login on a Google-only account | `JwtAuthGuard`, `AuthService.login` |
-| `403 Forbidden` | OAuth `state` mismatch; plan-limit reached; cancellation-window violated; booking already expired | `GoogleOAuthStateGuard`, `assertWithinPlanLimit`, `assertModifiable` |
+| `403 Forbidden` | OAuth `state` mismatch; plan-limit reached; cancellation-window violated; booking already expired; declined account | `GoogleOAuthStateGuard`, `assertWithinPlanLimit`, `assertModifiable`, `AuthService.login` |
 | `404 Not Found` | Unknown slug / token / id, or a row not owned by the caller | professional/service/booking lookups |
 | `409 Conflict` | Uniqueness or state conflict | duplicate email; duplicate exception date; slug taken; slot overlap; booking already cancelled/completed |
 | `429 Too Many Requests` | Throttle limit exceeded | `ThrottlerGuard` |
@@ -46,7 +46,9 @@ else the fallback.
 | Situation | Code · message |
 | --- | --- |
 | Email already registered | `409` `El correo ya está registrado.` |
-| Unknown email / wrong password | `401` `Credenciales inválidas.` |
+| Unknown email | `401 { code: "ACCOUNT_NOT_FOUND" }` — the web stays on `/login` and offers “Crear cuenta” |
+| Access declined | `403 { code: "ACCESS_DECLINED" }` `Esta cuenta no tiene acceso a Agendya.` |
+| Wrong password | `401` `Credenciales inválidas.` |
 | Password login on a Google account | `401` `Esta cuenta usa autenticación con Google.` |
 | OAuth callback, missing/mismatched `state` | `302` → `{WEB_URL}/login?error=oauth` (the API origin no longer renders the JSON `403`) |
 

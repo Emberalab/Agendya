@@ -264,4 +264,19 @@ describe('Admin (e2e)', () => {
       expect(professional?.plan).toBe('BASIC');
     });
   });
+
+  describe('GET /admin/registrations', () => {
+    it('lists registered professionals for SUPER_ADMIN', async () => {
+      const res = await request(app.getHttpServer())
+        .get('/admin/registrations')
+        .set('Authorization', `Bearer ${adminToken}`)
+        .expect(200);
+
+      expect(Array.isArray(res.body)).toBe(true);
+      const emails = (res.body as { email: string }[]).map((row) => row.email);
+      expect(emails).toEqual(
+        expect.arrayContaining([adminEmail, independentEmail]),
+      );
+    });
+  });
 });

@@ -17,10 +17,11 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { BookingsService } from './bookings.service';
 
 @Controller('bookings')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ApprovedAccessGuard)
 export class BookingsController {
   constructor(private readonly bookingsService: BookingsService) {}
 

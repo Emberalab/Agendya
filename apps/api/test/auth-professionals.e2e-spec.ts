@@ -62,6 +62,17 @@ describe('Auth + Professionals (e2e)', () => {
       .expect(401);
   });
 
+  it('tells the client when the email has no account', async () => {
+    const res = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({ email: `missing-${runId}@agendya.test`, password: 'whatever1' })
+      .expect(401);
+
+    expect(res.body).toMatchObject({
+      code: 'ACCOUNT_NOT_FOUND',
+    });
+  });
+
   it('logs in with the right credentials', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/login')

@@ -15,6 +15,7 @@ Definido íntegramente en `src/routes/AppRouter.tsx` con `<BrowserRouter>` y un
 | `/register` | `RegisterPage` | `<PublicRoute>` | lazy |
 | `/forgot-password` | `ForgotPasswordPage` | `<PublicRoute>` | lazy · *(aún sin API detrás)* |
 | `/auth/callback` | `GoogleCallbackPage` | ninguno | lazy |
+| `/acceso-pendiente` | `PendingAccessPage` | `<PrivateRoute>` | lazy |
 | `/dashboard/profile` | `ProfilePage` | `<PrivateRoute>` → `<DashboardLayout>` | lazy |
 | `/dashboard/services` | `ServicesPage` | `<PrivateRoute>` → `<DashboardLayout>` | lazy |
 | `/dashboard/services/new` | `ServiceFormPage` | ″ | lazy |

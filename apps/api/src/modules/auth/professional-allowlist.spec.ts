@@ -1,8 +1,10 @@
 import { ForbiddenException } from '@nestjs/common';
 import {
   assertProfessionalEmailAllowed,
+  effectiveAccessStatus,
   parseEmailAllowlist,
   resolveAllowlistPolicy,
+  signupAccessStatus,
   type PlatformAccessGrant,
 } from './professional-allowlist';
 
@@ -90,5 +92,31 @@ describe('professional-allowlist', () => {
     await expect(
       assertProfessionalEmailAllowed('other@agendya.co', lookup, env),
     ).rejects.toThrow(ForbiddenException);
+  });
+
+  it('marks unlisted signups PENDING while the env allowlist is on', () => {
+    const env = { PROFESSIONAL_EMAIL_ALLOWLIST: 'beta@agendya.test' };
+    expect(signupAccessStatus(null, 'intruso@gmail.com', env)).toBe('PENDING');
+    expect(signupAccessStatus(null, 'beta@agendya.test', env)).toBe('APPROVED');
+    expect(signupAccessStatus('ALLOWLISTED', 'anyone@x.com', env)).toBe(
+      'APPROVED',
+    );
+  });
+
+  it('marks local signups without a grant as PENDING', () => {
+    expect(signupAccessStatus(null, 'nuevo@salon.com', {})).toBe('PENDING');
+  });
+
+  it('only elevates PENDING when the kill switch is an empty allowlist', () => {
+    expect(effectiveAccessStatus('PENDING', {})).toBe('PENDING');
+    expect(
+      effectiveAccessStatus('PENDING', { PROFESSIONAL_EMAIL_ALLOWLIST: '' }),
+    ).toBe('APPROVED');
+    expect(
+      effectiveAccessStatus('PENDING', {
+        PROFESSIONAL_EMAIL_ALLOWLIST: 'a@b.com',
+      }),
+    ).toBe('PENDING');
+    expect(effectiveAccessStatus('DECLINED', {})).toBe('DECLINED');
   });
 });

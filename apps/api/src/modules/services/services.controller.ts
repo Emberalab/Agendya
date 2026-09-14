@@ -18,10 +18,11 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { ServicesService } from './services.service';
 
 @Controller('services')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ApprovedAccessGuard)
 export class ServicesController {
   constructor(private readonly servicesService: ServicesService) {}
 

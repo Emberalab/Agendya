@@ -1,6 +1,5 @@
 import {
   ConflictException,
-  ForbiddenException,
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
@@ -17,6 +16,7 @@ type CreateCall = [
       businessName: string;
       slug: string;
       role: string;
+      accessStatus: string;
     };
   },
 ];
@@ -92,26 +92,37 @@ describe('AuthService', () => {
           businessName: 'María Belleza',
           slug: 'maria-belleza',
           role: 'INDEPENDENT',
+          accessStatus: 'PENDING',
         },
       });
     });
 
-    it('rejects emails outside the professional allowlist', async () => {
+    it('creates a PENDING account when the email is outside the env allowlist', async () => {
       const previous = process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
       process.env.PROFESSIONAL_EMAIL_ALLOWLIST = 'hjose0650@gmail.com';
+      prisma.professional.findUnique.mockResolvedValue(null);
+      prisma.professional.findFirst.mockResolvedValue(null);
+      prisma.professional.create.mockImplementation(({ data }) =>
+        Promise.resolve({ id: 'prof-pending', ...data }),
+      );
 
-      await expect(
-        authService.register({
+      try {
+        const result = await authService.register({
           email: 'intruso@gmail.com',
           password: 'supersecret',
           businessName: 'Intruso',
-        }),
-      ).rejects.toThrow(ForbiddenException);
+        });
 
-      if (previous === undefined) {
-        delete process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
-      } else {
-        process.env.PROFESSIONAL_EMAIL_ALLOWLIST = previous;
+        const [[createArgs]] = prisma.professional.create.mock
+          .calls as CreateCall[];
+        expect(createArgs.data.accessStatus).toBe('PENDING');
+        expect(result.user.accessStatus).toBe('PENDING');
+      } finally {
+        if (previous === undefined) {
+          delete process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+        } else {
+          process.env.PROFESSIONAL_EMAIL_ALLOWLIST = previous;
+        }
       }
     });
 
@@ -224,6 +235,7 @@ describe('AuthService', () => {
         businessName: 'María Belleza',
         slug: 'maria-belleza',
         role: 'INDEPENDENT',
+        accessStatus: 'APPROVED',
         passwordHash,
       });
 
@@ -235,14 +247,20 @@ describe('AuthService', () => {
       expect(result.accessToken).toBe('signed-jwt');
       expect(result.user.email).toBe('maria@example.com');
       expect(result.user.role).toBe('INDEPENDENT');
+      expect(result.user.accessStatus).toBe('APPROVED');
     });
 
-    it('throws unauthorized when the professional does not exist', async () => {
+    it('throws ACCOUNT_NOT_FOUND when the professional does not exist', async () => {
       prisma.professional.findUnique.mockResolvedValue(null);
 
       await expect(
         authService.login({ email: 'nope@example.com', password: 'whatever' }),
-      ).rejects.toThrow(UnauthorizedException);
+      ).rejects.toMatchObject({
+        response: {
+          code: 'ACCOUNT_NOT_FOUND',
+          message: 'No existe una cuenta con este correo. Verifica que esté bien escrito o regístrate.',
+        },
+      });
     });
 
     it('throws unauthorized when the password does not match', async () => {
@@ -253,6 +271,7 @@ describe('AuthService', () => {
         businessName: 'María Belleza',
         slug: 'maria-belleza',
         role: 'INDEPENDENT',
+        accessStatus: 'APPROVED',
         passwordHash,
       });
 
@@ -262,6 +281,59 @@ describe('AuthService', () => {
           password: 'wrong-password',
         }),
       ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('throws ACCESS_DECLINED when Super Admin declined the account', async () => {
+      const passwordHash = await bcrypt.hash('supersecret', 10);
+      prisma.professional.findUnique.mockResolvedValue({
+        id: 'prof-1',
+        email: 'maria@example.com',
+        businessName: 'María Belleza',
+        slug: 'maria-belleza',
+        role: 'INDEPENDENT',
+        accessStatus: 'DECLINED',
+        passwordHash,
+      });
+
+      await expect(
+        authService.login({
+          email: 'maria@example.com',
+          password: 'supersecret',
+        }),
+      ).rejects.toMatchObject({
+        response: {
+          code: 'ACCESS_DECLINED',
+        },
+      });
+    });
+
+    it('returns PENDING while closed beta is on', async () => {
+      const previous = process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+      process.env.PROFESSIONAL_EMAIL_ALLOWLIST = 'other@agendya.test';
+      const passwordHash = await bcrypt.hash('supersecret', 10);
+      prisma.professional.findUnique.mockResolvedValue({
+        id: 'prof-1',
+        email: 'maria@example.com',
+        businessName: 'María Belleza',
+        slug: 'maria-belleza',
+        role: 'INDEPENDENT',
+        accessStatus: 'PENDING',
+        passwordHash,
+      });
+
+      try {
+        const result = await authService.login({
+          email: 'maria@example.com',
+          password: 'supersecret',
+        });
+        expect(result.user.accessStatus).toBe('PENDING');
+      } finally {
+        if (previous === undefined) {
+          delete process.env.PROFESSIONAL_EMAIL_ALLOWLIST;
+        } else {
+          process.env.PROFESSIONAL_EMAIL_ALLOWLIST = previous;
+        }
+      }
     });
   });
 });

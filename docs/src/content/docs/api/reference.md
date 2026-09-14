@@ -19,13 +19,13 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 
 | Método | Ruta | Auth | Cuerpo / Query | Respuesta |
 | --- | --- | --- | --- | --- |
-| `POST` | `/auth/register` | ninguna · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `403 { code: "WAITLIST_REQUIRED" }` en Railway si el correo no está en la lista de prueba |
-| `POST` | `/auth/login` | ninguna · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · mismo `403` de lista de espera |
-| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug }` |
+| `POST` | `/auth/register` | ninguna · 5/60s | `{ email, password (8–72), businessName (2–100) }` (`registerSchema`) | `201` `{ accessToken, user }` · `user.accessStatus` es `PENDING` en beta cerrada si el correo no está en la lista |
+| `POST` | `/auth/login` | ninguna · 5/60s | `{ email, password }` (`loginSchema`) | `200` `{ accessToken, user }` · `401 { code: "ACCOUNT_NOT_FOUND" }` si el correo no tiene cuenta (la web se queda en `/login` con CTA a registro) · `403 { code: "ACCESS_DECLINED" }` si Super Admin declinó |
+| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role, accessStatus }` |
 | `GET` | `/auth/google` | ninguna | — | `302` → Google (pone la cookie `oauth_state`) |
-| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · correo no permitido: `{WEB_URL}/register?waitlist=1` · `state` inválido: `{WEB_URL}/login?error=oauth` |
+| `GET` | `/auth/google/callback` | state + Google | `?code&state` | `302` → `{WEB_URL}/auth/callback#token=<JWT>` · cuenta declinada: `{WEB_URL}/login?error=declined` · `state` inválido: `{WEB_URL}/login?error=oauth` |
 
-`user` = `{ id, email, businessName, slug }`.
+`user` = `{ id, email, businessName, slug, role, accessStatus }`.
 
 ## Admin — `modules/admin` (JWT + `SUPER_ADMIN`)
 
@@ -35,6 +35,8 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 | `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` | `AllowlistEntry` · `409` si existe |
 | `PATCH` | `/admin/allowlist/:email` | `updateAllowlistEntrySchema` | `AllowlistEntry` · `403` si te bajas a ti mismo · `400` si queda 0 Super Admin |
 | `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · mismas reglas que el PATCH |
+| `GET` | `/admin/registrations` | — | `RegistrationEntry[]` (todas las cuentas `Professional`) |
+| `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` | `RegistrationEntry` · `403` si se declina a un Super Admin |
 | `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | mismo objeto · `404` |
 

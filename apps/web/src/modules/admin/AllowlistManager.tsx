@@ -84,7 +84,7 @@ export function AllowlistManager() {
   };
 
   const handleDelete = async (email: string) => {
-    if (!confirm(`¿Eliminar el acceso de ${email}?`)) return;
+    if (!confirm(`¿Eliminar el acceso de ${email}? Si ya tiene cuenta, pasará a Pendiente y perderá el panel.`)) return;
 
     try {
       await apiClient.delete(`/admin/allowlist/${encodeURIComponent(email)}`);
@@ -140,9 +140,10 @@ export function AllowlistManager() {
         className="text-sm mb-4"
         style={{ color: 'var(--color-text-secondary)' }}
       >
-        Controla quién puede registrarse en Railway. Super Admin solo se asigna
-        al crear la cuenta; cambiar el grant de alguien que ya existe no le
-        cambia el rol.
+        Controla invitaciones previas al registro. Quitar un correo borra el
+        grant y, si ya tiene cuenta, la deja en Pendiente (sin acceso al panel).
+        Super Admin solo se asigna al crear la cuenta; cambiar el grant de
+        alguien que ya existe no le cambia el rol.
       </p>
 
       {error && (

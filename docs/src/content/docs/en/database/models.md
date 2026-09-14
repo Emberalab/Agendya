@@ -29,6 +29,8 @@ The barber/stylist account.
 | `planStartedAt` | `DateTime?` | Wompi payment that opened the current period |
 | `planExpiresAt` | `DateTime?` | End of the paid window (UTC). Monthly = +1 month, annual = +1 year. No job demotes to FREE yet |
 | `lastWompiTransactionId` | `String? @unique` | Idempotency: the same Wompi `tx` does not extend the period again |
+| `role` | `PlatformRole @default(INDEPENDENT)` | `SUPER_ADMIN` \| `BUSINESS_ADMIN` \| `INDEPENDENT` |
+| `accessStatus` | `AccessStatus @default(APPROVED)` | `PENDING` \| `APPROVED` \| `DECLINED`. New signups without a grant in closed beta are born `PENDING`. Do not overload `isActive` for this |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rejects tokens for inactive accounts |
 
 Relations: `services`, `workingHours`, `scheduleExceptions`, `bookings`
