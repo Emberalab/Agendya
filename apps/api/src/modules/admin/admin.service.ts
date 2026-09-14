@@ -76,9 +76,7 @@ export class AdminService {
     }
 
     if (professional.role === 'SUPER_ADMIN' && status === 'DECLINED') {
-      throw new ForbiddenException(
-        'No puedes declinar a un Super Admin.',
-      );
+      throw new ForbiddenException('No puedes declinar a un Super Admin.');
     }
 
     const updated = await this.prisma.professional.update({

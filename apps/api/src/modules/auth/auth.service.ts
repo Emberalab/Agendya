@@ -14,10 +14,7 @@ import type {
   PlatformRole,
   RegisterInput,
 } from '@agendya/types';
-import {
-  ACCESS_DECLINED_CODE,
-  ACCOUNT_NOT_FOUND_CODE,
-} from '@agendya/types';
+import { ACCESS_DECLINED_CODE, ACCOUNT_NOT_FOUND_CODE } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { ensureUniqueSlug, slugify } from '../../common/utils/slug.util';
 import {

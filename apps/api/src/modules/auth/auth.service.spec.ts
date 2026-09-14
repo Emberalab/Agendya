@@ -1,7 +1,4 @@
-import {
-  ConflictException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
@@ -258,7 +255,8 @@ describe('AuthService', () => {
       ).rejects.toMatchObject({
         response: {
           code: 'ACCOUNT_NOT_FOUND',
-          message: 'No existe una cuenta con este correo. Verifica que esté bien escrito o regístrate.',
+          message:
+            'No existe una cuenta con este correo. Verifica que esté bien escrito o regístrate.',
         },
       });
     });
