@@ -11,3 +11,8 @@ export * from './schemas/notification.schema';
 export * from './schemas/push.schema';
 export * from './schemas/realtime.schema';
 export * from './schemas/realtime.guard';
+export * from './schemas/internal-user.schema';
+export * from './schemas/backoffice-auth.schema';
+export * from './schemas/audit-log.schema';
+export * from './schemas/ticket.schema';
+export * from './schemas/backoffice-investigation.schema';

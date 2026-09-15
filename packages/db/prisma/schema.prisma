@@ -102,6 +102,11 @@ model Professional {
   bookings           Booking[]
   notifications      Notification[]
   pushSubscriptions  PushSubscription[]
+  // Backoffice: this professional's support tickets. See SupportTicket.
+  supportTickets     SupportTicket[]
+  // Backoffice: messages this professional authored on their own tickets.
+  // See SupportMessage.authorProfessionalId.
+  authoredSupportMessages SupportMessage[]
 
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
@@ -187,6 +192,9 @@ model Booking {
   createdAt               DateTime      @default(now())
   updatedAt               DateTime      @updatedAt
 
+  // Backoffice: tickets opened about this appointment. See SupportTicket.relatedBooking.
+  supportTickets SupportTicket[]
+
   // Agenda list: professional's bookings within a date range, any status.
   @@index([professionalId, startAt])
   // Availability + overlap guard (createPublicBooking / reschedule): equality on
@@ -257,4 +265,157 @@ model PushSubscription {
 
   // Delivery loads every subscription for one professional.
   @@index([professionalId])
+}
+
+// =============================================================================
+// Backoffice — internal operations & support (Fase 1 MVP)
+//
+// A deliberately separate identity system from `Professional`: Backoffice
+// staff are the Agendya team, not barbers/stylists, so they get their own
+// table + JWT + roles instead of overloading the customer-facing account
+// model. See CLAUDE.md / the Backoffice plan for the full design rationale.
+// =============================================================================
+
+enum InternalRole {
+  SUPER_ADMIN
+  ADMIN
+  SUPPORT
+  READ_ONLY
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  WAITING_FOR_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+enum TicketPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum TicketCategory {
+  APPOINTMENTS
+  SCHEDULE
+  AVAILABILITY
+  NOTIFICATIONS
+  ACCOUNT
+  LOGIN
+  PAYMENTS
+  BUG
+  PERFORMANCE
+  OTHER
+}
+
+// CUSTOMER_VISIBLE messages are modeled now but have no delivery surface yet
+// (no professional-facing ticket UI in this phase) — see Fase 2 in the plan.
+// INTERNAL_NOTE messages must never be exposed to the professional.
+enum MessageVisibility {
+  CUSTOMER_VISIBLE
+  INTERNAL_NOTE
+}
+
+enum AuditAction {
+  SUPPORT_VIEWED_PROFESSIONAL
+  TICKET_CREATED
+  TICKET_ASSIGNED
+  TICKET_STATUS_CHANGED
+  TICKET_PRIORITY_CHANGED
+  TICKET_MESSAGE_ADDED
+  INTERNAL_USER_CREATED
+  INTERNAL_USER_ROLE_CHANGED
+  INTERNAL_USER_DEACTIVATED
+}
+
+model InternalUser {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  role         InternalRole @default(SUPPORT)
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  assignedTickets SupportTicket[]  @relation("TicketAssignee")
+  messages        SupportMessage[]
+  auditLogs       AuditLog[]
+}
+
+model SupportTicket {
+  id                String         @id @default(uuid())
+  professionalId    String
+  professional      Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  subject           String
+  category          TicketCategory
+  priority          TicketPriority @default(NORMAL)
+  status            TicketStatus   @default(OPEN)
+  assignedToId      String?
+  assignedTo        InternalUser?  @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  // Optional link to the appointment this ticket is about — powers the
+  // ticket <-> appointment cross-navigation in the troubleshooting view.
+  relatedBookingId  String?
+  relatedBooking    Booking?       @relation(fields: [relatedBookingId], references: [id], onDelete: SetNull)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  messages SupportMessage[]
+
+  // Ticket list, filtered/sorted by status + priority (the default queue view).
+  @@index([status, priority])
+  // A professional's 360° view: their open/resolved tickets.
+  @@index([professionalId])
+  // "My tickets" queue.
+  @@index([assignedToId])
+  // FK column: Postgres does not auto-index it.
+  @@index([relatedBookingId])
+}
+
+model SupportMessage {
+  id                   String            @id @default(uuid())
+  ticketId             String
+  ticket               SupportTicket     @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  // Exactly one of authorInternalUserId / authorProfessionalId is set,
+  // never both — enforced in the service layer (SupportService /
+  // TicketsService), same as this schema's other cross-field invariants
+  // (e.g. the self-assign rule). A message is either staff writing on a
+  // ticket (visibility can be INTERNAL_NOTE or CUSTOMER_VISIBLE) or the
+  // professional themselves (always CUSTOMER_VISIBLE).
+  authorInternalUserId String?
+  author               InternalUser?     @relation(fields: [authorInternalUserId], references: [id], onDelete: Restrict)
+  authorProfessionalId String?
+  authorProfessional   Professional?     @relation(fields: [authorProfessionalId], references: [id], onDelete: Cascade)
+  visibility           MessageVisibility
+  body                 String
+  createdAt            DateTime          @default(now())
+
+  // Ticket conversation thread, oldest first.
+  @@index([ticketId, createdAt])
+  // FK column: Postgres does not auto-index it.
+  @@index([authorProfessionalId])
+}
+
+// Append-only: every mutating Backoffice action writes one row here. There is
+// intentionally no update/delete path anywhere in the API for this model.
+model AuditLog {
+  id                  String       @id @default(uuid())
+  actorInternalUserId String
+  actor               InternalUser @relation(fields: [actorInternalUserId], references: [id], onDelete: Restrict)
+  action              AuditAction
+  entityType          String
+  entityId            String
+  // Safe, non-secret before/after context only — never tokens, password
+  // hashes, or env/config values. Enforced by convention in AuditLogService
+  // callers, not by the schema.
+  metadata            Json?
+  createdAt           DateTime     @default(now())
+
+  // "What happened to this entity" timeline (e.g. one ticket's full history).
+  @@index([entityType, entityId])
+  // "What has this staff member done" timeline.
+  @@index([actorInternalUserId, createdAt])
 }

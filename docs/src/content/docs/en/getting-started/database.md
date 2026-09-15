@@ -25,7 +25,7 @@ The matching `DATABASE_URL` is already in `apps/api/.env.example`.
 
 ## Prisma setup
 
-- **Schema:** `apps/api/prisma/schema.prisma`
+- **Schema:** `packages/db/prisma/schema.prisma`
 - **Client generator:** `prisma-client-js`
 - **Datasource:** `postgresql`, URL from `DATABASE_URL`
 - **Driver adapter:** `@prisma/adapter-pg` (`PrismaPg`) — see
@@ -67,11 +67,11 @@ flowchart LR
 ## Seeding
 
 There is no `prisma db seed` hook wired up. A standalone script,
-`apps/api/prisma/seed-services.mjs`, inserts a batch of example services for an
+`apps/api/scripts/seed-services.mjs`, inserts a batch of example services for an
 existing professional:
 
 ```bash
-node apps/api/prisma/seed-services.mjs
+node apps/api/scripts/seed-services.mjs
 ```
 
 Read the script before running it — it targets a specific account.

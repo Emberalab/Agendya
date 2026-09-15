@@ -15,6 +15,7 @@ import { ProfessionalsModule } from './modules/professionals/professionals.modul
 import { RealtimeModule } from './modules/realtime/realtime.module';
 import { SchedulesModule } from './modules/schedules/schedules.module';
 import { ServicesModule } from './modules/services/services.module';
+import { SupportModule } from './modules/support/support.module';
 import { UploadModule } from './infra/upload/upload.module';
 import configuration from './config/configuration';
 
@@ -31,6 +32,7 @@ import configuration from './config/configuration';
     BillingModule,
     ProfessionalsModule,
     ServicesModule,
+    SupportModule,
     SchedulesModule,
     BookingsModule,
     UploadModule,

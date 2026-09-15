@@ -1,6 +1,6 @@
 # Agendya
 
-Monorepo with an API ([apps/api](apps/api), NestJS + Prisma) and a web app ([apps/web](apps/web), React + Vite), managed as npm workspaces.
+Monorepo with an API ([apps/api](apps/api), NestJS + Prisma) and a web app ([apps/web](apps/web), React + Vite) for the professional/customer-facing platform, plus a separately deployed Backoffice for internal staff ([apps/backoffice-api](apps/backoffice-api), [apps/backoffice-web](apps/backoffice-web)) sharing the same Postgres database — managed as npm workspaces. This README covers `apps/api`/`apps/web`; see [apps/backoffice-api/.env.example](apps/backoffice-api/.env.example) and [apps/backoffice-web/.env.example](apps/backoffice-web/.env.example) for the Backoffice's own setup, which is the same shape (`npm install` at the root already covers it; copy its `.env.example`, then `npm run dev:backoffice-api` / `npm run dev:backoffice-web`).
 
 ## Documentation
 
@@ -29,7 +29,7 @@ See [docs/README.md](docs/README.md) for how to write and deploy it.
    npm install
    ```
 
-   This installs all workspaces and runs `postinstall`, which builds `packages/types` and generates the Prisma client for `apps/api`.
+   This installs all workspaces and runs `postinstall`, which builds `packages/types` and generates the Prisma client (shared by `apps/api` and `apps/backoffice-api` — see `packages/db/prisma`).
 
 2. **Set up environment variables**:
 
@@ -54,6 +54,8 @@ See [docs/README.md](docs/README.md) for how to write and deploy it.
    cd apps/api && npx prisma migrate deploy && cd ../..
    ```
 
+   (Schema/migrations live in `packages/db/prisma`, shared with `apps/backoffice-api` — this one command applies them for both; no separate migrate step needed there.)
+
 5. **Run the API**:
 
    ```bash
@@ -67,6 +69,23 @@ See [docs/README.md](docs/README.md) for how to write and deploy it.
    ```
 
 The web app runs at `http://localhost:5173` and the API at `http://localhost:4000` by default.
+
+### Backoffice (internal staff)
+
+Separate apps, separate ports, same Postgres — see [CLAUDE.md](CLAUDE.md#structure) for why. Same shape as steps 2–6 above:
+
+```bash
+cp apps/backoffice-api/.env.example apps/backoffice-api/.env
+cp apps/backoffice-web/.env.example apps/backoffice-web/.env
+npm run dev:backoffice-api    # :4001
+npm run dev:backoffice-web    # :5174
+```
+
+First run only — there's no self-registration, so provision the first `SUPER_ADMIN` by hand:
+
+```bash
+cd apps/backoffice-api && npm run seed:backoffice -- <email> "<name>" <password>
+```
 
 ## Other useful scripts
 

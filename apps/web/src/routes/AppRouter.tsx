@@ -59,6 +59,21 @@ const ServiceFormPage = lazy(() =>
     default: m.ServiceFormPage,
   })),
 );
+const SupportTicketsPage = lazy(() =>
+  import('../modules/support/SupportTicketsPage').then((m) => ({
+    default: m.SupportTicketsPage,
+  })),
+);
+const NewSupportTicketPage = lazy(() =>
+  import('../modules/support/NewSupportTicketPage').then((m) => ({
+    default: m.NewSupportTicketPage,
+  })),
+);
+const SupportTicketDetailPage = lazy(() =>
+  import('../modules/support/SupportTicketDetailPage').then((m) => ({
+    default: m.SupportTicketDetailPage,
+  })),
+);
 const SchedulePage = lazy(() =>
   import('../modules/schedules/SchedulePage').then((m) => ({
     default: m.SchedulePage,
@@ -131,6 +146,15 @@ export function AppRouter() {
                 element={<DaySchedulePage />}
               />
               <Route path="/dashboard/agenda" element={<AgendaPage />} />
+              <Route path="/dashboard/support" element={<SupportTicketsPage />} />
+              <Route
+                path="/dashboard/support/new"
+                element={<NewSupportTicketPage />}
+              />
+              <Route
+                path="/dashboard/support/:id"
+                element={<SupportTicketDetailPage />}
+              />
             </Route>
           </Route>
 

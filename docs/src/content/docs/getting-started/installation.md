@@ -77,7 +77,7 @@ con más contexto.
 ## Opcional — sembrar servicios de demo
 
 ```bash
-node apps/api/prisma/seed-services.mjs
+node apps/api/scripts/seed-services.mjs
 ```
 
 Crea un conjunto de servicios de ejemplo para un profesional existente. Revisa

@@ -25,7 +25,7 @@ El `DATABASE_URL` correspondiente ya está en `apps/api/.env.example`.
 
 ## Configuración de Prisma
 
-- **Esquema:** `apps/api/prisma/schema.prisma`
+- **Esquema:** `packages/db/prisma/schema.prisma`
 - **Generador de cliente:** `prisma-client-js`
 - **Datasource:** `postgresql`, URL desde `DATABASE_URL`
 - **Driver adapter:** `@prisma/adapter-pg` (`PrismaPg`) — ver
@@ -67,11 +67,11 @@ flowchart LR
 ## Sembrado (seeding)
 
 No hay un hook `prisma db seed` cableado. Un script independiente,
-`apps/api/prisma/seed-services.mjs`, inserta un lote de servicios de ejemplo
+`apps/api/scripts/seed-services.mjs`, inserta un lote de servicios de ejemplo
 para un profesional existente:
 
 ```bash
-node apps/api/prisma/seed-services.mjs
+node apps/api/scripts/seed-services.mjs
 ```
 
 Lee el script antes de ejecutarlo — apunta a una cuenta concreta.

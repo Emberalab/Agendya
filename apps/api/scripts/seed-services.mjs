@@ -1,13 +1,16 @@
 // Seeds a handful of example services for one professional.
 //
-//   node --env-file=.env prisma/seed-services.mjs                 # first professional
-//   node --env-file=.env prisma/seed-services.mjs pro@example.com # by email
+//   node --env-file=.env scripts/seed-services.mjs                 # first professional
+//   node --env-file=.env scripts/seed-services.mjs pro@example.com # by email
 //
 // Safe to re-run: services whose name already exists (non-deleted) are skipped.
 
 import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }),
+});
 
 const pesos = (n) => n * 100;
 
