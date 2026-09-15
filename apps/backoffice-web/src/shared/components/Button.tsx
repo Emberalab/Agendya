@@ -7,6 +7,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
+// Same brand fill, radius and focus ring as apps/web's `.moon-button` (see
+// main.scss) — this app doesn't pull in Moon Design System itself (see
+// CLAUDE.md), but a plain button styled with the same tokens still reads as
+// the same product.
 export function Button({
   children,
   variant = 'primary',
@@ -16,27 +20,30 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:ring-offset-gray-900';
+  const baseClasses =
+    'inline-flex items-center justify-center gap-2 font-semibold rounded-control transition-colors focus-visible:outline-none focus-visible:shadow-focus-brand';
 
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-300 dark:disabled:bg-blue-900/60',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:bg-gray-300 dark:disabled:bg-gray-700',
-    outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500 disabled:border-gray-200 disabled:text-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 dark:disabled:border-gray-700 dark:disabled:text-gray-600',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 dark:disabled:bg-red-900/60',
-    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500 disabled:text-gray-400 dark:text-gray-300 dark:hover:bg-gray-800 dark:disabled:text-gray-600',
+    primary: 'bg-brand-primary text-on-brand hover:bg-brand-primary-hover',
+    secondary: 'bg-brand-secondary text-on-brand hover:opacity-90',
+    outline:
+      'bg-transparent text-text-primary shadow-[inset_0_0_0_1px_var(--color-border)] hover:bg-surface-soft hover:shadow-[inset_0_0_0_1px_var(--color-brand-primary)]',
+    danger: 'bg-danger-fill text-on-brand hover:opacity-90',
+    ghost: 'bg-transparent text-text-secondary hover:bg-surface-soft',
   };
 
   const sizeClasses = {
     sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
+    md: 'px-4 py-2 text-sm',
+    lg: 'px-6 py-3 text-base',
   };
 
   const widthClass = fullWidth ? 'w-full' : '';
+  const disabledClass = disabled ? 'cursor-not-allowed opacity-55' : '';
 
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${disabled ? 'cursor-not-allowed opacity-60' : ''} ${className}`}
+      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${disabledClass} ${className}`}
       disabled={disabled}
       {...props}
     >

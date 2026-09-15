@@ -1,5 +1,5 @@
 import type { TicketPriority, TicketStatus } from '@agendya/types';
-import { Badge } from '../../../shared/components/Badge';
+import { Badge, type BadgeVariant } from '../../../shared/components/Badge';
 
 const STATUS_LABELS: Record<TicketStatus, string> = {
   OPEN: 'Abierto',
@@ -9,10 +9,14 @@ const STATUS_LABELS: Record<TicketStatus, string> = {
   CLOSED: 'Cerrado',
 };
 
-const STATUS_VARIANTS: Record<
-  TicketStatus,
-  'default' | 'success' | 'warning' | 'danger' | 'secondary'
-> = {
+// A "semáforo" scale reused for both status and priority below — gray (calm)
+// → brand blue (normal/active) → amber (needs attention) → red (urgent) —
+// plus green reserved for the one state priority never reaches: done.
+// OPEN and WAITING_FOR_CUSTOMER used to share the same amber, which read as
+// the same chip at a glance; OPEN (nobody has looked at it yet) now gets the
+// more urgent red, leaving amber for "we've responded, ball's in the
+// professional's court".
+const STATUS_VARIANTS: Record<TicketStatus, BadgeVariant> = {
   OPEN: 'danger',
   IN_PROGRESS: 'default',
   WAITING_FOR_CUSTOMER: 'warning',
@@ -31,10 +35,7 @@ const PRIORITY_LABELS: Record<TicketPriority, string> = {
   URGENT: 'Urgente',
 };
 
-const PRIORITY_VARIANTS: Record<
-  TicketPriority,
-  'default' | 'success' | 'warning' | 'danger' | 'secondary'
-> = {
+const PRIORITY_VARIANTS: Record<TicketPriority, BadgeVariant> = {
   LOW: 'secondary',
   NORMAL: 'default',
   HIGH: 'warning',
@@ -42,9 +43,7 @@ const PRIORITY_VARIANTS: Record<
 };
 
 export function TicketPriorityBadge({ priority }: { priority: TicketPriority }) {
-  return (
-    <Badge variant={PRIORITY_VARIANTS[priority]}>{PRIORITY_LABELS[priority]}</Badge>
-  );
+  return <Badge variant={PRIORITY_VARIANTS[priority]}>{PRIORITY_LABELS[priority]}</Badge>;
 }
 
 export { STATUS_LABELS as TICKET_STATUS_LABELS, PRIORITY_LABELS as TICKET_PRIORITY_LABELS };

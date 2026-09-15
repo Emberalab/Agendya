@@ -43,7 +43,7 @@ The product was renamed from "Ronda" to "Agendya" early on. Infra/config, CI, an
 
 **Backoffice API** (`apps/backoffice-api`): NestJS 11, same Prisma/Zod/JWT/throttler stack as `apps/api` (bootstrap/CORS/config code is a deliberate small duplicate, not shared — see Structure above), no Google OAuth/Resend/Cloudinary/web-push/`@nestjs/schedule` (unneeded here). Its own passport strategy (`internal-jwt`, audience `agendya-backoffice`) keeps a `Professional` token and an `InternalUser` token from ever authenticating each other's routes.
 
-**Backoffice Web** (`apps/backoffice-web`): React 19 + Vite + TypeScript, React Router 7, TanStack Query, Zustand — deliberately lighter than `apps/web`: plain Tailwind utility classes (no Moon Design System, no custom `--color-*`/`--font-*` tokens, `dark:` follows OS `prefers-color-scheme` with no toggle), no PWA/service worker, no React Hook Form.
+**Backoffice Web** (`apps/backoffice-web`): React 19 + Vite + TypeScript, React Router 7, TanStack Query, Zustand — deliberately lighter than `apps/web` (no Moon Design System, no PWA/service worker, no React Hook Form), but shares its visual identity: `src/styles/tailwind.css` duplicates apps/web's `--color-*`/`--font-*`/`--radius-control` token values (own file, no shared CSS package — see "Why Backoffice is a separate deploy" above) and its own `shared/theme/themeStore.ts`/`ThemeToggle.tsx` apply the same `data-theme` light/dark mechanism, own storage key (`agendya-backoffice-theme`).
 
 **Shared**: `packages/types` holds the Zod schemas (booking, service, schedule, professional, auth, ticket, internal-user, audit-log) used across all four apps. When a data shape changes, update it there first, then adjust every consumer.
 

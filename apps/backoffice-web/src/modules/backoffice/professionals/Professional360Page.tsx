@@ -3,14 +3,11 @@ import { Link, useParams } from 'react-router-dom';
 import { useProfessional360 } from './hooks/useProfessional360';
 import { Card } from '../../../shared/components/Card';
 import { Badge } from '../../../shared/components/Badge';
+import { BackLink } from '../../../shared/components/BackLink';
 import { TicketPriorityBadge, TicketStatusBadge } from '../shared/badges';
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return (
-    <h2 className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-300">
-      {children}
-    </h2>
-  );
+  return <h2 className="mb-2 text-sm font-semibold text-text-secondary">{children}</h2>;
 }
 
 export function Professional360Page() {
@@ -18,24 +15,25 @@ export function Professional360Page() {
   const { data, isLoading, error } = useProfessional360(id);
 
   if (isLoading) {
-    return <div className="p-6 text-sm text-gray-500">Cargando…</div>;
+    return <div className="p-6 text-sm text-text-muted">Cargando…</div>;
   }
   if (error || !data) {
     return (
-      <div className="p-6 text-sm text-red-600 dark:text-red-400">
-        No se pudo cargar este profesional.
+      <div className="p-6">
+        <BackLink to="/backoffice/professionals">Volver a profesionales</BackLink>
+        <p className="text-sm text-danger">No se pudo cargar este profesional.</p>
       </div>
     );
   }
 
   return (
     <div className="mx-auto max-w-4xl p-6">
+      <BackLink to="/backoffice/professionals">Volver a profesionales</BackLink>
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-            {data.business.businessName}
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
+          <h1 className="text-xl font-bold text-text-primary">{data.business.businessName}</h1>
+          <p className="text-sm text-text-muted">
             {data.account.email} · /{data.business.slug}
           </p>
         </div>
@@ -43,7 +41,9 @@ export function Professional360Page() {
           <Badge variant={data.account.isActive ? 'success' : 'danger'}>
             {data.account.isActive ? 'Activo' : 'Inactivo'}
           </Badge>
-          <Badge variant="secondary">{data.account.plan}</Badge>
+          <Badge variant="secondary" dot={false}>
+            {data.account.plan}
+          </Badge>
         </div>
       </div>
 
@@ -53,14 +53,8 @@ export function Professional360Page() {
           <dl className="space-y-1 text-sm">
             <Row label="Rol" value={data.account.role} />
             <Row label="Zona horaria" value={data.account.timezone} />
-            <Row
-              label="Miembro desde"
-              value={new Date(data.account.createdAt).toLocaleDateString('es-CO')}
-            />
-            <Row
-              label="Política de cancelación"
-              value={`${data.business.cancellationPolicyHours} h`}
-            />
+            <Row label="Miembro desde" value={new Date(data.account.createdAt).toLocaleDateString('es-CO')} />
+            <Row label="Política de cancelación" value={`${data.business.cancellationPolicyHours} h`} />
           </dl>
         </Card>
 
@@ -78,10 +72,7 @@ export function Professional360Page() {
       <div className="mt-4">
         <SectionTitle>Próximas citas</SectionTitle>
         <Card padding="none">
-          <BookingList
-            items={data.appointments.upcoming}
-            empty="Sin citas próximas."
-          />
+          <BookingList items={data.appointments.upcoming} empty="Sin citas próximas." />
         </Card>
       </div>
 
@@ -97,15 +88,12 @@ export function Professional360Page() {
           <SectionTitle>Horario semanal</SectionTitle>
           <Card padding="sm">
             {data.schedule.workingHours.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Sin horario configurado.
-              </p>
+              <p className="text-sm text-text-muted">Sin horario configurado.</p>
             ) : (
-              <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <ul className="space-y-1 text-sm text-text-secondary">
                 {data.schedule.workingHours.map((block) => (
                   <li key={block.id}>
-                    {block.dayOfWeek} · {minutesToHm(block.startMinute)}–
-                    {minutesToHm(block.endMinute)}
+                    {block.dayOfWeek} · {minutesToHm(block.startMinute)}–{minutesToHm(block.endMinute)}
                   </li>
                 ))}
               </ul>
@@ -116,11 +104,9 @@ export function Professional360Page() {
           <SectionTitle>Fechas bloqueadas próximas</SectionTitle>
           <Card padding="sm">
             {data.schedule.exceptions.length === 0 ? (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                Ninguna.
-              </p>
+              <p className="text-sm text-text-muted">Ninguna.</p>
             ) : (
-              <ul className="space-y-1 text-sm text-gray-700 dark:text-gray-300">
+              <ul className="space-y-1 text-sm text-text-secondary">
                 {data.schedule.exceptions.map((exception) => (
                   <li key={exception.id}>
                     {exception.date}
@@ -137,19 +123,14 @@ export function Professional360Page() {
         <SectionTitle>Notificaciones recientes</SectionTitle>
         <Card padding="none">
           {data.notifications.recent.length === 0 ? (
-            <p className="p-4 text-sm text-gray-500 dark:text-gray-400">
-              Sin notificaciones.
-            </p>
+            <p className="p-4 text-sm text-text-muted">Sin notificaciones.</p>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ul className="divide-y divide-border">
               {data.notifications.recent.map((notification) => (
                 <li key={notification.id} className="p-3">
-                  <p className="text-sm text-gray-900 dark:text-gray-100">
-                    {notification.title}
-                  </p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {notification.body} ·{' '}
-                    {new Date(notification.createdAt).toLocaleString('es-CO')}
+                  <p className="text-sm text-text-primary">{notification.title}</p>
+                  <p className="text-xs text-text-muted">
+                    {notification.body} · {new Date(notification.createdAt).toLocaleString('es-CO')}
                     {notification.readAt ? '' : ' · sin leer'}
                   </p>
                 </li>
@@ -163,20 +144,16 @@ export function Professional360Page() {
         <SectionTitle>Tickets de soporte</SectionTitle>
         <Card padding="none">
           {[...data.support.open, ...data.support.resolved].length === 0 ? (
-            <p className="p-4 text-sm text-gray-500 dark:text-gray-400">
-              Sin tickets.
-            </p>
+            <p className="p-4 text-sm text-text-muted">Sin tickets.</p>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ul className="divide-y divide-border">
               {[...data.support.open, ...data.support.resolved].map((ticket) => (
                 <li key={ticket.id}>
                   <Link
                     to={`/backoffice/tickets/${ticket.id}`}
-                    className="flex items-center justify-between gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+                    className="flex items-center justify-between gap-3 p-3 hover:bg-surface-soft"
                   >
-                    <span className="truncate text-sm text-gray-900 dark:text-gray-100">
-                      {ticket.subject}
-                    </span>
+                    <span className="truncate text-sm text-text-primary">{ticket.subject}</span>
                     <span className="flex shrink-0 items-center gap-2">
                       <TicketPriorityBadge priority={ticket.priority} />
                       <TicketStatusBadge status={ticket.status} />
@@ -195,8 +172,8 @@ export function Professional360Page() {
 function Row({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="flex justify-between gap-3">
-      <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
-      <dd className="font-medium text-gray-900 dark:text-gray-100">{value}</dd>
+      <dt className="text-text-muted">{label}</dt>
+      <dd className="font-medium text-text-primary">{value}</dd>
     </div>
   );
 }
@@ -224,26 +201,26 @@ function BookingList({
   empty: string;
 }) {
   if (items.length === 0) {
-    return <p className="p-4 text-sm text-gray-500 dark:text-gray-400">{empty}</p>;
+    return <p className="p-4 text-sm text-text-muted">{empty}</p>;
   }
   return (
-    <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+    <ul className="divide-y divide-border">
       {items.map((booking) => (
         <li key={booking.id}>
           <Link
             to={`/backoffice/appointments/${booking.id}`}
-            className="flex items-center justify-between gap-3 p-3 hover:bg-gray-50 dark:hover:bg-gray-800/60"
+            className="flex items-center justify-between gap-3 p-3 hover:bg-surface-soft"
           >
             <div className="min-w-0">
-              <p className="truncate text-sm text-gray-900 dark:text-gray-100">
+              <p className="truncate text-sm text-text-primary">
                 {booking.serviceName} — {booking.customerName}
               </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
+              <p className="text-xs text-text-muted">
                 {new Date(booking.startAt).toLocaleString('es-CO')}
                 {booking.atHome ? ' · a domicilio' : ''}
               </p>
             </div>
-            <Badge variant="secondary" size="sm">
+            <Badge variant="secondary" size="sm" dot={false}>
               {booking.status}
             </Badge>
           </Link>

@@ -1,20 +1,196 @@
-/* No custom @theme here on purpose: this app's UI (see shared/components/)
-   uses plain Tailwind palette classes (text-gray-700, dark:bg-gray-950/30,
-   etc.), not the design-token system in apps/web. `dark:` follows the OS
-   `prefers-color-scheme` — Tailwind's default — since there's no theme
-   toggle here. */
+/* Design tokens mirror apps/web/src/main.scss — same brand palette, fonts,
+   radius and shadows, so the Backoffice reads as the same product, not a
+   generic admin dashboard. Two apps, two Vite/Tailwind builds (no shared CSS
+   package — see CLAUDE.md's "Why Backoffice is a separate deploy"), so the
+   values are duplicated here rather than imported; keep the two files in
+   sync when the brand palette changes.
+
+   Theme switching mirrors apps/web exactly: shared/theme/themeStore.ts
+   resolves either the user's stored choice or the OS preference to a
+   concrete 'light'/'dark' and writes it as `data-theme` on `<html>` — the
+   inline script in index.html does this before first paint so there's never
+   a flash. Nothing here reads `prefers-color-scheme` directly; the
+   `:root[data-theme='dark']` block below is the only dark trigger.
+
+   Plain `@theme` (NOT `@theme inline`) is required for the override to
+   work at all: `inline` tells Tailwind to bake each token's literal value
+   straight into the generated utility (`.bg-surface{background-color:#fff}`),
+   leaving no compiled reference for `:root[data-theme='dark']` to affect. A
+   plain `@theme` instead emits `.bg-surface{background-color:var(--color-surface)}`,
+   so redefining the variable there actually changes what already-generated
+   utilities paint. */
 @import 'tailwindcss';
 
-body {
-  margin: 0;
-  min-height: 100vh;
-  background-color: #fff;
-  color: #111827;
+@theme {
+  --font-display: 'Outfit', sans-serif;
+  --font-body: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'Inter', monospace;
+
+  /* Brand + surface palette — identical values to apps/web/src/main.scss */
+  --color-brand-primary: #4f46e5;
+  --color-brand-primary-hover: #4338ca;
+  --color-brand-secondary: #0f172a;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f8f8fc;
+  --color-border: #e2e8f0;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #475569;
+  --color-text-muted: #5b6b84;
+  /* Named `on-brand` (not `text-on-brand` like apps/web) so it also
+     generates a plain `bg-on-brand` utility, not just `text-on-brand`. */
+  --color-on-brand: #ffffff;
+  --color-text-brand: #4f46e5;
+  --color-brand-tint: rgba(79, 70, 229, 0.08);
+  --color-brand-surface: #eef2ff;
+  --color-brand-border: #c7d2fe;
+  --color-overlay-scrim: rgba(15, 23, 42, 0.45);
+
+  /* Semantic status colors, AA-checked against their own surface the same
+     way as apps/web (see the comments there) */
+  --color-danger: #b91c1c;
+  --color-danger-fill: #b91c1c;
+  --color-danger-surface: #fff1f2;
+  --color-danger-border: #fecdd3;
+  --color-success: #047857;
+  --color-success-surface: #f0fdf4;
+  --color-success-border: #bbf7d0;
+  --color-warning: #b45309;
+  --color-warning-surface: #fffbeb;
+  --color-warning-border: #fde68a;
+
+  --radius-control: 8px;
+  --shadow-menu: 0 8px 24px rgba(15, 23, 42, 0.12);
+  --shadow-focus-brand: 0 0 0 3px rgba(79, 70, 229, 0.3);
 }
 
-@media (prefers-color-scheme: dark) {
-  body {
-    background-color: #0b0f1a;
-    color: #e5e7eb;
+:root[data-theme='dark'] {
+  --color-brand-primary-hover: #655ce8;
+  --color-surface: #161b2c;
+  --color-surface-soft: #0b0f19;
+  --color-border: #2a3349;
+  --color-text-primary: #f1f5f9;
+  --color-text-secondary: #a7b2c6;
+  --color-text-muted: #9caac0;
+  --color-text-brand: #818cf8;
+  --color-brand-tint: rgba(99, 102, 241, 0.16);
+  --color-brand-surface: rgba(99, 102, 241, 0.16);
+  --color-brand-border: rgba(99, 102, 241, 0.4);
+  --color-overlay-scrim: rgba(0, 0, 0, 0.6);
+
+  --color-danger: #f87171;
+  --color-danger-surface: rgba(239, 68, 68, 0.16);
+  --color-danger-border: rgba(239, 68, 68, 0.4);
+  --color-success: #34d399;
+  --color-success-surface: rgba(16, 185, 129, 0.16);
+  --color-success-border: rgba(16, 185, 129, 0.4);
+  --color-warning: #fbbf24;
+  --color-warning-surface: rgba(245, 158, 11, 0.16);
+  --color-warning-border: rgba(245, 158, 11, 0.4);
+
+  --shadow-menu: 0 8px 24px rgba(0, 0, 0, 0.45);
+  --shadow-focus-brand: 0 0 0 3px rgba(99, 102, 241, 0.45);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-body);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-soft);
+}
+
+/* Native form controls don't inherit the body font by default. */
+button,
+input,
+select,
+textarea,
+optgroup,
+option {
+  font-family: inherit;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+input[type='checkbox'] {
+  accent-color: var(--color-brand-primary);
+}
+
+/* Same focus-visible treatment as apps/web. */
+a:focus-visible,
+button:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 99px;
+}
+
+/* Theme toggle switch — identical artwork/behavior to apps/web's
+   `.agendia-theme-toggle` (main.scss), copied here (see public/) rather than
+   referenced across apps, same reasoning as apps/web's own comment: it's on
+   every layout render, so it can't cost a third-party-origin round trip. */
+.agendia-theme-toggle {
+  cursor: pointer;
+  background-color: transparent;
+  background-image: url(/switch-body-light.svg);
+  background-position: 50%;
+  background-size: cover;
+  background-repeat: no-repeat;
+  border: none;
+  padding: 0;
+  border-radius: 0.875rem;
+  justify-content: center;
+  align-items: center;
+  width: 3.5625rem;
+  height: 1.625rem;
+  flex-shrink: 0;
+  transition:
+    background-image 0.3s ease-in-out,
+    transform 0.8s;
+  display: flex;
+  position: relative;
+  box-shadow:
+    0 3px 5px #091e4233,
+    0 0 1px #091e424f;
+}
+:root[data-theme='dark'] .agendia-theme-toggle {
+  background-image: url(/switch-body-dark.svg);
+}
+.agendia-theme-toggle:active {
+  transform: scale(0.94);
+}
+.agendia-theme-toggle:focus-visible {
+  outline: 2px solid var(--color-text-primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .agendia-theme-toggle {
+    transition: none;
   }
 }

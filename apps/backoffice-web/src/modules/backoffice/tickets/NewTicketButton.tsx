@@ -5,6 +5,8 @@ import { TICKET_CATEGORIES, TICKET_PRIORITIES } from '@agendya/types';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
 import { Input } from '../../../shared/components/Input';
+import { Select } from '../../../shared/components/Select';
+import { Textarea } from '../../../shared/components/Textarea';
 import { searchBackoffice } from '../dashboard/api';
 import { useCreateTicket } from './hooks/useTicketMutations';
 import { TICKET_CATEGORY_LABELS } from '../shared/categoryLabels';
@@ -27,9 +29,7 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
   const createTicket = useCreateTicket();
 
   const [professionalQuery, setProfessionalQuery] = useState('');
-  const [professional, setProfessional] = useState<TicketProfessionalSummary | null>(
-    null,
-  );
+  const [professional, setProfessional] = useState<TicketProfessionalSummary | null>(null);
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState<TicketCategory>('OTHER');
   const [priority, setPriority] = useState<TicketPriority>('NORMAL');
@@ -58,21 +58,22 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-xl bg-white p-5 dark:bg-gray-900">
-        <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay-scrim)] p-4"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-ticket-title"
+    >
+      <div className="w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-menu">
+        <h2 id="new-ticket-title" className="text-lg font-bold text-text-primary">
           Nuevo ticket
         </h2>
 
         <div className="mt-4 flex flex-col gap-3">
           {professional ? (
-            <div className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-sm dark:border-gray-700">
+            <div className="flex items-center justify-between rounded-control px-3 py-2 text-sm shadow-[inset_0_0_0_1px_var(--color-border)]">
               <span>{professional.businessName}</span>
-              <button
-                type="button"
-                className="text-xs text-gray-500 hover:underline"
-                onClick={() => setProfessional(null)}
-              >
+              <button type="button" className="text-xs text-text-muted hover:underline" onClick={() => setProfessional(null)}>
                 Cambiar
               </button>
             </div>
@@ -85,12 +86,12 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
                 onChange={(event) => setProfessionalQuery(event.target.value)}
               />
               {searchResults && searchResults.professionals.length > 0 && (
-                <ul className="mt-1 max-h-40 overflow-y-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                <ul className="mt-1 max-h-40 overflow-y-auto rounded-control shadow-[inset_0_0_0_1px_var(--color-border)]">
                   {searchResults.professionals.map((p) => (
                     <li key={p.id}>
                       <button
                         type="button"
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-surface-soft"
                         onClick={() => {
                           setProfessional(p);
                           setProfessionalQuery('');
@@ -105,69 +106,33 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <Input
-            label="Asunto"
-            value={subject}
-            onChange={(event) => setSubject(event.target.value)}
-          />
+          <Input label="Asunto" value={subject} onChange={(event) => setSubject(event.target.value)} />
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="text-sm">
-              <span className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
-                Categoría
-              </span>
-              <select
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                value={category}
-                onChange={(event) => setCategory(event.target.value as TicketCategory)}
-              >
-                {TICKET_CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {TICKET_CATEGORY_LABELS[c]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="text-sm">
-              <span className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
-                Prioridad
-              </span>
-              <select
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-                value={priority}
-                onChange={(event) => setPriority(event.target.value as TicketPriority)}
-              >
-                {TICKET_PRIORITIES.map((p) => (
-                  <option key={p} value={p}>
-                    {TICKET_PRIORITY_LABELS[p]}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <Select label="Categoría" value={category} onChange={(event) => setCategory(event.target.value as TicketCategory)}>
+              {TICKET_CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {TICKET_CATEGORY_LABELS[c]}
+                </option>
+              ))}
+            </Select>
+            <Select label="Prioridad" value={priority} onChange={(event) => setPriority(event.target.value as TicketPriority)}>
+              {TICKET_PRIORITIES.map((p) => (
+                <option key={p} value={p}>
+                  {TICKET_PRIORITY_LABELS[p]}
+                </option>
+              ))}
+            </Select>
           </div>
 
-          <label className="text-sm">
-            <span className="mb-1.5 block font-medium text-gray-700 dark:text-gray-300">
-              Descripción (nota interna)
-            </span>
-            <textarea
-              className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm dark:border-gray-600 dark:bg-gray-900 dark:text-gray-100"
-              rows={3}
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-            />
-          </label>
+          <Textarea label="Descripción (nota interna)" rows={3} value={body} onChange={(event) => setBody(event.target.value)} />
         </div>
 
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancelar
           </Button>
-          <Button
-            size="sm"
-            disabled={!canSubmit || createTicket.isPending}
-            onClick={onSubmit}
-          >
+          <Button size="sm" disabled={!canSubmit || createTicket.isPending} onClick={onSubmit}>
             {createTicket.isPending ? 'Creando…' : 'Crear ticket'}
           </Button>
         </div>

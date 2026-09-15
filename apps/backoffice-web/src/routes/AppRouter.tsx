@@ -58,7 +58,7 @@ const InternalUsersPage = lazy(() =>
 function RouteFallback() {
   return (
     <div className="flex min-h-screen items-center justify-center">
-      <p className="text-sm text-gray-400">Cargando…</p>
+      <p className="text-sm text-text-muted">Cargando…</p>
     </div>
   );
 }

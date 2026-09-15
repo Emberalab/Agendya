@@ -7,6 +7,8 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   helperText?: string;
 }
 
+// Same look as apps/web's `.moon-input.moon-input-outline` (inset 1px
+// border, radius-control, 2px brand ring on focus) — see main.scss.
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ label, error, helperText, className = '', ...props }, ref) => {
     const hasError = !!error;
@@ -14,40 +16,36 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     return (
       <div className="w-full">
         {label && (
-          <label
-            htmlFor={props.id}
-            className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
-          >
+          <label htmlFor={props.id} className="mb-1.5 block text-sm font-medium text-text-secondary">
             {label}
-            {props.required && <span className="ml-1 text-red-500 dark:text-red-400">*</span>}
+            {props.required && <span className="ml-1 text-danger">*</span>}
           </label>
         )}
         <input
           ref={ref}
           className={`
-            w-full rounded-lg border px-3 py-2 bg-white text-gray-900 transition-colors
-            dark:bg-gray-900 dark:text-gray-100
-            placeholder:text-gray-400 dark:placeholder:text-gray-500
-            focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-gray-900
-            disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500
-            dark:disabled:bg-gray-800 dark:disabled:text-gray-500
-            ${hasError
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-500 dark:border-red-700'
-              : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600'
+            w-full rounded-control bg-surface px-3 py-2 text-text-primary transition-shadow
+            placeholder:text-text-muted
+            focus:outline-none
+            disabled:cursor-not-allowed disabled:bg-surface-soft disabled:text-text-muted
+            ${
+              hasError
+                ? 'shadow-[inset_0_0_0_1px_var(--color-danger)] focus:shadow-[inset_0_0_0_2px_var(--color-danger)]'
+                : 'shadow-[inset_0_0_0_1px_var(--color-border)] focus:shadow-[inset_0_0_0_2px_var(--color-brand-primary)]'
             }
             ${className}
           `}
           {...props}
         />
         {error && (
-          <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p role="alert" className="mt-1.5 text-sm text-danger">
+            {error}
+          </p>
         )}
-        {helperText && !error && (
-          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
-        )}
+        {helperText && !error && <p className="mt-1.5 text-sm text-text-muted">{helperText}</p>}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = 'Input';

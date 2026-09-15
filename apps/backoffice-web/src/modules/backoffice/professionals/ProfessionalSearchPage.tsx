@@ -15,42 +15,26 @@ export function ProfessionalSearchPage() {
 
   return (
     <div className="mx-auto max-w-3xl p-6">
-      <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100">
-        Profesionales
-      </h1>
-      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-        Busca por nombre del negocio, correo o enlace público.
-      </p>
+      <h1 className="text-xl font-bold text-text-primary">Profesionales</h1>
+      <p className="mt-1 text-sm text-text-muted">Busca por nombre del negocio, correo o enlace público.</p>
 
       <div className="mt-4">
-        <Input
-          placeholder="Buscar profesional…"
-          value={q}
-          onChange={(event) => setQ(event.target.value)}
-          aria-label="Buscar profesional"
-        />
+        <Input placeholder="Buscar profesional…" value={q} onChange={(event) => setQ(event.target.value)} aria-label="Buscar profesional" />
       </div>
 
-      {isFetching && <p className="mt-4 text-sm text-gray-500">Buscando…</p>}
+      {isFetching && <p className="mt-4 text-sm text-text-muted">Buscando…</p>}
 
       {data && q.trim().length >= 2 && (
         <Card className="mt-4" padding="none">
           {data.professionals.length === 0 ? (
-            <p className="p-4 text-sm text-gray-500 dark:text-gray-400">
-              Sin resultados.
-            </p>
+            <p className="p-4 text-sm text-text-muted">Sin resultados.</p>
           ) : (
-            <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+            <ul className="divide-y divide-border">
               {data.professionals.map((professional) => (
                 <li key={professional.id}>
-                  <Link
-                    to={`/backoffice/professionals/${professional.id}`}
-                    className="flex flex-col p-4 hover:bg-gray-50 dark:hover:bg-gray-800/60"
-                  >
-                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {professional.businessName}
-                    </span>
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                  <Link to={`/backoffice/professionals/${professional.id}`} className="flex flex-col p-4 hover:bg-surface-soft">
+                    <span className="text-sm font-medium text-text-primary">{professional.businessName}</span>
+                    <span className="text-xs text-text-muted">
                       {professional.email} · /{professional.slug}
                     </span>
                   </Link>
