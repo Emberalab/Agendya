@@ -8,6 +8,18 @@ export const platformRoleSchema = z.enum([
 
 export type PlatformRole = z.infer<typeof platformRoleSchema>;
 
+export const ACCESS_STATUSES = ['PENDING', 'APPROVED', 'DECLINED'] as const;
+
+export const accessStatusSchema = z.enum(ACCESS_STATUSES);
+
+export type AccessStatus = z.infer<typeof accessStatusSchema>;
+
+export const ACCESS_STATUS_LABELS: Record<AccessStatus, string> = {
+  PENDING: 'Pendiente',
+  APPROVED: 'Aprobado',
+  DECLINED: 'Declinado',
+};
+
 const EMAIL_MESSAGE =
   'Eso no parece un correo. Escríbelo como nombre@empresa.com.';
 
@@ -78,6 +90,7 @@ export const authUserSchema = z.object({
   businessName: z.string(),
   slug: z.string(),
   role: platformRoleSchema,
+  accessStatus: accessStatusSchema,
 });
 
 export type AuthUser = z.infer<typeof authUserSchema>;
@@ -88,3 +101,9 @@ export const authResponseSchema = z.object({
 });
 
 export type AuthResponse = z.infer<typeof authResponseSchema>;
+
+/** Login with an email that has no Professional row — the web offers a register CTA. */
+export const ACCOUNT_NOT_FOUND_CODE = 'ACCOUNT_NOT_FOUND';
+
+/** The account exists but Super Admin declined access. */
+export const ACCESS_DECLINED_CODE = 'ACCESS_DECLINED';

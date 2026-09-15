@@ -24,6 +24,8 @@ export function RegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [acceptTerms, setAcceptTerms] = useState(false);
   const [termsError, setTermsError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+  const waitlistEmail = searchParams.get('email') ?? '';
   const {
     control,
     handleSubmit,
@@ -31,10 +33,12 @@ export function RegisterPage() {
     formState: { errors, isSubmitted },
   } = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { businessName: '', email: '', password: '' },
+    defaultValues: {
+      businessName: '',
+      email: waitlistEmail,
+      password: '',
+    },
   });
-  const [searchParams] = useSearchParams();
-  const waitlistEmail = searchParams.get('email') ?? '';
   const showWaitlist =
     searchParams.get('waitlist') === '1' ||
     isWaitlistRequiredError(registerMutation.error);
@@ -160,6 +164,7 @@ export function RegisterPage() {
                   </FormGroup.Label>
                   <Input
                     {...field}
+                    value={field.value ?? ''}
                     id="reg-email"
                     type="email"
                     autoComplete="email"

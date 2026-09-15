@@ -65,4 +65,18 @@ describe('GoogleOauthCallbackFilter', () => {
       'http://localhost:5173/login?error=oauth',
     );
   });
+
+  it('sends a declined Google account to login', () => {
+    const { host, redirect } = hostFor({ email: 'out@salon.com' });
+    filter.catch(
+      new ForbiddenException({
+        code: 'ACCESS_DECLINED',
+        message: 'Esta cuenta no tiene acceso a Agendya.',
+      }),
+      host,
+    );
+    expect(redirect).toHaveBeenCalledWith(
+      'http://localhost:5173/login?error=declined',
+    );
+  });
 });

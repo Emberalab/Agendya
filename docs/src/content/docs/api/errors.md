@@ -32,7 +32,7 @@ no el fallback.
 | `302` | Redirección | `GET /auth/google*` |
 | `400 Bad Request` | Falló la validación; o una petición semánticamente incorrecta | `ZodValidationPipe`; `startAt` pasado; a domicilio sin dirección; subida que no es imagen |
 | `401 Unauthorized` | JWT faltante/inválido/expirado; credenciales incorrectas; login por contraseña en una cuenta solo de Google | `JwtAuthGuard`, `AuthService.login` |
-| `403 Forbidden` | Desajuste del `state` de OAuth; límite de plan alcanzado; ventana de cancelación violada; reserva ya vencida | `GoogleOAuthStateGuard`, `assertWithinPlanLimit`, `assertModifiable` |
+| `403 Forbidden` | Desajuste del `state` de OAuth; límite de plan alcanzado; ventana de cancelación violada; reserva ya vencida; cuenta declinada | `GoogleOAuthStateGuard`, `assertWithinPlanLimit`, `assertModifiable`, `AuthService.login` |
 | `404 Not Found` | slug / token / id desconocido, o una fila que no pertenece a quien llama | búsquedas de profesional/servicio/reserva |
 | `409 Conflict` | Conflicto de unicidad o de estado | email duplicado; fecha de excepción duplicada; slug tomado; solapamiento de espacio; reserva ya cancelada/completada |
 | `429 Too Many Requests` | Límite de throttle superado | `ThrottlerGuard` |
@@ -46,7 +46,9 @@ no el fallback.
 | Situación | Código · mensaje |
 | --- | --- |
 | Email ya registrado | `409` `El correo ya está registrado.` |
-| Email desconocido / contraseña incorrecta | `401` `Credenciales inválidas.` |
+| Email desconocido | `401 { code: "ACCOUNT_NOT_FOUND" }` — la web se queda en `/login` y ofrece «Crear cuenta» |
+| Acceso declinado | `403 { code: "ACCESS_DECLINED" }` `Esta cuenta no tiene acceso a Agendya.` |
+| Contraseña incorrecta | `401` `Credenciales inválidas.` |
 | Login por contraseña en una cuenta de Google | `401` `Esta cuenta usa autenticación con Google.` |
 | Callback de OAuth, `state` faltante/no coincide | `302` → `{WEB_URL}/login?error=oauth` (ya no se muestra el JSON `403` en el origen de la API) |
 

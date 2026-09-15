@@ -28,6 +28,8 @@ La cuenta del barbero/peluquero.
 | `planStartedAt` | `DateTime?` | Momento del pago Wompi que abrió el periodo actual |
 | `planExpiresAt` | `DateTime?` | Fin del periodo pagado (UTC). Mensual = +1 mes, anual = +1 año. Aún no hay job que baje a FREE |
 | `lastWompiTransactionId` | `String? @unique` | Idempotencia: el mismo `tx` de Wompi no vuelve a alargar el periodo |
+| `role` | `PlatformRole @default(INDEPENDENT)` | `SUPER_ADMIN` \| `BUSINESS_ADMIN` \| `INDEPENDENT` |
+| `accessStatus` | `AccessStatus @default(APPROVED)` | `PENDING` \| `APPROVED` \| `DECLINED`. Cuentas nuevas sin grant en beta cerrada nacen `PENDING`. `isActive` no se usa para esto |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rechaza tokens de cuentas inactivas |
 
 Relaciones: `services`, `workingHours`, `scheduleExceptions`, `bookings`

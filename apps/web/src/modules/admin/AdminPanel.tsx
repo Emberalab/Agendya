@@ -3,13 +3,15 @@ import { AllowlistManager } from './AllowlistManager';
 import { BillingTable } from './BillingTable';
 import { FeatureComparison } from './FeatureComparison';
 import { PlanChanger } from './PlanChanger';
+import { RegistrationsManager } from './RegistrationsManager';
 
-type Tab = 'allowlist' | 'features' | 'plans' | 'billing';
+type Tab = 'registrations' | 'allowlist' | 'features' | 'plans' | 'billing';
 
 export function AdminPanel() {
-  const [activeTab, setActiveTab] = useState<Tab>('allowlist');
+  const [activeTab, setActiveTab] = useState<Tab>('registrations');
 
   const tabs: { id: Tab; label: string }[] = [
+    { id: 'registrations', label: 'Registros' },
     { id: 'allowlist', label: 'Lista de Acceso' },
     { id: 'features', label: 'Funcionalidades' },
     { id: 'plans', label: 'Cambiar Plan' },
@@ -63,6 +65,7 @@ export function AdminPanel() {
       </div>
 
       <div>
+        {activeTab === 'registrations' && <RegistrationsManager />}
         {activeTab === 'allowlist' && <AllowlistManager />}
         {activeTab === 'features' && <FeatureComparison />}
         {activeTab === 'plans' && <PlanChanger />}

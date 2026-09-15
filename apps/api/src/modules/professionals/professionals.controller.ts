@@ -9,10 +9,11 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { ProfessionalsService } from './professionals.service';
 
 @Controller('professionals')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ApprovedAccessGuard)
 export class ProfessionalsController {
   constructor(private readonly professionalsService: ProfessionalsService) {}
 

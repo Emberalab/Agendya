@@ -12,6 +12,7 @@ import {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
+import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
 import { AvailabilityService } from './availability.service';
 
 @Controller('public/professionals')
@@ -29,7 +30,7 @@ export class AvailabilityController {
     query: AvailabilityQuery,
   ) {
     const professional = await this.prisma.professional.findFirst({
-      where: { slug, isActive: true },
+      where: { slug, isActive: true, ...publicProfessionalAccessFilter() },
     });
     if (!professional) {
       throw new NotFoundException('Profesional no encontrado.');

@@ -1,6 +1,6 @@
 import { NavLink, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../auth/authStore';
-import { isSuperAdmin } from '../auth/postAuthPath';
+import { isPendingAccess, isSuperAdmin } from '../auth/postAuthPath';
 import Group from '../../imports/LogoGroup';
 import { Sidebar } from './Sidebar';
 import { ThemeToggle } from '../../shared/theme/ThemeToggle';
@@ -19,6 +19,10 @@ export function DashboardLayout() {
   const isAdminRoute =
     location.pathname === '/dashboard' ||
     location.pathname.startsWith('/dashboard/admin');
+
+  if (isPendingAccess(user)) {
+    return <Navigate to="/acceso-pendiente" replace />;
+  }
 
   if (isSuperAdmin(user)) {
     if (isAdminRoute) {

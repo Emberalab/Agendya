@@ -13,24 +13,41 @@ import {
   changeProfessionalPlanSchema,
   createAllowlistEntrySchema,
   updateAllowlistEntrySchema,
+  updateRegistrationStatusSchema,
   type ChangeProfessionalPlanInput,
   type CreateAllowlistEntryInput,
   type UpdateAllowlistEntryInput,
+  type UpdateRegistrationStatusInput,
 } from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { SuperAdminGuard } from '../auth/guards/super-admin.guard';
 import { AdminService } from './admin.service';
 
 @Controller('admin')
-@UseGuards(JwtAuthGuard, SuperAdminGuard)
+@UseGuards(JwtAuthGuard, ApprovedAccessGuard, SuperAdminGuard)
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   @Get('allowlist')
   listAllowlist() {
     return this.adminService.listAllowlist();
+  }
+
+  @Get('registrations')
+  listRegistrations() {
+    return this.adminService.listRegistrations();
+  }
+
+  @Patch('registrations/:email')
+  updateRegistrationStatus(
+    @Param('email') email: string,
+    @Body(new ZodValidationPipe(updateRegistrationStatusSchema))
+    input: UpdateRegistrationStatusInput,
+  ) {
+    return this.adminService.updateRegistrationStatus(email, input.status);
   }
 
   @Post('allowlist')

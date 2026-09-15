@@ -31,6 +31,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException();
     }
 
+    if (professional.accessStatus === 'DECLINED') {
+      throw new UnauthorizedException();
+    }
+
     return professional;
   }
 }

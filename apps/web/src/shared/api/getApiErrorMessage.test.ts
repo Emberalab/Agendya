@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
+import { ACCOUNT_NOT_FOUND_CODE } from '@agendya/types';
 import { ApiError } from './apiClient';
-import { getApiErrorMessage, isWaitlistRequiredError } from './getApiErrorMessage';
+import {
+  getApiErrorMessage,
+  isAccountNotFoundError,
+  isWaitlistRequiredError,
+} from './getApiErrorMessage';
 
 describe('getApiErrorMessage', () => {
   it('returns a plain string message as-is', () => {
@@ -78,5 +83,17 @@ describe('isWaitlistRequiredError', () => {
   it('is false for an unrelated 403', () => {
     const error = new ApiError(403, { message: 'Forbidden' });
     expect(isWaitlistRequiredError(error)).toBe(false);
+  });
+});
+
+describe('isAccountNotFoundError', () => {
+  it('detects the missing-account code', () => {
+    const error = new ApiError(401, { code: ACCOUNT_NOT_FOUND_CODE });
+    expect(isAccountNotFoundError(error)).toBe(true);
+  });
+
+  it('is false for a wrong-password 401', () => {
+    const error = new ApiError(401, { message: 'Credenciales inválidas.' });
+    expect(isAccountNotFoundError(error)).toBe(false);
   });
 });

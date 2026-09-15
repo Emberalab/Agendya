@@ -20,6 +20,7 @@ export const TEST_USER: AuthUser = {
   businessName: process.env.E2E_USER_BUSINESS_NAME ?? 'Barbería E2E',
   slug: 'barberia-e2e',
   role: 'INDEPENDENT',
+  accessStatus: 'APPROVED',
 };
 
 export const TEST_ACCESS_TOKEN =

@@ -8,6 +8,7 @@ import Group from '../../imports/Group11';
 import { apiBaseUrl } from '../../shared/api/apiClient';
 import {
   getApiErrorMessage,
+  isAccountNotFoundError,
   isWaitlistRequiredError,
 } from '../../shared/api/getApiErrorMessage';
 import { AccessWaitlistForm } from './AccessWaitlistForm';
@@ -28,10 +29,17 @@ export function LoginPage() {
     handleSubmit,
     getValues,
     formState: { errors },
-  } = useForm<LoginInput>({ resolver: zodResolver(loginSchema) });
+  } = useForm<LoginInput>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
   const [searchParams] = useSearchParams();
   const oauthFailed = searchParams.get('error') === 'oauth';
+  const accessDeclined = searchParams.get('error') === 'declined';
   const showWaitlist = isWaitlistRequiredError(loginMutation.error);
+  const accountNotFound = isAccountNotFoundError(loginMutation.error);
+  const attemptedEmail =
+    loginMutation.variables?.email ?? getValues('email') ?? '';
 
   const onSubmit = handleSubmit((data) => {
     loginMutation.mutate(data, {
@@ -90,6 +98,14 @@ export function LoginPage() {
               : 'Bienvenido de vuelta. Ingresa tus datos para continuar.'}
           </p>
 
+          {accessDeclined && !showWaitlist && (
+            <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
+              <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
+                Esta cuenta no tiene acceso a Agendya.
+              </p>
+            </div>
+          )}
+
           {oauthFailed && !showWaitlist && (
             <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3 mb-4">
               <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
@@ -112,6 +128,7 @@ export function LoginPage() {
                   </FormGroup.Label>
                   <Input
                     {...field}
+                    value={field.value ?? ''}
                     id="email"
                     type="email"
                     autoComplete="email"
@@ -141,6 +158,7 @@ export function LoginPage() {
                   <div className="relative">
                     <Input
                       {...field}
+                      value={field.value ?? ''}
                       id="password"
                       type={showPassword ? 'text' : 'password'}
                       autoComplete="current-password"
@@ -198,7 +216,26 @@ export function LoginPage() {
               </Link>
             </div>
 
-            {loginMutation.isError && (
+            {loginMutation.isError && accountNotFound && (
+              <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+                <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
+                  No tenemos una cuenta con este correo. ¿Quieres registrarte?{' '}
+                  <Link
+                    to={
+                      attemptedEmail
+                        ? `/register?email=${encodeURIComponent(attemptedEmail)}`
+                        : '/register'
+                    }
+                    className="font-semibold underline"
+                    style={{ color: 'var(--color-text-brand)' }}
+                  >
+                    Crear cuenta
+                  </Link>
+                </p>
+              </div>
+            )}
+
+            {loginMutation.isError && !accountNotFound && (
               <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
                 <p className="text-sm text-red-600 dark:text-red-400" style={{ fontFamily: 'var(--font-body)' }}>
                   {getApiErrorMessage(loginMutation.error)}
@@ -270,7 +307,11 @@ export function LoginPage() {
           >
             ¿No tienes cuenta?{' '}
             <Link
-              to="/register"
+              to={
+                getValues('email')
+                  ? `/register?email=${encodeURIComponent(getValues('email'))}`
+                  : '/register'
+              }
               className="font-semibold underline"
               style={{ color: 'var(--color-text-brand)', fontFamily: 'var(--font-body)' }}
             >

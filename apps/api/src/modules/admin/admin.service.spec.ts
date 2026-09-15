@@ -31,11 +31,13 @@ describe('AdminService', () => {
       update: jest.Mock;
       delete: jest.Mock;
       count: jest.Mock;
+      upsert: jest.Mock;
     };
     professional: {
       findUnique: jest.Mock;
       findMany: jest.Mock;
       update: jest.Mock;
+      updateMany: jest.Mock;
     };
   };
 
@@ -48,11 +50,13 @@ describe('AdminService', () => {
         update: jest.fn(),
         delete: jest.fn(),
         count: jest.fn(),
+        upsert: jest.fn(),
       },
       professional: {
         findUnique: jest.fn(),
         findMany: jest.fn(),
         update: jest.fn(),
+        updateMany: jest.fn(),
       },
     };
 
@@ -128,6 +132,31 @@ describe('AdminService', () => {
       ).rejects.toThrow(BadRequestException);
       expect(prisma.platformAccessEmail.delete).not.toHaveBeenCalled();
     });
+
+    it('revokes an existing professional to PENDING when the grant is removed', async () => {
+      prisma.platformAccessEmail.findUnique.mockResolvedValue({
+        id: 'grant-3',
+        email: 'pro@salon.com',
+        access: 'ALLOWLISTED' as const,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      });
+      prisma.platformAccessEmail.delete.mockResolvedValue({});
+      prisma.professional.updateMany.mockResolvedValue({ count: 1 });
+
+      await service.deleteAllowlistEntry('pro@salon.com', 'admin@agendya.co');
+
+      expect(prisma.platformAccessEmail.delete).toHaveBeenCalledWith({
+        where: { email: 'pro@salon.com' },
+      });
+      expect(prisma.professional.updateMany).toHaveBeenCalledWith({
+        where: {
+          email: 'pro@salon.com',
+          role: { not: 'SUPER_ADMIN' },
+          accessStatus: { not: 'DECLINED' },
+        },
+        data: { accessStatus: 'PENDING' },
+      });
+    });
   });
 
   describe('listAllowlist', () => {
@@ -194,6 +223,52 @@ describe('AdminService', () => {
       await expect(
         service.getProfessionalByEmail('missing@example.com'),
       ).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('updateRegistrationStatus', () => {
+    it('approves a pending professional and upserts the allowlist', async () => {
+      prisma.professional.findUnique.mockResolvedValue({
+        id: 'prof-1',
+        email: 'nuevo@salon.com',
+        role: 'INDEPENDENT',
+      });
+      prisma.professional.update.mockResolvedValue({
+        id: 'prof-1',
+        email: 'nuevo@salon.com',
+        businessName: 'Salón',
+        slug: 'salon',
+        accessStatus: 'APPROVED',
+        role: 'INDEPENDENT',
+        plan: 'FREE',
+        createdAt: new Date('2026-09-14T00:00:00.000Z'),
+      });
+      prisma.platformAccessEmail.upsert.mockResolvedValue({});
+
+      const result = await service.updateRegistrationStatus(
+        'nuevo@salon.com',
+        'APPROVED',
+      );
+
+      expect(result.accessStatus).toBe('APPROVED');
+      expect(prisma.platformAccessEmail.upsert).toHaveBeenCalledWith({
+        where: { email: 'nuevo@salon.com' },
+        create: { email: 'nuevo@salon.com', access: 'ALLOWLISTED' },
+        update: {},
+      });
+    });
+
+    it('rejects declining a Super Admin', async () => {
+      prisma.professional.findUnique.mockResolvedValue({
+        id: 'admin-1',
+        email: 'admin@agendya.co',
+        role: 'SUPER_ADMIN',
+      });
+
+      await expect(
+        service.updateRegistrationStatus('admin@agendya.co', 'DECLINED'),
+      ).rejects.toThrow(ForbiddenException);
+      expect(prisma.professional.update).not.toHaveBeenCalled();
     });
   });
 });

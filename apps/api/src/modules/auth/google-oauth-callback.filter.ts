@@ -6,6 +6,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import type { Response } from 'express';
+import { ACCESS_DECLINED_CODE } from '@agendya/types';
 import { frontendWebUrl } from './frontend-web-url';
 import { WAITLIST_REQUIRED_CODE } from './professional-allowlist';
 
@@ -30,6 +31,11 @@ export class GoogleOauthCallbackFilter implements ExceptionFilter {
       return;
     }
 
+    if (isAccessDeclined(exception)) {
+      response.redirect(`${webUrl}/login?error=declined`);
+      return;
+    }
+
     response.redirect(`${webUrl}/login?error=oauth`);
   }
 }
@@ -37,13 +43,23 @@ export class GoogleOauthCallbackFilter implements ExceptionFilter {
 function isWaitlistForbidden(
   exception: ForbiddenException | UnauthorizedException,
 ): boolean {
+  return exceptionCode(exception) === WAITLIST_REQUIRED_CODE;
+}
+
+function isAccessDeclined(
+  exception: ForbiddenException | UnauthorizedException,
+): boolean {
+  return exceptionCode(exception) === ACCESS_DECLINED_CODE;
+}
+
+function exceptionCode(
+  exception: ForbiddenException | UnauthorizedException,
+): string | undefined {
   const body = exception.getResponse();
-  return (
-    typeof body === 'object' &&
-    body !== null &&
-    'code' in body &&
-    (body as { code?: string }).code === WAITLIST_REQUIRED_CODE
-  );
+  if (typeof body === 'object' && body !== null && 'code' in body) {
+    return (body as { code?: string }).code;
+  }
+  return undefined;
 }
 
 function googleEmailFromRequest(user: unknown): string | undefined {

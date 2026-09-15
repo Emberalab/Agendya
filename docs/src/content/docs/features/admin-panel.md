@@ -12,6 +12,16 @@ esa ruta vuelve a `/dashboard/profile`.
 El rol se asigna **al registrarse** si existe una fila `PlatformAccessEmail`
 con `access = SUPER_ADMIN`. El login no escala ni degrada el rol.
 
+## Registros
+
+Lista **todas** las cuentas `Professional` (email, negocio, `accessStatus`,
+plan, fecha). **Aceptar** pone `APPROVED` y hace upsert `ALLOWLISTED` en
+`PlatformAccessEmail`. **Declinar** pone `DECLINED` (la fila no se borra). No
+se puede declinar a un Super Admin.
+
+Esta pestaña es la fuente de verdad de quién pidió acceso. La lista de acceso
+de abajo sigue sirviendo para invitar correos **antes** de que se registren.
+
 ## Lista de acceso
 
 Tabla `PlatformAccessEmail` (`ALLOWLISTED` | `SUPER_ADMIN`). En Railway
@@ -22,6 +32,8 @@ Tabla `PlatformAccessEmail` (`ALLOWLISTED` | `SUPER_ADMIN`). En Railway
   incluye el `plan` del `Professional` si ya se registró (`null` = solo está
   en la lista), más `billingInterval` (mensual/anual), `planStartedAt`
   (comprado) y `planExpiresAt` (vence) cuando el ciclo vino de un pago Wompi.
+- Eliminar un grant también pone `accessStatus = PENDING` en la cuenta si
+  ya existe (no borra el `Professional`; deja de tener panel).
 - No puedes bajarte ni borrarte a ti mismo (`403`).
 - No puedes dejar 0 grants `SUPER_ADMIN` (`400`), ni por PATCH ni por DELETE.
 - Cambiar un grant a `SUPER_ADMIN` **no** promueve una cuenta ya creada.
@@ -63,5 +75,7 @@ Todos: JWT + `SUPER_ADMIN`.
 | `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` · `409` si el correo ya existe |
 | `PATCH` | `/admin/allowlist/:email` | `{ access }` · `403`/`400` según las reglas de arriba |
 | `DELETE` | `/admin/allowlist/:email` | `{ deleted: true }` |
+| `GET` | `/admin/registrations` | `RegistrationEntry[]` |
+| `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` · `403` si se declina a un Super Admin |
 | `GET` | `/admin/professionals/:email` | `{ id, email, businessName, slug, plan }` · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `{ plan }` (`planSchema`) · `404` |

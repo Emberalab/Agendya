@@ -41,6 +41,7 @@ See [docs/README.md](docs/README.md) for how to write and deploy it.
    - `apps/api/.env.example` has working defaults for local development (matches the Docker Postgres credentials below). Ask a teammate for real values of `RESEND_API_KEY` / `CLOUDINARY_URL` if you need those integrations working locally — share them through a secure channel (password manager), not plain text.
    - For Web Push notifications to the PWA, generate a VAPID keypair with `npx web-push generate-vapid-keys` and set `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` in `apps/api/.env`. Left blank, push is disabled and the notification feed still delivers over SSE.
    - `apps/web/.env` usually doesn't need any changes — `VITE_API_URL` auto-detects the API host. Only set it to point at a different backend (e.g. staging).
+   - **Closed beta / access:** leave `PROFESSIONAL_EMAIL_ALLOWLIST` **unset** (commented) locally. New signups are created as `PENDING` until a Super Admin accepts them in **Registros**. Do **not** set `PROFESSIONAL_EMAIL_ALLOWLIST=""` unless you intentionally open the product (kill switch: PENDING can use the dashboard). A comma-separated list pre-approves those emails at signup.
 
 3. **Start Postgres**:
 
@@ -55,6 +56,7 @@ See [docs/README.md](docs/README.md) for how to write and deploy it.
    ```
 
    (Schema/migrations live in `packages/db/prisma`, shared with `apps/backoffice-api` — this one command applies them for both; no separate migrate step needed there.)
+   After pulling, if Prisma complains about a missing column (e.g. `accessStatus`), you forgot this step. Also run `npm run build --workspace packages/types` if types fail to resolve (root `npm install` usually builds them via `postinstall`).
 
 5. **Run the API**:
 
@@ -86,6 +88,16 @@ First run only — there's no self-registration, so provision the first `SUPER_A
 ```bash
 cd apps/backoffice-api && npm run seed:backoffice -- <email> "<name>" <password>
 ```
+
+### After pulling (teammates)
+
+```bash
+npm install
+cd apps/api && npx prisma migrate deploy && cd ../..
+# if the API was already running, restart npm run dev:api
+```
+
+If the UI still shows an old access state after an admin approval, log out or clear `localStorage` key `agendya-auth` and sign in again (the app also revalidates `/auth/me` on private routes).
 
 ## Other useful scripts
 
@@ -152,6 +164,7 @@ Copy the example env files (`cp apps/api/.env.example apps/api/.env`,
 | --- | --- | --- |
 | `apps/api/.env` | `WEB_URL` | CORS allow-origin **and** the base the Google OAuth callback redirects back to. `http://localhost:5173` by default. Only change it for tunnelled OAuth. |
 | `apps/api/.env` | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` / `GOOGLE_CALLBACK_URL` | Google sign-in. `GOOGLE_CALLBACK_URL` defaults to `http://localhost:4000/auth/google/callback`. |
+| `apps/api/.env` | `PROFESSIONAL_EMAIL_ALLOWLIST` | Closed beta. **Unset** = register OK, account `PENDING` until Super Admin accepts. Comma-separated emails = those are `APPROVED` at signup. `""` (empty string) = kill switch, PENDING can use the dashboard. |
 | `apps/api/.env` | `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` / `VAPID_SUBJECT` | Web Push. Generate the pair with `npx web-push generate-vapid-keys`. All three must be set for delivery; any missing → push disabled. |
 | `apps/api/.env` | `REALTIME_HEARTBEAT_MS` | Optional. SSE keep-alive interval (default `25000`); lower it if a proxy drops idle connections sooner. |
 | `apps/web/.env` | `VITE_API_URL` | **Leave unset** for LAN/tunnel dev (auto-detect + `/api` proxy). Set it only to pin a fixed backend (staging), or in a **production build**, where there is no Vite proxy and the app must be told the API origin. Client vars must be prefixed `VITE_`. |

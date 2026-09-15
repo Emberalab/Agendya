@@ -23,11 +23,12 @@ import {
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { NotificationsService } from './notifications.service';
 import { PushSubscriptionsService } from './push-subscriptions.service';
 
 @Controller('notifications')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, ApprovedAccessGuard)
 export class NotificationsController {
   constructor(
     private readonly notifications: NotificationsService,

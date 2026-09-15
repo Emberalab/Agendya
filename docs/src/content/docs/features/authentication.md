@@ -29,13 +29,14 @@ trabajo sin terminar, no una funcionalidad documentada.
 | Método | Ruta | Auth | Cuerpo / parámetros | Respuesta |
 | --- | --- | --- | --- | --- |
 | `POST` | `/auth/register` | ninguna · `@Throttle 5/60s` | `{ email, password, businessName }` (`registerSchema`) | `{ accessToken, user }` |
-| `POST` | `/auth/login` | ninguna · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` |
-| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role }` |
+| `POST` | `/auth/login` | ninguna · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` · `401 ACCOUNT_NOT_FOUND` se queda en `/login` con CTA a registro |
+| `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role, accessStatus }` |
 | `GET` | `/auth/google` | ninguna | — | 302 a Google (+ pone la cookie `oauth_state`) |
-| `GET` | `/auth/google/callback` | cookie `state` + Google | `?code&state` | 302 a `{WEB_URL}/auth/callback#token=<JWT>` · lista de espera: `/register?waitlist=1` · `state` inválido: `/login?error=oauth` |
+| `GET` | `/auth/google/callback` | cookie `state` + Google | `?code&state` | 302 a `{WEB_URL}/auth/callback#token=<JWT>` · declinado: `/login?error=declined` · `state` inválido: `/login?error=oauth` |
 
-Forma de `user`: `{ id, email, businessName, slug, role }`. `SUPER_ADMIN`
-entra a `/dashboard` sin el menú del profesional.
+Forma de `user`: `{ id, email, businessName, slug, role, accessStatus }`. `PENDING`
+entra a `/acceso-pendiente`. `SUPER_ADMIN` entra a `/dashboard` sin el menú del
+profesional.
 
 ## Modelo de cuenta
 
@@ -49,20 +50,26 @@ entra a `/dashboard` sin el menú del profesional.
   llamado `"Nombre Apellido"`.
 - `isActive = false` deshabilita una cuenta: `JwtStrategy.validate` rechaza sus
   tokens con `401`.
+- `accessStatus`: `PENDING` \| `APPROVED` \| `DECLINED`. El registro siempre crea
+  la fila. Sin grant en beta cerrada queda `PENDING` (sesión sí, panel no).
+  `DECLINED` no entra. `JwtStrategy` rechaza `DECLINED` y permite `PENDING`.
 - `role`: `INDEPENDENT` por defecto; `SUPER_ADMIN` si el correo tiene una fila
   `PlatformAccessEmail` con `access = SUPER_ADMIN` (la semilla incluye
   `info@agendya.co` y `afz.0228@gmail.com`). `BUSINESS_ADMIN` está en el enum
   y no se usa.
 
-## Periodo de prueba (lista de espera)
+## Periodo de prueba (acceso pendiente)
 
-En Railway (`RAILWAY_ENVIRONMENT_NAME` = `production` o `dev`) solo los correos
-en `PlatformAccessEmail` pueden registrar o iniciar sesión como profesional.
-Cualquier otro recibe `403 { code: "WAITLIST_REQUIRED" }` y la web muestra el
-mismo formulario de cupo que [launch.agendya.co](https://launch.agendya.co).
-Local y CI no aplican la lista (signup abierto). `PROFESSIONAL_EMAIL_ALLOWLIST`
-la pisa; vacía = abierto. Un grant `SUPER_ADMIN` siempre entra, aunque la
-variable no lo liste. Las reservas públicas `/:slug` no se ven afectadas.
+El registro **siempre** crea un `Professional`. Sin grant en
+`PlatformAccessEmail` (ni match en `PROFESSIONAL_EMAIL_ALLOWLIST`) el
+`accessStatus` queda `PENDING` y la web manda a `/acceso-pendiente`. Super
+Admin ve todas las cuentas en **Registros** y puede Aceptar / Declinar.
+
+`PROFESSIONAL_EMAIL_ALLOWLIST=""` (string vacío) abre el producto: los
+`PENDING` entran al panel sin un update masivo (`DECLINED` sigue fuera). Un
+grant `SUPER_ADMIN` o `ALLOWLISTED` nace `APPROVED`. Las páginas públicas
+`/:slug` solo muestran cuentas `APPROVED` mientras el kill switch no esté
+abierto.
 
 ## Ciclo de vida de la sesión (web)
 

@@ -11,6 +11,7 @@ import {
   type UpdateProfileInput,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
 
 @Injectable()
 export class ProfessionalsService {
@@ -139,7 +140,7 @@ export class ProfessionalsService {
 
   async findPublicBySlug(slug: string): Promise<PublicProfessional> {
     const professional = await this.prisma.professional.findFirst({
-      where: { slug, isActive: true },
+      where: { slug, isActive: true, ...publicProfessionalAccessFilter() },
       include: {
         services: {
           where: { isActive: true, deletedAt: null },

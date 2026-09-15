@@ -1,3 +1,4 @@
+import { ACCOUNT_NOT_FOUND_CODE } from '@agendya/types';
 import { isApiError } from './apiClient';
 
 /** The shape `ZodValidationPipe` throws: `{ message: 'Validation failed', errors: z.ZodError['flatten']() }'. */
@@ -46,19 +47,37 @@ export function isWaitlistRequiredError(error: unknown): boolean {
   return payloadHasWaitlistCode(error.data);
 }
 
+export function isAccountNotFoundError(error: unknown): boolean {
+  if (!isApiError(error) || error.status !== 401) {
+    return false;
+  }
+  return payloadHasCode(error.data, ACCOUNT_NOT_FOUND_CODE);
+}
+
 function payloadHasWaitlistCode(data: unknown): boolean {
+  if (payloadHasCode(data, 'WAITLIST_REQUIRED')) {
+    return true;
+  }
   if (!data || typeof data !== 'object') {
     return false;
   }
-  const payload = data as { code?: unknown; message?: unknown };
-  if (payload.code === 'WAITLIST_REQUIRED') {
-    return true;
-  }
-  if (payload.message && typeof payload.message === 'object') {
-    return payloadHasWaitlistCode(payload.message);
-  }
+  const payload = data as { message?: unknown };
   return (
     typeof payload.message === 'string' &&
     payload.message.toLowerCase().includes('lista de espera')
   );
+}
+
+function payloadHasCode(data: unknown, code: string): boolean {
+  if (!data || typeof data !== 'object') {
+    return false;
+  }
+  const payload = data as { code?: unknown; message?: unknown };
+  if (payload.code === code) {
+    return true;
+  }
+  if (payload.message && typeof payload.message === 'object') {
+    return payloadHasCode(payload.message, code);
+  }
+  return false;
 }
