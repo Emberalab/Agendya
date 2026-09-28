@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import type { SignOptions } from 'jsonwebtoken';
+import { MailService } from '../../infra/mail/mail.service';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { GoogleStrategy } from './strategies/google.strategy';
@@ -27,6 +28,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   controllers: [AuthController],
   providers: [
     AuthService,
+    MailService,
     JwtStrategy,
     {
       // Only register the Google OAuth strategy when it is actually configured.

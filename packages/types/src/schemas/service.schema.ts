@@ -78,6 +78,8 @@ export const serviceSchema = z.object({
   homeDurationMinutes: z.number().nullable(),
   homePriceCents: z.number().nullable(),
   sortOrder: z.number(),
+  planLocked: z.boolean(),
+  planEnabledAt: z.string().datetime().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });

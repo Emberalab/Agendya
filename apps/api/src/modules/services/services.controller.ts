@@ -53,6 +53,11 @@ export class ServicesController {
     return this.servicesService.duplicate(user.id, id);
   }
 
+  @Post(':id/enable')
+  enable(@CurrentUser() user: Professional, @Param('id') id: string) {
+    return this.servicesService.enableService(user.id, id);
+  }
+
   @Delete(':id')
   remove(@CurrentUser() user: Professional, @Param('id') id: string) {
     return this.servicesService.softDelete(user.id, id);

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
+import { MailService } from '../../infra/mail/mail.service';
 import { AdminService } from './admin.service';
 
 const SUPER_ADMIN_ROW = {
@@ -40,6 +41,9 @@ describe('AdminService', () => {
       updateMany: jest.Mock;
     };
   };
+  let mailService: {
+    sendAccountActivated: jest.Mock;
+  };
 
   beforeEach(async () => {
     prisma = {
@@ -59,9 +63,16 @@ describe('AdminService', () => {
         updateMany: jest.fn(),
       },
     };
+    mailService = {
+      sendAccountActivated: jest.fn().mockResolvedValue(undefined),
+    };
 
     const moduleRef = await Test.createTestingModule({
-      providers: [AdminService, { provide: PrismaService, useValue: prisma }],
+      providers: [
+        AdminService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: MailService, useValue: mailService },
+      ],
     }).compile();
 
     service = moduleRef.get(AdminService);
@@ -269,6 +280,57 @@ describe('AdminService', () => {
         service.updateRegistrationStatus('admin@agendya.co', 'DECLINED'),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.professional.update).not.toHaveBeenCalled();
+    });
+
+    it('sends activation email only when transitioning to APPROVED', async () => {
+      prisma.professional.findUnique.mockResolvedValue({
+        id: 'prof-1',
+        email: 'nuevo@salon.com',
+        role: 'INDEPENDENT',
+        accessStatus: 'PENDING',
+      });
+      prisma.professional.update.mockResolvedValue({
+        id: 'prof-1',
+        email: 'nuevo@salon.com',
+        businessName: 'Salón',
+        slug: 'salon',
+        accessStatus: 'APPROVED',
+        role: 'INDEPENDENT',
+        plan: 'FREE',
+        createdAt: new Date('2026-09-14T00:00:00.000Z'),
+      });
+      prisma.platformAccessEmail.upsert.mockResolvedValue({});
+
+      await service.updateRegistrationStatus('nuevo@salon.com', 'APPROVED');
+
+      expect(mailService.sendAccountActivated).toHaveBeenCalledWith(
+        'nuevo@salon.com',
+        'Salón',
+      );
+    });
+
+    it('does not send activation email when already APPROVED', async () => {
+      prisma.professional.findUnique.mockResolvedValue({
+        id: 'prof-1',
+        email: 'activo@salon.com',
+        role: 'INDEPENDENT',
+        accessStatus: 'APPROVED',
+      });
+      prisma.professional.update.mockResolvedValue({
+        id: 'prof-1',
+        email: 'activo@salon.com',
+        businessName: 'Salón Activo',
+        slug: 'salon-activo',
+        accessStatus: 'APPROVED',
+        role: 'INDEPENDENT',
+        plan: 'FREE',
+        createdAt: new Date('2026-09-14T00:00:00.000Z'),
+      });
+      prisma.platformAccessEmail.upsert.mockResolvedValue({});
+
+      await service.updateRegistrationStatus('activo@salon.com', 'APPROVED');
+
+      expect(mailService.sendAccountActivated).not.toHaveBeenCalled();
     });
   });
 });

@@ -125,7 +125,8 @@ Todo se acota a `req.user.id` en el servidor; nunca se confía en un id del clie
 
 `Notification` (`notificationSchema`): `{ id, type, title, body, data: { bookingId,
 customerName, serviceName, startAt, atHome? }, readAt: string \| null, createdAt }`.
-`type` hoy solo `APPOINTMENT_CREATED`; para una reserva a domicilio el `title` es
+`type` es `APPOINTMENT_CREATED` o `APPOINTMENT_CANCELLED` (el cliente canceló desde
+su enlace; `title` `"Cita cancelada"`); para una reserva a domicilio el `title` es
 `"Nueva cita a domicilio"` y `data.atHome` es `true`. La dirección del cliente
 **nunca** viaja en el payload (ni en el frame SSE) — el profesional abre el
 detalle de la cita, cuyo `AgendaBooking` sí trae `customerAddress`. `markRead` /

@@ -21,6 +21,7 @@ Agendya has **two kinds** of notification:
 | `sendBookingRescheduled` | Any reschedule / time-changing edit | Customer | `Cita modificada con <business>` |
 | `sendBookingRescheduledToProfessional` | Customer-initiated reschedule / edit | Professional | `Modificación de reserva - <customer>` |
 | `sendBookingCancelled` | Cancel by customer or professional | Customer | `Reserva cancelada con <business>` |
+| `sendBookingCancelledToProfessional` | Customer-initiated cancel (public link) | Professional | `Cita cancelada - <customer>` |
 
 - **From:** `Agendya <reservas@agendya.app>` (hard-coded).
 - **Dates:** `Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle:
@@ -72,7 +73,7 @@ flowchart LR
 | --- | --- | --- |
 | `id` | uuid | |
 | `professionalId` | uuid | FK → `Professional`, `onDelete: Cascade` |
-| `type` | `NotificationType` | today only `APPOINTMENT_CREATED`; reserved `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` |
+| `type` | `NotificationType` | `APPOINTMENT_CREATED` (new booking) or `APPOINTMENT_CANCELLED` (customer cancelled from their link); reserved `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` |
 | `title` / `body` | string | ready-to-render strings (es-CO); also serve a future Web Push payload. Home service: `title` = `"Nueva cita a domicilio"` |
 | `data` | `Json` | `{ bookingId, customerName, serviceName, startAt, atHome? }` — `bookingId` is the navigation reference; the rest avoids a join and is point-in-time. `atHome: true` is added only for a home-service booking (a flag, never the address) |
 | `readAt` | `DateTime?` | `null` while unread |
@@ -253,7 +254,5 @@ rescheduled merely because this sweep hasn't run.
 ## Not implemented
 
 - No reminder to the **professional**.
-- No cancellation email to the professional (only the customer is emailed on
-  cancel).
 - No `NO_SHOW` flow, so no related notification.
 - No digest / daily-summary email.

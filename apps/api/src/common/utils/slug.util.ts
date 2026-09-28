@@ -1,4 +1,5 @@
 import { PrismaService } from '../../database/prisma.service';
+import { isReservedSlug } from '@agendya/types';
 
 export function slugify(text: string): string {
   const base = text
@@ -16,7 +17,15 @@ export function slugify(text: string): string {
     .replace(/^-+|-+$/g, '')
     .slice(0, 50);
 
-  return base || 'profesional';
+  const slug = base || 'profesional';
+
+  // If the slug is reserved, append "-negocio" to make it valid
+
+  if (isReservedSlug(slug)) {
+    return `${slug}-negocio`;
+  }
+
+  return slug;
 }
 
 export async function ensureUniqueSlug(

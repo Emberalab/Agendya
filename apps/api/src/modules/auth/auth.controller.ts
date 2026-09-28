@@ -14,10 +14,14 @@ import { Throttle } from '@nestjs/throttler';
 import type { Professional } from '@prisma/client';
 import type { Request, Response } from 'express';
 import {
+  forgotPasswordSchema,
   loginSchema,
   registerSchema,
+  resetPasswordSchema,
+  type ForgotPasswordInput,
   type LoginInput,
   type RegisterInput,
+  type ResetPasswordInput,
 } from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
@@ -76,5 +80,23 @@ export class AuthController {
     // "//auth/callback" path that the frontend router fails to match.
     const redirectUrl = `${webUrl}/auth/callback#token=${authResponse.accessToken}`;
     res.redirect(redirectUrl);
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordSchema)) dto: ForgotPasswordInput,
+  ) {
+    return this.authService.forgotPassword(dto);
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordSchema)) dto: ResetPasswordInput,
+  ) {
+    return this.authService.resetPassword(dto);
   }
 }

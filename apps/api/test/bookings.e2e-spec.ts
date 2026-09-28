@@ -87,7 +87,12 @@ describe('Bookings (e2e)', () => {
 
     const register = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName: `E2E Bookings ${runId}` });
+      .send({
+        email,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Bookings ${runId}`,
+      });
     const registerBody = register.body as {
       accessToken: string;
       user: { slug: string };
@@ -100,6 +105,7 @@ describe('Bookings (e2e)', () => {
       .send({
         email: otherEmail,
         password,
+        acceptTerms: true,
         businessName: `E2E Bookings Otro ${runId}`,
       });
     otherAccessToken = (registerOther.body as { accessToken: string })

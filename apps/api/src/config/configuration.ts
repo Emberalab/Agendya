@@ -15,6 +15,10 @@ export default () => ({
   resendApiKey: process.env.RESEND_API_KEY,
   cloudinaryUrl: process.env.CLOUDINARY_URL,
   webUrl: (process.env.WEB_URL ?? 'http://localhost:5173').replace(/\/+$/, ''),
+  mail: {
+    from: process.env.MAIL_FROM ?? 'Agendya <no-reply@agendya.co>',
+    replyTo: process.env.MAIL_REPLY_TO ?? 'info@agendya.co',
+  },
   // Public booking origin (`agendya.co`). Empty locally / on hosted-dev where
   // the dashboard and `/:slug` share one host. Used for CORS and cancel links.
   publicWebUrl: (process.env.PUBLIC_WEB_URL ?? '').replace(/\/+$/, ''),

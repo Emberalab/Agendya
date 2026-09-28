@@ -54,6 +54,7 @@ describe('RemindersScheduler', () => {
       where: {
         status: 'CONFIRMED',
         reminder24hSentAt: null,
+        customerEmail: { not: null },
         startAt: {
           gte: new Date('2026-08-02T14:00:00.000Z'),
           lt: new Date('2026-08-02T14:15:00.000Z'),
@@ -70,6 +71,7 @@ describe('RemindersScheduler', () => {
       where: {
         status: 'CONFIRMED',
         reminder2hSentAt: null,
+        customerEmail: { not: null },
         startAt: {
           gte: new Date('2026-08-01T16:00:00.000Z'),
           lt: new Date('2026-08-01T16:15:00.000Z'),

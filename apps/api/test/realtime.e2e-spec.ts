@@ -127,7 +127,12 @@ describe('Realtime SSE (e2e)', () => {
 
     const registerA = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName: `E2E Realtime ${runId}` });
+      .send({
+        email,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Realtime ${runId}`,
+      });
     tokenA = (registerA.body as { accessToken: string }).accessToken;
     slugA = (registerA.body as { user: { slug: string } }).user.slug;
 
@@ -136,6 +141,7 @@ describe('Realtime SSE (e2e)', () => {
       .send({
         email: otherEmail,
         password,
+        acceptTerms: true,
         businessName: `E2E Realtime Otro ${runId}`,
       });
     tokenB = (registerB.body as { accessToken: string }).accessToken;

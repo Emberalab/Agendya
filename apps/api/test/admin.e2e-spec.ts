@@ -44,7 +44,7 @@ describe('Admin (e2e)', () => {
     // Register admin user
     const adminRes = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email: adminEmail, password, businessName });
+      .send({ email: adminEmail, password, businessName, acceptTerms: true });
     if (!(adminRes.body as { accessToken?: string }).accessToken) {
       throw new Error(
         `Admin registration failed: ${JSON.stringify(adminRes.body)}`,
@@ -55,7 +55,12 @@ describe('Admin (e2e)', () => {
     // Register independent user
     const independentRes = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email: independentEmail, password, businessName: 'Independent' });
+      .send({
+        email: independentEmail,
+        password,
+        businessName: 'Independent',
+        acceptTerms: true,
+      });
     if (!(independentRes.body as { accessToken?: string }).accessToken) {
       throw new Error(
         `Independent registration failed: ${JSON.stringify(independentRes.body)}`,

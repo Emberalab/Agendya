@@ -1,12 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import { registerSchema } from '@agendya/types';
+import { registerFormSchema, registerSchema } from '@agendya/types';
+
+describe('registerFormSchema', () => {
+  it('validates the form fields without the terms flag', () => {
+    const result = registerFormSchema.safeParse({
+      businessName: 'María Belleza',
+      email: 'maria@salon.com',
+      password: 'secret123',
+    });
+    expect(result.success).toBe(true);
+  });
+});
 
 describe('registerSchema', () => {
+  it('requires accepting the terms', () => {
+    const result = registerSchema.safeParse({
+      businessName: 'María Belleza',
+      email: 'maria@salon.com',
+      password: 'secret123',
+    });
+    expect(result.success).toBe(false);
+  });
+
   it('accepts a valid registration payload', () => {
     const result = registerSchema.safeParse({
       businessName: 'María Belleza',
       email: 'maria@salon.com',
       password: 'secret123',
+      acceptTerms: true,
     });
     expect(result.success).toBe(true);
   });
@@ -16,6 +37,7 @@ describe('registerSchema', () => {
       businessName: 'María Belleza',
       email: 'AgendyaSuperAdmin',
       password: 'secret123',
+      acceptTerms: true,
     });
     expect(result.success).toBe(false);
     if (result.success) {
@@ -31,6 +53,7 @@ describe('registerSchema', () => {
       businessName: 'info@agendya.co',
       email: 'AgendyaSuperAdmin',
       password: 'secret123',
+      acceptTerms: true,
     });
     expect(result.success).toBe(false);
     if (result.success) {
@@ -46,6 +69,7 @@ describe('registerSchema', () => {
       businessName: 'María Belleza',
       email: 'user@localhost',
       password: 'secret123',
+      acceptTerms: true,
     });
     expect(result.success).toBe(false);
     if (result.success) {

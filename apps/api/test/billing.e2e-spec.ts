@@ -37,7 +37,12 @@ describe('Billing (e2e)', () => {
 
     const register = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName: `Billing ${runId}` });
+      .send({
+        email,
+        password,
+        acceptTerms: true,
+        businessName: `Billing ${runId}`,
+      });
     const body = register.body as {
       accessToken?: string;
       user?: { id: string };

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BILLING_INTERVALS } from '../plans/billing';
 import { planSchema } from '../plans/catalog';
+import { slugSchema } from './slug.schema';
 
 export const CANCELLATION_POLICY_HOURS_OPTIONS = [1, 2, 3, 4, 6, 24] as const;
 
@@ -12,17 +13,6 @@ export const cancellationPolicyHoursSchema = z.union([
   z.literal(6),
   z.literal(24),
 ]);
-
-export const slugSchema = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .min(3)
-  .max(50)
-  .regex(
-    /^[a-z0-9]+(-[a-z0-9]+)*$/,
-    'El enlace solo puede contener letras minúsculas, números y guiones.',
-  );
 
 /** Any 6-digit hex colour, e.g. `#4F46E5`. */
 export const hexColorSchema = z
@@ -88,6 +78,7 @@ export const professionalProfileSchema = z.object({
   plan: planSchema,
   billingInterval: z.enum(BILLING_INTERVALS).nullable(),
   planExpiresAt: z.string().datetime().nullable(),
+  planCancelledAt: z.string().datetime().nullable(),
   /** Non-cancelled bookings created in the current calendar month. */
   bookingsThisMonth: z.number(),
   /** Non-deleted services — used for plan upsell, not a second list fetch. */

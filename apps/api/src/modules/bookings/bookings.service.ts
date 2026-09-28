@@ -11,6 +11,7 @@ import {
   PLAN_MONTHLY_BOOKING_LIMITS,
   type AgendaBooking,
   type CreateBookingInput,
+  type CreateManualBookingInput,
   type Plan,
   type PublicBooking,
   type RescheduleBookingInput,
@@ -19,7 +20,10 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UsageAlertsService } from '../notifications/usage-alerts.service';
 import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
+import { bookableServiceWhere } from '../services/service-plan-limit';
+import { countBookingsThisMonth } from './booking-usage';
 import {
   dateOnlyUtc,
   weekdayFromDateString,
@@ -38,6 +42,7 @@ export class BookingsService {
     private readonly prisma: PrismaService,
     private readonly mailService: MailService,
     private readonly notifications: NotificationsService,
+    private readonly usageAlerts: UsageAlertsService,
   ) {}
 
   async createPublicBooking(
@@ -89,15 +94,19 @@ export class BookingsService {
       .notifyAppointmentCreated(professional, booking)
       .catch(() => undefined);
 
-    await this.mailService.sendBookingConfirmation({
-      to: booking.customerEmail,
-      customerName: booking.customerName,
-      businessName: professional.businessName,
-      serviceName: booking.serviceNameSnapshot,
-      startAt: booking.startAt,
-      timezone: professional.timezone,
-      cancellationToken: booking.cancellationToken,
-    });
+    if (booking.customerEmail) {
+      await this.mailService.sendBookingConfirmation({
+        to: booking.customerEmail,
+        customerName: booking.customerName,
+        businessName: professional.businessName,
+        serviceName: booking.serviceNameSnapshot,
+        startAt: booking.startAt,
+        timezone: professional.timezone,
+        cancellationToken: booking.cancellationToken,
+      });
+    }
+
+    await this.checkBookingUsage(professional.id, professional.plan);
 
     return this.toPublicBooking(booking, professional);
   }
@@ -123,7 +132,11 @@ export class BookingsService {
     await this.assertModifiable(booking, professional, 'modificar');
 
     const { primaryServiceId, serviceNames, totalDurationMinutes } =
-      await this.resolveServiceSelection(professional.id, input);
+      await this.resolveServiceSelection(
+        professional.id,
+        input,
+        booking.serviceId ?? undefined,
+      );
 
     const startAt = new Date(input.startAt);
     if (Number.isNaN(startAt.getTime()) || isPast(startAt)) {
@@ -153,15 +166,18 @@ export class BookingsService {
     });
 
     if (oldStartAt.getTime() !== startAt.getTime()) {
-      await this.mailService.sendBookingRescheduled({
-        to: updated.customerEmail,
-        customerName: updated.customerName,
-        businessName: professional.businessName,
-        serviceName: updated.serviceNameSnapshot,
-        oldStartAt,
-        newStartAt: startAt,
-        timezone: professional.timezone,
-      });
+      if (updated.customerEmail) {
+        await this.mailService.sendBookingRescheduled({
+          to: updated.customerEmail,
+          customerName: updated.customerName,
+          businessName: professional.businessName,
+          serviceName: updated.serviceNameSnapshot,
+          oldStartAt,
+          newStartAt: startAt,
+          cancellationToken: updated.cancellationToken,
+          timezone: professional.timezone,
+        });
+      }
       await this.mailService.sendBookingRescheduledToProfessional({
         to: professional.email,
         professionalName: professional.businessName,
@@ -174,28 +190,112 @@ export class BookingsService {
     } else {
       // Only the service, modality, or contact details changed — re-confirm
       // with the same token.
-      await this.mailService.sendBookingConfirmation({
-        to: updated.customerEmail,
-        customerName: updated.customerName,
-        businessName: professional.businessName,
-        serviceName: updated.serviceNameSnapshot,
-        startAt: updated.startAt,
-        timezone: professional.timezone,
-        cancellationToken: updated.cancellationToken,
-      });
+      if (updated.customerEmail) {
+        await this.mailService.sendBookingConfirmation({
+          to: updated.customerEmail,
+          customerName: updated.customerName,
+          businessName: professional.businessName,
+          serviceName: updated.serviceNameSnapshot,
+          startAt: updated.startAt,
+          timezone: professional.timezone,
+          cancellationToken: updated.cancellationToken,
+        });
+      }
     }
 
     return this.toPublicBooking(updated, professional);
   }
 
   /**
+   * Lets a professional create a manual booking from their agenda. Similar to
+   * {@link createPublicBooking} but with optional email and no working-hour
+   * enforcement (though it still guards against overlaps and past dates).
+   */
+  async createManualBooking(
+    professionalId: string,
+    input: CreateManualBookingInput,
+  ): Promise<AgendaBooking> {
+    const professional = await this.prisma.professional.findUniqueOrThrow({
+      where: { id: professionalId },
+    });
+
+    const { primaryServiceId, serviceNames, totalDurationMinutes } =
+      await this.resolveServiceSelection(professionalId, input);
+
+    const startAt = new Date(input.startAt);
+    if (Number.isNaN(startAt.getTime()) || isPast(startAt)) {
+      throw new BadRequestException('No puedes crear reservas en el pasado.');
+    }
+    const endAt = new Date(startAt.getTime() + totalDurationMinutes * 60_000);
+
+    // No working-hour check — professional can create bookings any time
+
+    const booking = await this.commitBookingSlot({
+      professionalId: professional.id,
+      plan: professional.plan,
+      service: {
+        id: primaryServiceId,
+        name: serviceNames,
+        durationMinutes: totalDurationMinutes,
+      },
+      input: {
+        customerName: input.customerName,
+        customerEmail: input.customerEmail,
+        customerPhone: input.customerPhone,
+        customerNote: input.customerNote,
+        atHome: input.atHome,
+        customerAddress: input.customerAddress,
+      },
+      startAt,
+      endAt,
+      source: 'MANUAL',
+    });
+
+    // No in-app notification: the professional created it themselves.
+    if (booking.customerEmail) {
+      await this.mailService.sendBookingConfirmation({
+        to: booking.customerEmail,
+        customerName: booking.customerName,
+        businessName: professional.businessName,
+        serviceName: booking.serviceNameSnapshot,
+        startAt: booking.startAt,
+        timezone: professional.timezone,
+        cancellationToken: booking.cancellationToken,
+      });
+    }
+
+    await this.checkBookingUsage(professionalId, professional.plan);
+
+    return this.toAgendaBooking(booking, professional);
+  }
+
+  /** Best-effort usage-limit emails after a booking is committed. */
+  private async checkBookingUsage(
+    professionalId: string,
+    plan: Plan,
+  ): Promise<void> {
+    try {
+      const count = await countBookingsThisMonth(this.prisma, professionalId);
+      await this.usageAlerts.checkBookingLimits(professionalId, count, plan);
+    } catch {
+      // checkBookingLimits logs its own failures; the booking is already saved.
+    }
+  }
+
+  /**
    * Resolves the requested (comma-separated) services for a professional and
    * derives the combined name, duration, and primary id, applying the at-home
-   * rules. Shared by the create and token-edit booking flows.
+   * rules. Only bookable services are accepted, except `keepServiceId` — the
+   * service an existing booking already has, which stays valid even if the
+   * plan has since locked it.
    */
   private async resolveServiceSelection(
     professionalId: string,
-    input: CreateBookingInput,
+    input: Pick<
+      CreateBookingInput,
+      'serviceIds' | 'atHome' | 'customerAddress'
+    >,
+    keepServiceId?: string,
   ): Promise<{
     primaryServiceId: string;
     serviceNames: string;
@@ -204,7 +304,15 @@ export class BookingsService {
     const serviceIds = input.serviceIds.split(',').map((id) => id.trim());
 
     const services = await this.prisma.service.findMany({
-      where: { id: { in: serviceIds }, professionalId, isActive: true },
+      where: {
+        id: { in: serviceIds },
+        OR: [
+          bookableServiceWhere(professionalId),
+          ...(keepServiceId
+            ? [{ id: keepServiceId, professionalId, deletedAt: null }]
+            : []),
+        ],
+      },
     });
     if (services.length === 0) {
       throw new NotFoundException('Servicios no encontrados.');
@@ -302,9 +410,19 @@ export class BookingsService {
     professionalId: string;
     plan: Plan;
     service: { id: string; name: string; durationMinutes: number };
-    input: CreateBookingInput;
+    input:
+      | CreateBookingInput
+      | {
+          customerName: string;
+          customerEmail?: string;
+          customerPhone: string;
+          customerNote?: string;
+          atHome?: boolean;
+          customerAddress?: string;
+        };
     startAt: Date;
     endAt: Date;
+    source?: 'ONLINE' | 'MANUAL';
     existingBookingId?: string;
   }): Promise<Booking> {
     const {
@@ -314,6 +432,7 @@ export class BookingsService {
       input,
       startAt,
       endAt,
+      source = 'ONLINE',
       existingBookingId,
     } = params;
 
@@ -322,13 +441,14 @@ export class BookingsService {
       serviceNameSnapshot: service.name,
       durationMinutesSnapshot: service.durationMinutes,
       customerName: input.customerName,
-      customerEmail: input.customerEmail,
+      customerEmail: input.customerEmail ?? null,
       customerPhone: input.customerPhone,
       customerNote: input.customerNote?.trim() || null,
       atHome: input.atHome ?? false,
       customerAddress: input.atHome ? (input.customerAddress ?? null) : null,
       startAt,
       endAt,
+      source,
     };
 
     const maxAttempts = 3;
@@ -392,17 +512,7 @@ export class BookingsService {
     const limit = PLAN_MONTHLY_BOOKING_LIMITS[plan];
     if (limit === null) return;
 
-    const now = new Date();
-    const monthStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-    );
-    const count = await tx.booking.count({
-      where: {
-        professionalId,
-        status: { not: 'CANCELLED' },
-        createdAt: { gte: monthStart },
-      },
-    });
+    const count = await countBookingsThisMonth(tx, professionalId);
     if (count >= limit) {
       throw new ForbiddenException(
         'Alcanzaste el límite de reservas de tu plan este mes.',
@@ -464,10 +574,25 @@ export class BookingsService {
       },
     });
 
-    await this.mailService.sendBookingCancelled({
-      to: booking.customerEmail,
+    await this.notifications
+      .notifyAppointmentCancelled(booking.professional, booking)
+      .catch(() => undefined);
+
+    if (booking.customerEmail) {
+      await this.mailService.sendBookingCancelled({
+        to: booking.customerEmail,
+        customerName: booking.customerName,
+        businessName: booking.professional.businessName,
+        serviceName: booking.serviceNameSnapshot,
+        startAt: booking.startAt,
+        timezone: booking.professional.timezone,
+      });
+    }
+
+    await this.mailService.sendBookingCancelledToProfessional({
+      to: booking.professional.email,
+      professionalName: booking.professional.businessName,
       customerName: booking.customerName,
-      businessName: booking.professional.businessName,
       serviceName: booking.serviceNameSnapshot,
       startAt: booking.startAt,
       timezone: booking.professional.timezone,
@@ -513,15 +638,18 @@ export class BookingsService {
     );
 
     // Notificar al cliente
-    await this.mailService.sendBookingRescheduled({
-      to: booking.customerEmail,
-      customerName: booking.customerName,
-      businessName: booking.professional.businessName,
-      serviceName: booking.serviceNameSnapshot,
-      oldStartAt,
-      newStartAt,
-      timezone: booking.professional.timezone,
-    });
+    if (booking.customerEmail) {
+      await this.mailService.sendBookingRescheduled({
+        to: booking.customerEmail,
+        customerName: booking.customerName,
+        businessName: booking.professional.businessName,
+        serviceName: booking.serviceNameSnapshot,
+        oldStartAt,
+        newStartAt,
+        cancellationToken: booking.cancellationToken,
+        timezone: booking.professional.timezone,
+      });
+    }
 
     // Notificar al profesional
     await this.mailService.sendBookingRescheduledToProfessional({
@@ -584,14 +712,16 @@ export class BookingsService {
       },
     });
 
-    await this.mailService.sendBookingCancelled({
-      to: booking.customerEmail,
-      customerName: booking.customerName,
-      businessName: professional.businessName,
-      serviceName: booking.serviceNameSnapshot,
-      startAt: booking.startAt,
-      timezone: professional.timezone,
-    });
+    if (booking.customerEmail) {
+      await this.mailService.sendBookingCancelled({
+        to: booking.customerEmail,
+        customerName: booking.customerName,
+        businessName: professional.businessName,
+        serviceName: booking.serviceNameSnapshot,
+        startAt: booking.startAt,
+        timezone: professional.timezone,
+      });
+    }
 
     return this.toAgendaBooking(updated, professional);
   }
@@ -669,12 +799,13 @@ export class BookingsService {
     );
 
     await this.mailService.sendBookingRescheduled({
-      to: booking.customerEmail,
+      to: booking.customerEmail!,
       customerName: booking.customerName,
       businessName: professional.businessName,
       serviceName: booking.serviceNameSnapshot,
       oldStartAt,
       newStartAt,
+      cancellationToken: booking.cancellationToken,
       timezone: professional.timezone,
     });
 
@@ -807,6 +938,7 @@ export class BookingsService {
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       status: booking.status,
+      source: booking.source,
       cancellationToken: booking.cancellationToken,
       cancellationPolicyHours: professional.cancellationPolicyHours,
       canCancel: isModifiable(booking, professional),
@@ -833,6 +965,7 @@ export class BookingsService {
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       status: booking.status,
+      source: booking.source,
       cancellationPolicyHours: professional.cancellationPolicyHours,
       canReschedule: isModifiable(booking, professional),
       createdAt: booking.createdAt.toISOString(),

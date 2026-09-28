@@ -40,6 +40,7 @@ export class RemindersScheduler {
     const bookings = await this.prisma.booking.findMany({
       where: {
         status: 'CONFIRMED',
+        customerEmail: { not: null },
         [sentAtField]: null,
         startAt: { gte: windowStart, lt: windowEnd },
       },
@@ -49,7 +50,7 @@ export class RemindersScheduler {
     for (const booking of bookings) {
       try {
         await this.mailService.sendBookingReminder({
-          to: booking.customerEmail,
+          to: booking.customerEmail!,
           customerName: booking.customerName,
           businessName: booking.professional.businessName,
           serviceName: booking.serviceNameSnapshot,

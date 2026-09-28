@@ -14,6 +14,12 @@ export const bookingStatusSchema = z.enum(BOOKING_STATUSES);
 
 export type BookingStatus = z.infer<typeof bookingStatusSchema>;
 
+export const BOOKING_SOURCES = ['ONLINE', 'MANUAL'] as const;
+
+export const bookingSourceSchema = z.enum(BOOKING_SOURCES);
+
+export type BookingSource = z.infer<typeof bookingSourceSchema>;
+
 // Kept as a plain object (not wrapped in .superRefine) so consumers can still
 // `.pick()` fields from it. The `atHome` + `customerAddress` dependency is
 // enforced in the booking service and the public booking wizard.
@@ -33,6 +39,34 @@ export const createBookingSchema = z.object({
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
+// Manual booking creation by professionals from their agenda. Same validation as
+// public bookings but customerEmail is optional. Empty string becomes undefined;
+// if provided, it's validated with trim, lowercase, and email.
+export const createManualBookingSchema = z.object({
+  serviceIds: z.string().min(1), // Comma-separated UUIDs
+  startAt: z.string().datetime(),
+  customerName: z.string().trim().min(2).max(100),
+  customerEmail: z
+    .string()
+    .trim()
+    .transform((val) => (val === '' ? undefined : val))
+    .optional()
+    .refine(
+      (val) => val === undefined || z.string().email().safeParse(val).success,
+      'Ingresa un correo válido.',
+    )
+    .transform((val) => (val === undefined ? undefined : val.toLowerCase())),
+  customerPhone: z
+    .string()
+    .trim()
+    .regex(/^[0-9+\-\s()]{7,20}$/, 'Ingresa un teléfono válido.'),
+  customerNote: z.string().trim().max(500).optional(),
+  atHome: z.boolean().optional().default(false),
+  customerAddress: z.string().trim().min(5).max(200).optional(),
+});
+
+export type CreateManualBookingInput = z.infer<typeof createManualBookingSchema>;
+
 // A public booking edit accepts the same fields as a fresh booking: the customer
 // can change the service, modality, date/time, and their contact details. The
 // booking is looked up by its cancellation token, so no slug is needed here.
@@ -48,7 +82,7 @@ export const publicBookingSchema = z.object({
   serviceName: z.string(),
   durationMinutes: z.number(),
   customerName: z.string(),
-  customerEmail: z.string(),
+  customerEmail: z.string().nullable(),
   customerPhone: z.string(),
   customerNote: z.string().nullable(),
   atHome: z.boolean(),
@@ -56,6 +90,7 @@ export const publicBookingSchema = z.object({
   startAt: z.string(),
   endAt: z.string(),
   status: bookingStatusSchema,
+  source: bookingSourceSchema,
   cancellationToken: z.string(),
   cancellationPolicyHours: z.number(),
   canCancel: z.boolean(),
@@ -70,7 +105,7 @@ export const agendaBookingSchema = z.object({
   serviceName: z.string(),
   durationMinutes: z.number(),
   customerName: z.string(),
-  customerEmail: z.string(),
+  customerEmail: z.string().nullable(),
   customerPhone: z.string(),
   customerNote: z.string().nullable(),
   // Home-service ("a domicilio") modality + the address the customer gave for
@@ -84,6 +119,7 @@ export const agendaBookingSchema = z.object({
   startAt: z.string(),
   endAt: z.string(),
   status: bookingStatusSchema,
+  source: bookingSourceSchema,
   cancellationPolicyHours: z.number(),
   canReschedule: z.boolean(),
   createdAt: z.string(),

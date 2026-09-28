@@ -125,7 +125,8 @@ scoped to `req.user.id` server-side; a client-supplied id is never trusted.
 
 `Notification` (`notificationSchema`): `{ id, type, title, body, data: {
 bookingId, customerName, serviceName, startAt, atHome? }, readAt: string \| null,
-createdAt }`. `type` is only `APPOINTMENT_CREATED` today; for a home-service
+createdAt }`. `type` is `APPOINTMENT_CREATED` or `APPOINTMENT_CANCELLED` (the customer
+cancelled from their link; `title` `"Cita cancelada"`); for a home-service
 booking the `title` is `"Nueva cita a domicilio"` and `data.atHome` is `true`.
 The customer's address is **never** in the payload (or the SSE frame) — the
 professional opens the appointment detail, whose `AgendaBooking` carries

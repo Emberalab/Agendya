@@ -3,6 +3,7 @@ export * from './plans/billing';
 export * from './schemas/admin.schema';
 export * from './schemas/billing.schema';
 export * from './schemas/auth.schema';
+export * from './schemas/slug.schema';
 export * from './schemas/professional.schema';
 export * from './schemas/service.schema';
 export * from './schemas/schedule.schema';

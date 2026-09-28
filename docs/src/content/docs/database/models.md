@@ -32,8 +32,23 @@ La cuenta del barbero/peluquero.
 | `accessStatus` | `AccessStatus @default(APPROVED)` | `PENDING` \| `APPROVED` \| `DECLINED`. Cuentas nuevas sin grant en beta cerrada nacen `PENDING`. `isActive` no se usa para esto |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rechaza tokens de cuentas inactivas |
 
-Relaciones: `services`, `workingHours`, `scheduleExceptions`, `bookings`
+Relaciones: `services`, `workingHours`, `scheduleExceptions`, `bookings`, `passwordResetTokens`
 (todas `[]`).
+
+## PasswordResetToken
+
+Token de un solo uso para restablecer la contraseña de un profesional.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `professionalId` | `String` | FK a `Professional`, `onDelete: Cascade` |
+| `tokenHash` | `String @unique` | SHA-256 del token aleatorio de 32 bytes (base64url). Solo se guarda el hash, nunca el token en claro |
+| `expiresAt` | `DateTime` | Timestamp de expiración (UTC). Los tokens expiran después de 1 hora (`TOKEN_EXPIRY_HOURS = 1`) |
+| `usedAt` | `DateTime?` | Se establece al momento de restablecer la contraseña exitosamente. Los tokens usados no se pueden reutilizar. Tokens no usados (`null`) de solicitudes previas se marcan como usados al generar uno nuevo |
+
+Índice: `@@index([professionalId])`.
+
+No tiene `updatedAt` porque son de un solo uso y nunca se actualizan excepto para marcar `usedAt`.
 
 ## Service
 
@@ -115,7 +130,7 @@ la fuente de verdad; SSE y Web Push son canales de entrega.
 | Campo | Tipo | Notas |
 | --- | --- | --- |
 | `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
-| `type` | `NotificationType` | Hoy solo `APPOINTMENT_CREATED`. El enum reserva `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` para más adelante |
+| `type` | `NotificationType` | `APPOINTMENT_CREATED` o `APPOINTMENT_CANCELLED` (cancelación del cliente). El enum reserva `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` para más adelante |
 | `title` / `body` | `String` | Textos listos para mostrar (es-CO). También servirían de payload para Web Push |
 | `data` | `Json` | `{ bookingId, customerName, serviceName, startAt }` — `bookingId` es la referencia de navegación; los otros campos evitan un join y son *point-in-time* |
 | `readAt` | `DateTime?` | `null` mientras está sin leer |

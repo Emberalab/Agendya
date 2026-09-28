@@ -159,6 +159,43 @@ describe('NotificationsService', () => {
     });
   });
 
+  describe('notifyAppointmentCancelled', () => {
+    it('persists an APPOINTMENT_CANCELLED row and fans it out', async () => {
+      prisma.notification.create.mockResolvedValue(
+        row({ type: 'APPOINTMENT_CANCELLED', title: 'Cita cancelada' }),
+      );
+
+      await service.notifyAppointmentCancelled(PROFESSIONAL, BOOKING);
+
+      const [[createArg]] = prisma.notification.create.mock.calls as [
+        [{ data: Record<string, unknown> }],
+      ];
+      expect(createArg.data).toMatchObject({
+        professionalId: 'prof-1',
+        type: 'APPOINTMENT_CANCELLED',
+        title: 'Cita cancelada',
+      });
+      expect(createArg.data.data).toEqual({
+        bookingId: BOOKING.id,
+        customerName: 'Ana',
+        serviceName: 'Corte de cabello',
+        startAt: '2026-08-03T14:00:00.000Z',
+      });
+      expect(String(createArg.data.body)).toContain('Ana canceló');
+      expect(realtime.emitNotificationCreated).toHaveBeenCalledTimes(1);
+      expect(push.sendToProfessional).toHaveBeenCalledTimes(1);
+    });
+
+    it('never throws when the insert fails', async () => {
+      prisma.notification.create.mockRejectedValue(new Error('db down'));
+
+      await expect(
+        service.notifyAppointmentCancelled(PROFESSIONAL, BOOKING),
+      ).resolves.toBeUndefined();
+      expect(realtime.emitNotificationCreated).not.toHaveBeenCalled();
+    });
+  });
+
   describe('list', () => {
     it('scopes to the professional and requests one extra row for the cursor', async () => {
       prisma.notification.findMany.mockResolvedValue([row()]);

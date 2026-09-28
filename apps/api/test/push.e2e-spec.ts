@@ -41,12 +41,22 @@ describe('Push subscriptions (e2e)', () => {
 
     const regA = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email: emailA, password, businessName: `E2E Push A ${runId}` });
+      .send({
+        email: emailA,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Push A ${runId}`,
+      });
     tokenA = (regA.body as { accessToken: string }).accessToken;
 
     const regB = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email: emailB, password, businessName: `E2E Push B ${runId}` });
+      .send({
+        email: emailB,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Push B ${runId}`,
+      });
     tokenB = (regB.body as { accessToken: string }).accessToken;
   });
 

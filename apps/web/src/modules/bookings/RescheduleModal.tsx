@@ -154,8 +154,8 @@ export function RescheduleModal({
                   <rect x="1" y="3" width="12" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
                   <path d="M1 4l6 4.5L13 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
                 </svg>
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-primary)' }}>
-                  {booking.customerEmail}
+                <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: booking.customerEmail ? 'var(--color-text-primary)' : 'var(--color-text-muted)', fontStyle: booking.customerEmail ? 'normal' : 'italic' }}>
+                  {booking.customerEmail || 'Sin correo registrado'}
                 </span>
               </div>
             </div>
