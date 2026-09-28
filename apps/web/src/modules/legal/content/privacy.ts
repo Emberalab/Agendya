@@ -25,7 +25,7 @@ export const privacySections: LegalSection[] = [
   {
     title: '1. Introducción',
     content: [
-      'Esta Política de privacidad (en adelante, la "Política") describe cómo Agendya, con domicilio en Ruta N, Medellín (en adelante, "Agendya", "nosotros" o "la empresa"), recolecta, usa, almacena, comparte y protege los datos personales de los usuarios de la plataforma Agendya (en adelante, la "Plataforma").',
+      'Esta Política de privacidad (en adelante, la "Política") describe cómo Agendya, con domicilio en Calle 9 Sur #79C - 151, Medellín (en adelante, "Agendya", "nosotros" o "la empresa"), recolecta, usa, almacena, comparte y protege los datos personales de los usuarios de la plataforma Agendya (en adelante, la "Plataforma").',
       'Esta Política se rige por la Ley 1581 de 2012, el Decreto 1377 de 2013 y demás normativa colombiana aplicable en materia de protección de datos personales (habeas data).',
       'Al registrarte o utilizar la Plataforma, aceptas el tratamiento de tus datos personales conforme a esta Política.',
     ],
@@ -247,7 +247,7 @@ export const privacySections: LegalSection[] = [
       [
         'Correo electrónico: info@agendya.co',
         'Razón social: Agendya',
-        'Domicilio: Ruta N, Medellín',
+        'Domicilio: Calle 9 Sur #79C - 151, Medellín',
       ],
       'Nos comprometemos a responder tus inquietudes de manera oportuna y transparente.',
     ],
