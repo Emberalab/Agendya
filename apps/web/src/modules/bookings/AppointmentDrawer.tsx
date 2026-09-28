@@ -289,8 +289,8 @@ export function AppointmentDrawer({
             <rect x="1" y="3" width="12" height="8.5" rx="1.5" stroke="currentColor" strokeWidth="1.3" />
             <path d="M1 4l6 4.5L13 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
           </svg>
-          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-primary)' }}>
-            {booking.customerEmail}
+          <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: booking.customerEmail ? 'var(--color-text-primary)' : 'var(--color-text-muted)', fontStyle: booking.customerEmail ? 'normal' : 'italic' }}>
+            {booking.customerEmail || 'Sin correo registrado'}
           </span>
         </div>
 
@@ -307,9 +307,10 @@ export function AppointmentDrawer({
           </a>
           <button
             onClick={() => {
-              void navigator.clipboard?.writeText(
-                `${booking.customerName} · ${booking.customerPhone} · ${booking.customerEmail}`,
-              );
+              const data = booking.customerEmail
+                ? `${booking.customerName} · ${booking.customerPhone} · ${booking.customerEmail}`
+                : `${booking.customerName} · ${booking.customerPhone}`;
+              void navigator.clipboard?.writeText(data);
             }}
             className="flex items-center gap-1.5"
             style={{ fontFamily: 'var(--font-body)', fontSize: '14px', fontWeight: 600, color: 'var(--color-text-secondary)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
@@ -343,7 +344,7 @@ export function AppointmentDrawer({
         <div className="flex justify-between items-baseline mb-2 gap-3">
           <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-muted)' }}>Origen</span>
           <span style={{ fontFamily: 'var(--font-body)', fontSize: '14px', color: 'var(--color-text-primary)', textAlign: 'right' }}>
-            Reserva desde enlace público
+            {booking.source === 'MANUAL' ? 'Creada manualmente' : 'Reserva desde enlace público'}
           </span>
         </div>
         <div className="flex flex-col gap-1">

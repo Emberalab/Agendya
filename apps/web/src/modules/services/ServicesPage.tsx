@@ -10,8 +10,10 @@ import { Toggle } from './components/Toggle';
 import { formatCOP, formatDuration } from './format';
 import { useDeleteService } from './hooks/useDeleteService';
 import { useDuplicateService } from './hooks/useDuplicateService';
+import { useEnableService } from './hooks/useEnableService';
 import { useServices } from './hooks/useServices';
 import { useUpdateService } from './hooks/useUpdateService';
+import { ServiceSwapDialog } from './components/ServiceSwapDialog';
 
 const ClockIcon = () => (
   <svg
@@ -271,9 +273,11 @@ export function ServicesPage() {
   const updateService = useUpdateService();
   const deleteService = useDeleteService();
   const duplicateService = useDuplicateService();
+  const enableService = useEnableService();
 
   const [limitOpen, setLimitOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
+  const [swapTarget, setSwapTarget] = useState<Service | null>(null);
 
   const plan = profile?.plan ?? 'FREE';
   const limit = PLAN_SERVICE_LIMITS[plan];
@@ -300,6 +304,27 @@ export function ServicesPage() {
     if (!deleteTarget) return;
     deleteService.mutate(deleteTarget.id, {
       onSuccess: () => setDeleteTarget(null),
+    });
+  };
+
+  const handleEnableService = (service: Service) => {
+    if (!service.planLocked) return;
+
+    // Si hay servicios activos no bloqueados, mostrar diálogo de intercambio
+    const enabledServices = services?.filter(
+      (s) => !s.planLocked && s.id !== service.id,
+    );
+    if (enabledServices && enabledServices.length > 0) {
+      setSwapTarget(service);
+    } else {
+      // Si no hay servicios para intercambiar, simplemente habilitar
+      enableService.mutate(service.id);
+    }
+  };
+
+  const confirmSwap = (targetId: string) => {
+    enableService.mutate(targetId, {
+      onSuccess: () => setSwapTarget(null),
     });
   };
 
@@ -566,7 +591,7 @@ export function ServicesPage() {
                 style={{
                   gridTemplateColumns: '1fr 140px 140px 90px 110px',
                   borderTop: i > 0 ? '1px solid var(--color-border)' : 'none',
-                  opacity: service.isActive ? 1 : 0.6,
+                  opacity: service.isActive && !service.planLocked ? 1 : 0.5,
                 }}
               >
                 <div className="min-w-0 pr-4">
@@ -579,6 +604,18 @@ export function ServicesPage() {
                     }}
                   >
                     {service.name}
+                    {service.planLocked && (
+                      <span
+                        className="ml-2 px-2 py-0.5 rounded-md text-xs"
+                        style={{
+                          backgroundColor: 'var(--color-surface-soft)',
+                          color: 'var(--color-text-muted)',
+                          fontWeight: 500,
+                        }}
+                      >
+                        Bloqueado
+                      </span>
+                    )}
                   </p>
                   {service.description && (
                     <p
@@ -622,16 +659,32 @@ export function ServicesPage() {
                 </span>
 
                 <span>
-                  <Toggle
-                    checked={service.isActive}
-                    aria-label={`Estado de ${service.name}`}
-                    onChange={() =>
-                      updateService.mutate({
-                        id: service.id,
-                        input: { isActive: !service.isActive },
-                      })
-                    }
-                  />
+                  {service.planLocked ? (
+                    <button
+                      onClick={() => handleEnableService(service)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        backgroundColor: 'var(--color-brand-surface)',
+                        color: 'var(--color-text-brand)',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Activar
+                    </button>
+                  ) : (
+                    <Toggle
+                      checked={service.isActive}
+                      aria-label={`Estado de ${service.name}`}
+                      onChange={() =>
+                        updateService.mutate({
+                          id: service.id,
+                          input: { isActive: !service.isActive },
+                        })
+                      }
+                    />
+                  )}
                 </span>
 
                 <RowActions
@@ -655,7 +708,7 @@ export function ServicesPage() {
                 style={{
                   backgroundColor: 'var(--color-surface)',
                   border: '1px solid var(--color-border)',
-                  opacity: service.isActive ? 1 : 0.6,
+                  opacity: service.isActive && !service.planLocked ? 1 : 0.5,
                 }}
               >
                 <div className="flex items-start justify-between gap-3">
@@ -669,6 +722,18 @@ export function ServicesPage() {
                       }}
                     >
                       {service.name}
+                      {service.planLocked && (
+                        <span
+                          className="ml-2 px-2 py-0.5 rounded-md text-xs"
+                          style={{
+                            backgroundColor: 'var(--color-surface-soft)',
+                            color: 'var(--color-text-muted)',
+                            fontWeight: 500,
+                          }}
+                        >
+                          Bloqueado
+                        </span>
+                      )}
                     </p>
                     {service.description && (
                       <p
@@ -684,16 +749,32 @@ export function ServicesPage() {
                       </p>
                     )}
                   </div>
-                  <Toggle
-                    checked={service.isActive}
-                    aria-label={`Estado de ${service.name}`}
-                    onChange={() =>
-                      updateService.mutate({
-                        id: service.id,
-                        input: { isActive: !service.isActive },
-                      })
-                    }
-                  />
+                  {service.planLocked ? (
+                    <button
+                      onClick={() => handleEnableService(service)}
+                      className="px-3 py-1.5 rounded-lg text-xs font-semibold shrink-0"
+                      style={{
+                        fontFamily: 'var(--font-body)',
+                        backgroundColor: 'var(--color-brand-surface)',
+                        color: 'var(--color-text-brand)',
+                        border: 'none',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Activar
+                    </button>
+                  ) : (
+                    <Toggle
+                      checked={service.isActive}
+                      aria-label={`Estado de ${service.name}`}
+                      onChange={() =>
+                        updateService.mutate({
+                          id: service.id,
+                          input: { isActive: !service.isActive },
+                        })
+                      }
+                    />
+                  )}
                 </div>
 
                 <div className="flex items-center gap-4 mt-2.5">
@@ -805,6 +886,15 @@ export function ServicesPage() {
           pending={deleteService.isPending}
           onConfirm={confirmDelete}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {swapTarget && services && (
+        <ServiceSwapDialog
+          targetService={swapTarget}
+          enabledServices={services.filter((s) => !s.planLocked)}
+          onConfirm={confirmSwap}
+          onCancel={() => setSwapTarget(null)}
         />
       )}
     </div>

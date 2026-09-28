@@ -34,7 +34,7 @@ describe('Auth + Professionals (e2e)', () => {
   it('registers a new professional and returns an access token', async () => {
     const res = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName })
+      .send({ email, password, businessName, acceptTerms: true })
       .expect(201);
 
     const body = res.body as {
@@ -51,7 +51,7 @@ describe('Auth + Professionals (e2e)', () => {
   it('rejects registering the same email twice', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName })
+      .send({ email, password, businessName, acceptTerms: true })
       .expect(409);
   });
 
@@ -167,6 +167,7 @@ describe('Auth + Professionals (e2e)', () => {
       .send({
         email: otherEmail,
         password,
+        acceptTerms: true,
         businessName: `Otro Negocio ${runId}`,
       })
       .expect(201);

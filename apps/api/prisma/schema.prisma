@@ -77,8 +77,20 @@ enum AccessStatus {
 // source of truth for all of them.
 enum NotificationType {
   APPOINTMENT_CREATED
-  // Reserved for later — only APPOINTMENT_CREATED is emitted today:
-  // APPOINTMENT_CANCELLED, APPOINTMENT_RESCHEDULED, APPOINTMENT_REMINDER, SYSTEM
+  APPOINTMENT_CANCELLED
+  // Reserved for later: APPOINTMENT_RESCHEDULED, APPOINTMENT_REMINDER, SYSTEM
+}
+
+enum BookingSource {
+  ONLINE
+  MANUAL
+}
+
+enum UsageAlertKind {
+  BOOKINGS_NEAR
+  BOOKINGS_REACHED
+  SERVICES_NEAR
+  SERVICES_REACHED
 }
 
 model Professional {
@@ -100,19 +112,25 @@ model Professional {
   billingInterval         BillingInterval?
   planStartedAt           DateTime?
   planExpiresAt           DateTime?
+  planCancelledAt         DateTime?
   lastWompiTransactionId  String?           @unique
   role                    PlatformRole      @default(INDEPENDENT)
   accessStatus            AccessStatus      @default(APPROVED)
   isActive                Boolean      @default(true)
+  termsAcceptedAt         DateTime?
+  termsVersion            String?
   createdAt               DateTime     @default(now())
   updatedAt               DateTime     @updatedAt
 
-  services           Service[]
-  workingHours       WorkingHour[]
-  scheduleExceptions ScheduleException[]
-  bookings           Booking[]
-  notifications      Notification[]
-  pushSubscriptions  PushSubscription[]
+  services              Service[]
+  workingHours          WorkingHour[]
+  scheduleExceptions    ScheduleException[]
+  bookings              Booking[]
+  notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
+  passwordResetTokens   PasswordResetToken[]
+  usageLimitAlerts      UsageLimitAlert[]
+  billingNotices        BillingNotice[]
 
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
@@ -140,6 +158,8 @@ model Service {
   homeDurationMinutes Int?
   homePriceCents      Int?
   sortOrder           Int          @default(0)
+  planLocked          Boolean      @default(false)
+  planEnabledAt       DateTime?
   deletedAt           DateTime?
   createdAt           DateTime     @default(now())
   updatedAt           DateTime     @updatedAt
@@ -148,6 +168,7 @@ model Service {
 
   @@index([professionalId, isActive])
   @@index([professionalId, deletedAt])
+  @@index([professionalId, planLocked])
 }
 
 model WorkingHour {
@@ -183,7 +204,7 @@ model Booking {
   serviceNameSnapshot     String
   durationMinutesSnapshot Int
   customerName            String
-  customerEmail           String
+  customerEmail           String?
   customerPhone           String
   customerNote            String?
   atHome                  Boolean       @default(false)
@@ -191,6 +212,7 @@ model Booking {
   startAt                 DateTime
   endAt                   DateTime
   status                  BookingStatus @default(CONFIRMED)
+  source                  BookingSource @default(ONLINE)
   cancellationToken       String        @unique @default(uuid())
   cancelledAt             DateTime?
   cancelledBy             String?
@@ -268,5 +290,51 @@ model PushSubscription {
   lastActiveAt   DateTime     @default(now())
 
   // Delivery loads every subscription for one professional.
+  @@index([professionalId])
+}
+
+// Password reset tokens for the "forgot password" flow. Tokens are single-use
+// and expire in 1 hour. Only the SHA-256 hash is stored; the plain token is
+// sent in the email and never persisted.
+model PasswordResetToken {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  // SHA-256 hash of the token (never store the plain token)
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([professionalId])
+}
+
+// Usage limit alerts track when a professional has been notified about
+// approaching or reaching plan limits (bookings or services). Each alert is
+// sent at most once per period (month for bookings, plan for services).
+model UsageLimitAlert {
+  id             String         @id @default(uuid())
+  professionalId String
+  professional   Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  kind           UsageAlertKind
+  // Period key: "YYYY-MM" for booking alerts (UTC month), plan name for service alerts
+  periodKey      String
+  createdAt      DateTime       @default(now())
+
+  @@unique([professionalId, kind, periodKey])
+  @@index([professionalId])
+}
+
+// Billing notices ensure payment rejection emails are sent exactly once per
+// transaction. The unique constraint on transactionId prevents duplicate emails
+// for the same failed payment, even if the webhook fires multiple times.
+model BillingNotice {
+  id             String       @id @default(uuid())
+  transactionId  String       @unique
+  kind           String       // "payment_rejected"
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
   @@index([professionalId])
 }

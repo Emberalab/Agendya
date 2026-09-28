@@ -6,8 +6,11 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { MailService } from '../../infra/mail/mail.service';
+import { enforceServiceLimit } from '../services/service-plan-limit';
 import {
   planPeriodStart,
+  planRank,
   type AllowlistEntry,
   type BillingInterval,
   type CreateAllowlistEntryInput,
@@ -27,7 +30,10 @@ type AllowlistPlanSnapshot = {
 
 @Injectable()
 export class AdminService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly mailService: MailService,
+  ) {}
 
   async listAllowlist(): Promise<AllowlistEntry[]> {
     const rows = await this.prisma.platformAccessEmail.findMany({
@@ -67,6 +73,8 @@ export class AdminService {
         id: true,
         email: true,
         role: true,
+        accessStatus: true,
+        businessName: true,
       },
     });
     if (!professional) {
@@ -78,6 +86,8 @@ export class AdminService {
     if (professional.role === 'SUPER_ADMIN' && status === 'DECLINED') {
       throw new ForbiddenException('No puedes declinar a un Super Admin.');
     }
+
+    const previousStatus = professional.accessStatus;
 
     const updated = await this.prisma.professional.update({
       where: { id: professional.id },
@@ -100,6 +110,14 @@ export class AdminService {
         create: { email: professional.email, access: 'ALLOWLISTED' },
         update: {},
       });
+
+      // Enviar correo de activación solo si no estaba APPROVED antes
+      if (previousStatus !== 'APPROVED') {
+        await this.mailService.sendAccountActivated(
+          updated.email,
+          updated.businessName,
+        );
+      }
     } else {
       // Keep Lista de acceso in sync: declined accounts drop ALLOWLISTED grants.
       await this.prisma.platformAccessEmail.deleteMany({
@@ -213,25 +231,40 @@ export class AdminService {
     email: string,
     plan: Plan,
   ): Promise<ProfessionalForPlanChange> {
-    await this.getProfessionalByEmail(email);
-    const updated = await this.prisma.professional.update({
-      where: { email: email.trim().toLowerCase() },
-      data: {
-        plan,
-        billingInterval: null,
-        planStartedAt: null,
-        planExpiresAt: null,
-      },
-      select: {
-        id: true,
-        email: true,
-        businessName: true,
-        slug: true,
-        plan: true,
-        billingInterval: true,
-        planExpiresAt: true,
-      },
+    const previous = await this.getProfessionalByEmail(email);
+    const updated = await this.prisma.$transaction(async (tx) => {
+      const row = await tx.professional.update({
+        where: { email: email.trim().toLowerCase() },
+        data: {
+          plan,
+          billingInterval: null,
+          planStartedAt: null,
+          planExpiresAt: null,
+          planCancelledAt: null,
+        },
+        select: {
+          id: true,
+          email: true,
+          businessName: true,
+          slug: true,
+          plan: true,
+          billingInterval: true,
+          planExpiresAt: true,
+        },
+      });
+      await enforceServiceLimit(tx, row.id, plan);
+      return row;
     });
+
+    if (previous.plan !== plan) {
+      await this.mailService.sendPlanUpdated(
+        updated.email,
+        updated.businessName,
+        previous.plan,
+        plan,
+        planRank(plan) > planRank(previous.plan) ? 'upgrade' : 'downgrade',
+      );
+    }
     return this.toPlanChange(updated);
   }
 

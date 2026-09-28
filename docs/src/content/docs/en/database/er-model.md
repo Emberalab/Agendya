@@ -144,7 +144,7 @@ erDiagram
 | `Weekday` | `SUNDAY`, `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY` |
 | `BookingStatus` | `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, `EXPIRED` |
 | `Plan` | `FREE`, `BASIC`, `ADVANCED`, `BUSINESS` |
-| `NotificationType` | `APPOINTMENT_CREATED` (the only one emitted today; the enum will grow) |
+| `NotificationType` | `APPOINTMENT_CREATED`, `APPOINTMENT_CANCELLED` (the enum will grow) |
 
 ## Design notes
 

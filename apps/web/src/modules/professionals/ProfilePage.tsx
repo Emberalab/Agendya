@@ -9,13 +9,19 @@ import {
   cancellationPolicyHoursSchema,
   hexColorSchema,
   pickMissingFeatures,
+  planStatus,
   slugSchema,
   type ProfessionalProfile,
 } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { publicBookingUrl } from '../../shared/config/publicSiteUrl';
 import { cloudinaryImageUrl } from '../../shared/image/cloudinary';
-import { checkSlugAvailability, uploadImage } from './api';
+import {
+  cancelSubscription,
+  checkSlugAvailability,
+  reactivateSubscription,
+  uploadImage,
+} from './api';
 import { useBillingRedirect } from './hooks/useBillingRedirect';
 import { useProfile } from './hooks/useProfile';
 import { useUpdateProfile } from './hooks/useUpdateProfile';
@@ -73,6 +79,9 @@ function cancellationLabel(hours: number): string {
 export function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
   const updateProfile = useUpdateProfile();
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(
+    null,
+  );
   const {
     notice: billingNotice,
     upgradeOpen,
@@ -88,6 +97,26 @@ export function ProfilePage() {
   });
   const uploadCover = useMutation({
     mutationFn: (file: File) => uploadImage(file, 'cover'),
+  });
+  const cancelSub = useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: () => {
+      setSubscriptionError(null);
+      window.location.reload();
+    },
+    onError: (error) => {
+      setSubscriptionError(getApiErrorMessage(error));
+    },
+  });
+  const reactivateSub = useMutation({
+    mutationFn: reactivateSubscription,
+    onSuccess: () => {
+      setSubscriptionError(null);
+      window.location.reload();
+    },
+    onError: (error) => {
+      setSubscriptionError(getApiErrorMessage(error));
+    },
   });
 
   const {
@@ -475,19 +504,59 @@ export function ProfilePage() {
         >
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div>
-              <p
-                style={{
-                  fontFamily: 'var(--font-display)',
-                  fontWeight: 700,
-                  fontSize: '16px',
-                  color: 'var(--color-text-primary)',
-                }}
-              >
-                {formatPlanWithInterval(
-                  profile.plan,
-                  profile.billingInterval,
-                )}
-              </p>
+              <div className="flex items-center gap-3">
+                <p
+                  style={{
+                    fontFamily: 'var(--font-display)',
+                    fontWeight: 700,
+                    fontSize: '16px',
+                    color: 'var(--color-text-primary)',
+                  }}
+                >
+                  {formatPlanWithInterval(
+                    profile.plan,
+                    profile.billingInterval,
+                  )}
+                </p>
+                {(() => {
+                  const status = planStatus(
+                    profile.plan,
+                    profile.planExpiresAt
+                      ? new Date(profile.planExpiresAt)
+                      : null,
+                    profile.planCancelledAt
+                      ? new Date(profile.planCancelledAt)
+                      : null,
+                  );
+                  if (status === 'CANCELLED') {
+                    return (
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{
+                          backgroundColor: '#FEF3C7',
+                          color: '#B45309',
+                        }}
+                      >
+                        Cancelado
+                      </span>
+                    );
+                  }
+                  if (status === 'GRACE') {
+                    return (
+                      <span
+                        className="px-2 py-0.5 rounded text-xs font-semibold"
+                        style={{
+                          backgroundColor: '#FEE2E2',
+                          color: '#DC2626',
+                        }}
+                      >
+                        Período de gracia
+                      </span>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
               <p
                 style={{
                   fontSize: '13px',
@@ -499,6 +568,17 @@ export function ProfilePage() {
                   ? `Vence el ${new Date(profile.planExpiresAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })}.`
                   : 'Accede a más funcionalidades mejorando tu plan.'}
               </p>
+              {profile.planCancelledAt && (
+                <p
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--color-text-secondary)',
+                    marginTop: '4px',
+                  }}
+                >
+                  Podrás seguir usando tu plan hasta la fecha de vencimiento.
+                </p>
+              )}
             </div>
             <div className="min-w-[180px]">
               <p
@@ -598,38 +678,111 @@ export function ProfilePage() {
             </p>
           )}
 
-          {profile.plan !== 'BUSINESS' && (
-            <div className="flex justify-end mt-5">
-              <button
-                type="button"
-                className="rounded-xl px-9 py-4 font-semibold"
-                style={{
-                  background:
-                    'linear-gradient(135deg, #6366F1 0%, var(--color-brand-primary) 100%)',
-                  color: '#fff',
-                  border: 'none',
-                  cursor: 'pointer',
-                  fontSize: '15px',
-                  boxShadow:
-                    '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)',
-                  transition: 'box-shadow 0.15s, transform 0.15s',
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    '0 18px 34px -8px rgba(79, 70, 229, 0.6), 0 8px 16px -6px rgba(79, 70, 229, 0.45)';
-                  e.currentTarget.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.boxShadow =
-                    '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)';
-                  e.currentTarget.style.transform = 'translateY(0)';
-                }}
-                onClick={() => setUpgradeOpen(true)}
-              >
-                Mejorar plan
-              </button>
+          {subscriptionError && (
+            <div role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
+              <p className="text-sm text-red-600 dark:text-red-400">
+                {subscriptionError}
+              </p>
             </div>
           )}
+
+          {(() => {
+            const status = planStatus(
+              profile.plan,
+              profile.planExpiresAt ? new Date(profile.planExpiresAt) : null,
+              profile.planCancelledAt ? new Date(profile.planCancelledAt) : null,
+            );
+
+            return (
+              <div className="flex flex-col sm:flex-row gap-3 justify-end mt-5">
+                {/* Botón de Cancelar suscripción - solo si está ACTIVE y no es FREE */}
+                {status === 'ACTIVE' &&
+                  profile.plan !== 'FREE' &&
+                  profile.planExpiresAt && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          confirm(
+                            '¿Estás seguro de que quieres cancelar tu suscripción? Podrás seguir usando tu plan hasta la fecha de vencimiento.',
+                          )
+                        ) {
+                          cancelSub.mutate();
+                        }
+                      }}
+                      disabled={cancelSub.isPending}
+                      className="rounded-xl px-5 py-3 text-sm font-semibold"
+                      style={{
+                        border: '1px solid var(--color-border)',
+                        background: 'var(--color-surface)',
+                        color: 'var(--color-text-secondary)',
+                        cursor: cancelSub.isPending ? 'not-allowed' : 'pointer',
+                      }}
+                    >
+                      {cancelSub.isPending
+                        ? 'Cancelando...'
+                        : 'Cancelar suscripción'}
+                    </button>
+                  )}
+
+                {/* Botón de Reactivar suscripción - solo si está CANCELLED y no expiró */}
+                {status === 'CANCELLED' &&
+                  profile.planExpiresAt &&
+                  new Date(profile.planExpiresAt) > new Date() && (
+                    <button
+                      type="button"
+                      onClick={() => reactivateSub.mutate()}
+                      disabled={reactivateSub.isPending}
+                      className="rounded-xl px-5 py-3 text-sm font-semibold"
+                      style={{
+                        backgroundColor: 'var(--color-brand-primary)',
+                        color: '#fff',
+                        border: 'none',
+                        cursor: reactivateSub.isPending
+                          ? 'not-allowed'
+                          : 'pointer',
+                      }}
+                    >
+                      {reactivateSub.isPending
+                        ? 'Reactivando...'
+                        : 'Reactivar suscripción'}
+                    </button>
+                  )}
+
+                {/* Botón de Mejorar plan - si no es BUSINESS */}
+                {profile.plan !== 'BUSINESS' && (
+                  <button
+                    type="button"
+                    className="rounded-xl px-9 py-4 font-semibold"
+                    style={{
+                      background:
+                        'linear-gradient(135deg, #6366F1 0%, var(--color-brand-primary) 100%)',
+                      color: '#fff',
+                      border: 'none',
+                      cursor: 'pointer',
+                      fontSize: '15px',
+                      boxShadow:
+                        '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)',
+                      transition: 'box-shadow 0.15s, transform 0.15s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        '0 18px 34px -8px rgba(79, 70, 229, 0.6), 0 8px 16px -6px rgba(79, 70, 229, 0.45)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.boxShadow =
+                        '0 14px 28px -8px rgba(79, 70, 229, 0.55), 0 6px 12px -6px rgba(79, 70, 229, 0.4)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                    onClick={() => setUpgradeOpen(true)}
+                  >
+                    Mejorar plan
+                  </button>
+                )}
+              </div>
+            );
+          })()}
         </Section>
 
         {upgradeOpen && (

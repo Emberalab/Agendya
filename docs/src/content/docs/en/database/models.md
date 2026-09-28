@@ -115,7 +115,7 @@ source of truth; SSE and Web Push are delivery channels.
 | Field | Type | Notes |
 | --- | --- | --- |
 | `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
-| `type` | `NotificationType` | Today only `APPOINTMENT_CREATED`. The enum reserves `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` for later |
+| `type` | `NotificationType` | `APPOINTMENT_CREATED` or `APPOINTMENT_CANCELLED` (customer cancellation). The enum reserves `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` for later |
 | `title` / `body` | `String` | Ready-to-render strings (es-CO). Also usable as a Web Push payload |
 | `data` | `Json` | `{ bookingId, customerName, serviceName, startAt }` — `bookingId` is the navigation reference; the other fields avoid a join and are point-in-time |
 | `readAt` | `DateTime?` | `null` while unread |

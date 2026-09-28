@@ -12,6 +12,7 @@ import {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
+import { countBookingsThisMonth } from '../bookings/booking-usage';
 
 @Injectable()
 export class ProfessionalsService {
@@ -38,6 +39,7 @@ export class ProfessionalsService {
       plan: professional.plan,
       billingInterval: professional.billingInterval,
       planExpiresAt: professional.planExpiresAt?.toISOString() ?? null,
+      planCancelledAt: professional.planCancelledAt?.toISOString() ?? null,
       bookingsThisMonth,
       serviceCount,
       monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[professional.plan],
@@ -46,19 +48,8 @@ export class ProfessionalsService {
     };
   }
 
-  /** Non-cancelled bookings created since the first day of the current month. */
-  async countBookingsThisMonth(professionalId: string): Promise<number> {
-    const now = new Date();
-    const monthStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-    );
-    return this.prisma.booking.count({
-      where: {
-        professionalId,
-        status: { not: 'CANCELLED' },
-        createdAt: { gte: monthStart },
-      },
-    });
+  countBookingsThisMonth(professionalId: string): Promise<number> {
+    return countBookingsThisMonth(this.prisma, professionalId);
   }
 
   async countServices(professionalId: string): Promise<number> {
@@ -143,7 +134,7 @@ export class ProfessionalsService {
       where: { slug, isActive: true, ...publicProfessionalAccessFilter() },
       include: {
         services: {
-          where: { isActive: true, deletedAt: null },
+          where: { isActive: true, planLocked: false, deletedAt: null },
           orderBy: { sortOrder: 'asc' },
         },
       },

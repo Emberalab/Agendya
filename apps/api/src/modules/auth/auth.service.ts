@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   ForbiddenException,
   Injectable,
@@ -6,16 +7,25 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 import type {
   AccessStatus,
   AuthResponse,
   AuthUser,
+  ForgotPasswordInput,
   LoginInput,
   PlatformRole,
   RegisterInput,
+  ResetPasswordInput,
 } from '@agendya/types';
-import { ACCESS_DECLINED_CODE, ACCOUNT_NOT_FOUND_CODE } from '@agendya/types';
+import {
+  ACCESS_DECLINED_CODE,
+  ACCOUNT_NOT_FOUND_CODE,
+  LEGAL_DOCUMENTS_VERSION,
+  RESET_TOKEN_INVALID_CODE,
+} from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { MailService } from '../../infra/mail/mail.service';
 import { ensureUniqueSlug, slugify } from '../../common/utils/slug.util';
 import {
   effectiveAccessStatus,
@@ -24,6 +34,15 @@ import {
 } from './professional-allowlist';
 
 const SALT_ROUNDS = 10;
+const TOKEN_EXPIRY_HOURS = 1;
+
+/**
+ * Helper to create a Date instance safely for Prisma.
+ * Works around eslint no-unsafe-assignment warning with Date constructor.
+ */
+function now(): Date {
+  return new Date();
+}
 
 interface ProfessionalIdentity {
   id: string;
@@ -47,6 +66,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
+    private readonly mailService: MailService,
   ) {}
 
   async register(input: RegisterInput): Promise<AuthResponse> {
@@ -74,10 +94,25 @@ export class AuthService {
         slug,
         role: roleFromGrant(grant),
         accessStatus,
+        termsAcceptedAt: now(),
+        termsVersion: LEGAL_DOCUMENTS_VERSION,
       },
     });
 
     await this.ensureAllowlistGrant(professional.email, accessStatus, grant);
+
+    // Enviar correo de bienvenida según accessStatus
+    if (accessStatus === 'PENDING') {
+      await this.mailService.sendWelcomePending(
+        professional.email,
+        professional.businessName,
+      );
+    } else if (accessStatus === 'APPROVED') {
+      await this.mailService.sendWelcomeApproved(
+        professional.email,
+        professional.businessName,
+      );
+    }
 
     return this.buildAuthResponse(professional);
   }
@@ -144,6 +179,8 @@ export class AuthService {
             photoUrl: googleUser.photoUrl,
             role: roleFromGrant(grant),
             accessStatus,
+            termsAcceptedAt: now(),
+            termsVersion: LEGAL_DOCUMENTS_VERSION,
           },
         });
 
@@ -152,6 +189,19 @@ export class AuthService {
           accessStatus,
           grant,
         );
+
+        // Enviar correo de bienvenida solo si es cuenta nueva
+        if (accessStatus === 'PENDING') {
+          await this.mailService.sendWelcomePending(
+            professional.email,
+            professional.businessName,
+          );
+        } else if (accessStatus === 'APPROVED') {
+          await this.mailService.sendWelcomeApproved(
+            professional.email,
+            professional.businessName,
+          );
+        }
       }
     }
 
@@ -211,6 +261,122 @@ export class AuthService {
       accessToken,
       user: this.toAuthUser(professional),
     };
+  }
+
+  async forgotPassword(input: ForgotPasswordInput): Promise<{ success: true }> {
+    const professional = await this.prisma.professional.findUnique({
+      where: { email: input.email },
+      select: { id: true, email: true, accessStatus: true },
+    });
+
+    // Siempre responde lo mismo para no revelar si el correo existe
+    if (
+      !professional ||
+      effectiveAccessStatus(professional.accessStatus) === 'DECLINED'
+    ) {
+      return { success: true };
+    }
+
+    // Invalidar tokens anteriores sin usar
+    await this.prisma.passwordResetToken.updateMany({
+      where: {
+        professionalId: professional.id,
+        usedAt: null,
+      },
+      data: { usedAt: new Date() },
+    });
+
+    // Generar token aleatorio (32 bytes, base64url)
+    const tokenBytes = crypto.randomBytes(32);
+    const token = tokenBytes.toString('base64url');
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+
+    // Crear token que expira en 1 hora
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + TOKEN_EXPIRY_HOURS);
+
+    await this.prisma.passwordResetToken.create({
+      data: {
+        professionalId: professional.id,
+        tokenHash,
+        expiresAt,
+      },
+    });
+
+    // Enviar correo
+    await this.mailService.sendForgotPassword(professional.email, token);
+
+    return { success: true };
+  }
+
+  async resetPassword(input: ResetPasswordInput): Promise<{ success: true }> {
+    const tokenHash = crypto
+      .createHash('sha256')
+      .update(input.token)
+      .digest('hex');
+
+    const resetToken = await this.prisma.passwordResetToken.findUnique({
+      where: { tokenHash },
+      include: {
+        professional: {
+          select: {
+            id: true,
+            email: true,
+            accessStatus: true,
+          },
+        },
+      },
+    });
+
+    if (
+      !resetToken ||
+      resetToken.usedAt ||
+      resetToken.expiresAt < new Date() ||
+      effectiveAccessStatus(resetToken.professional.accessStatus) === 'DECLINED'
+    ) {
+      throw new BadRequestException({
+        code: RESET_TOKEN_INVALID_CODE,
+        message:
+          'El enlace de recuperación es inválido, ya fue usado o expiró.',
+      });
+    }
+
+    // Hash de la nueva contraseña
+    const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+
+    // Transacción interactiva: primero marcar token como usado (con validación),
+    // luego actualizar contraseña. Si el token ya fue usado, fallar antes de tocar la contraseña.
+    await this.prisma.$transaction(async (tx) => {
+      const now = new Date();
+      const tokenUpdateResult = await tx.passwordResetToken.updateMany({
+        where: {
+          id: resetToken.id,
+          usedAt: null,
+          expiresAt: { gt: now },
+        },
+        data: { usedAt: now },
+      });
+
+      // Si count es 0, el token ya fue usado o expiró en otra petición concurrente
+      if (tokenUpdateResult.count === 0) {
+        throw new BadRequestException({
+          code: RESET_TOKEN_INVALID_CODE,
+          message:
+            'El enlace de recuperación es inválido, ya fue usado o expiró.',
+        });
+      }
+
+      // Solo si el token se marcó correctamente, actualizar la contraseña
+      await tx.professional.update({
+        where: { id: resetToken.professionalId },
+        data: { passwordHash },
+      });
+    });
+
+    // Enviar correo de confirmación fuera de la transacción
+    await this.mailService.sendPasswordChanged(resetToken.professional.email);
+
+    return { success: true };
   }
 
   private assertNotDeclined(stored: AccessStatus | null | undefined): void {

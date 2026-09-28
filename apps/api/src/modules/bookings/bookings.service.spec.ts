@@ -9,6 +9,7 @@ import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import { UsageAlertsService } from '../notifications/usage-alerts.service';
 import { BookingsService } from './bookings.service';
 
 const PROFESSIONAL = {
@@ -59,6 +60,7 @@ describe('BookingsService', () => {
   let mailService: {
     sendBookingConfirmation: jest.Mock;
     sendBookingCancelled: jest.Mock;
+    sendBookingCancelledToProfessional: jest.Mock;
     sendBookingReminder: jest.Mock;
     sendBookingRescheduled: jest.Mock;
     sendBookingRescheduledToProfessional: jest.Mock;
@@ -69,7 +71,10 @@ describe('BookingsService', () => {
     update: jest.Mock;
     count: jest.Mock;
   };
-  let notificationsService: { notifyAppointmentCreated: jest.Mock };
+  let notificationsService: {
+    notifyAppointmentCreated: jest.Mock;
+    notifyAppointmentCancelled: jest.Mock;
+  };
 
   beforeEach(async () => {
     txBooking = {
@@ -106,6 +111,9 @@ describe('BookingsService', () => {
     mailService = {
       sendBookingConfirmation: jest.fn().mockResolvedValue(undefined),
       sendBookingCancelled: jest.fn().mockResolvedValue(undefined),
+      sendBookingCancelledToProfessional: jest
+        .fn()
+        .mockResolvedValue(undefined),
       sendBookingReminder: jest.fn().mockResolvedValue(undefined),
       sendBookingRescheduled: jest.fn().mockResolvedValue(undefined),
       sendBookingRescheduledToProfessional: jest
@@ -115,6 +123,11 @@ describe('BookingsService', () => {
 
     notificationsService = {
       notifyAppointmentCreated: jest.fn().mockResolvedValue(undefined),
+      notifyAppointmentCancelled: jest.fn().mockResolvedValue(undefined),
+    };
+
+    const usageAlertsService = {
+      checkBookingLimits: jest.fn().mockResolvedValue(undefined),
     };
 
     const moduleRef = await Test.createTestingModule({
@@ -123,6 +136,8 @@ describe('BookingsService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: MailService, useValue: mailService },
         { provide: NotificationsService, useValue: notificationsService },
+
+        { provide: UsageAlertsService, useValue: usageAlertsService },
       ],
     }).compile();
 
@@ -637,7 +652,7 @@ describe('BookingsService', () => {
       cancellationToken: 'token-abc',
       startAt: new Date('2026-08-10T14:00:00.000Z'),
       endAt: new Date('2026-08-10T14:30:00.000Z'),
-      professional: PROFESSIONAL,
+      professional: { ...PROFESSIONAL, email: 'pro@example.com' },
     };
 
     it('throws not found for an unknown token', async () => {
@@ -694,6 +709,53 @@ describe('BookingsService', () => {
         .calls as CancelledCall[];
       expect(cancelledArgs.to).toBe('ana@example.com');
       expect(result.status).toBe('CANCELLED');
+    });
+
+    it('notifies the professional by email and in-app feed', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      prisma.booking.update.mockResolvedValue({
+        ...BASE_BOOKING,
+        status: 'CANCELLED',
+      });
+
+      await service.cancelPublicBooking('token-abc');
+
+      expect(
+        mailService.sendBookingCancelledToProfessional,
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          to: 'pro@example.com',
+          professionalName: 'María Belleza',
+          customerName: 'Ana',
+          serviceName: 'Corte de cabello',
+          startAt: BASE_BOOKING.startAt,
+        }),
+      );
+      expect(
+        notificationsService.notifyAppointmentCancelled,
+      ).toHaveBeenCalledWith(
+        BASE_BOOKING.professional,
+        expect.objectContaining({ id: 'booking-1' }),
+      );
+    });
+
+    it('still cancels when the in-app notification fails', async () => {
+      prisma.booking.findUnique.mockResolvedValue(BASE_BOOKING);
+      prisma.booking.update.mockResolvedValue({
+        ...BASE_BOOKING,
+        status: 'CANCELLED',
+      });
+      notificationsService.notifyAppointmentCancelled.mockRejectedValue(
+        new Error('db down'),
+      );
+
+      const result = await service.cancelPublicBooking('token-abc');
+
+      expect(result.status).toBe('CANCELLED');
+      expect(mailService.sendBookingCancelled).toHaveBeenCalledTimes(1);
+      expect(
+        mailService.sendBookingCancelledToProfessional,
+      ).toHaveBeenCalledTimes(1);
     });
   });
 

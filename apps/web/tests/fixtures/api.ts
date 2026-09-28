@@ -456,6 +456,7 @@ export class ApiMock {
       startAt: (input.startAt as string) ?? '2026-08-03T14:00:00.000Z',
       endAt: '2026-08-03T14:30:00.000Z',
       status: 'CONFIRMED',
+      source: 'ONLINE',
       cancellationToken: 'e2e-cancellation-token',
       cancellationPolicyHours: 24,
       canCancel: true,

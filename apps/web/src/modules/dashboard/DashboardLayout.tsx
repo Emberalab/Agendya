@@ -11,6 +11,8 @@ import { Announcer } from '../../shared/a11y/announcer';
 import { NotificationBell } from '../notifications/NotificationBell';
 import { useNotificationsRealtime } from '../notifications/hooks/useNotificationsRealtime';
 import { disablePush } from '../../shared/push/pushManager';
+import { PlanStatusBanner } from './PlanStatusBanner';
+import { useProfile } from '../professionals/hooks/useProfile';
 
 export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
@@ -107,6 +109,7 @@ function SuperAdminShell() {
 function ProfessionalDashboardShell() {
   const user = useAuthStore((state) => state.user);
   const initial = user?.businessName?.charAt(0).toUpperCase() ?? '?';
+  const { data: profile } = useProfile();
 
   // Single mount point for the real-time connection: toasts, the notification
   // centre cache, and the unread badge all update from here.
@@ -147,6 +150,9 @@ function ProfessionalDashboardShell() {
             </div>
           </div>
         </div>
+
+        {/* Plan status banner */}
+        {profile && <PlanStatusBanner profile={profile} />}
 
         <main id="main-content" tabIndex={-1} className="flex-1 w-full px-4 py-6 lg:px-8 lg:py-8" style={{ overflowX: 'hidden' }}>
           <Outlet />

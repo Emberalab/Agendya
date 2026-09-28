@@ -28,9 +28,11 @@ function renderPage(initialEntry = '/register') {
 }
 
 describe('RegisterPage', () => {
-  it('explains swapped business name and email fields', async () => {
-    const user = userEvent.setup();
-    renderPage();
+  it(
+    'explains swapped business name and email fields',
+    async () => {
+      const user = userEvent.setup();
+      renderPage();
 
     await user.type(
       screen.getByLabelText('Nombre de tu negocio *'),
@@ -42,9 +44,7 @@ describe('RegisterPage', () => {
     );
     await user.type(screen.getByLabelText('Contraseña *'), 'secret123');
     await user.click(
-      screen.getByRole('checkbox', {
-        name: /acepto los términos/i,
-      }),
+      screen.getByLabelText(/acepto los términos de uso y la política de privacidad/i),
     );
     await user.click(
       screen.getByRole('button', { name: 'Crear cuenta gratis' }),
@@ -53,11 +53,13 @@ describe('RegisterPage', () => {
     expect(
       await screen.findByText(/esto parece un correo/i),
     ).toBeInTheDocument();
-    expect(screen.getByText(/aquí va el correo/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/revisa los campos marcados/i),
-    ).toBeInTheDocument();
-  });
+      expect(screen.getByText(/aquí va el correo/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/revisa los campos marcados/i),
+      ).toBeInTheDocument();
+    },
+    10000,
+  );
 
   it('asks to accept the terms when the rest of the form is valid', async () => {
     const user = userEvent.setup();

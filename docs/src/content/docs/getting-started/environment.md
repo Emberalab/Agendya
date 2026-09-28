@@ -28,6 +28,8 @@ arranque.
 | `GOOGLE_CALLBACK_URL` | `http://localhost:4000/auth/google/callback` | No | Cae de vuelta al callback de localhost |
 | `SLOT_GRID_MINUTES` | `15` | No (por defecto `15`) | Granularidad de los espacios de disponibilidad en minutos |
 | `RESEND_API_KEY` | *(vacío)* | No | Los correos se registran en consola en lugar de enviarse |
+| `MAIL_FROM` | `Agendya <no-reply@agendya.co>` | No (por defecto como ejemplo) | Remitente en el header `From:` de los correos transaccionales. Debe coincidir con un dominio verificado en Resend |
+| `MAIL_REPLY_TO` | `info@agendya.co` | No (por defecto como ejemplo) | Dirección `Reply-To:` para que los usuarios respondan por correo normal |
 | `CLOUDINARY_URL` | *(vacío)* | No | `POST /upload/image` devuelve `503 Service Unavailable` |
 | `PORT` | `4000` | No (por defecto `4000`) | Puerto de escucha de la API |
 | `WEB_URL` | `http://localhost:5173` | No (por defecto localhost) | Origen de CORS del dashboard, redirección de OAuth |

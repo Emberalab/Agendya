@@ -37,4 +37,16 @@ export class BillingController {
   ) {
     return this.billingService.syncTransaction(user.id, input);
   }
+
+  @Post('cancel')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  cancelSubscription(@CurrentUser() user: Professional) {
+    return this.billingService.cancelSubscription(user.id);
+  }
+
+  @Post('reactivate')
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  reactivateSubscription(@CurrentUser() user: Professional) {
+    return this.billingService.reactivateSubscription(user.id);
+  }
 }

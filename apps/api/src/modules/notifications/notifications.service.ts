@@ -76,6 +76,41 @@ export class NotificationsService {
   }
 
   /**
+   * Records an `APPOINTMENT_CANCELLED` notification when the customer cancels
+   * from their public link. Not emitted for professional-initiated
+   * cancellations. Best-effort, same guarantees as
+   * {@link notifyAppointmentCreated}.
+   */
+  async notifyAppointmentCancelled(
+    professional: Pick<Professional, 'id' | 'timezone'>,
+    booking: Booking,
+  ): Promise<void> {
+    try {
+      const data: NotificationData = {
+        bookingId: booking.id,
+        customerName: booking.customerName,
+        serviceName: booking.serviceNameSnapshot,
+        startAt: booking.startAt.toISOString(),
+        ...(booking.atHome ? { atHome: true } : {}),
+      };
+      await this.create(professional.id, {
+        type: 'APPOINTMENT_CANCELLED',
+        title: 'Cita cancelada',
+        body: `${booking.customerName} canceló ${booking.serviceNameSnapshot} · ${this.formatWhen(
+          booking.startAt,
+          professional.timezone,
+        )}`,
+        data,
+      });
+    } catch (error) {
+      this.logger.error(
+        `No se pudo registrar la notificación de cancelación de la reserva ${booking.id}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+    }
+  }
+
+  /**
    * The single write path for the feed. Persists the row, then fans it out over
    * SSE and Web Push. Add further delivery channels (email digest) here.
    */

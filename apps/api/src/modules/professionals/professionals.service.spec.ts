@@ -82,6 +82,7 @@ describe('ProfessionalsService', () => {
         plan: 'FREE',
         billingInterval: null,
         planExpiresAt: null,
+        planCancelledAt: null,
         bookingsThisMonth: 12,
         serviceCount: 0,
         monthlyBookingLimit: 100,
@@ -214,7 +215,7 @@ describe('ProfessionalsService', () => {
         },
         include: {
           services: {
-            where: { isActive: true, deletedAt: null },
+            where: { isActive: true, planLocked: false, deletedAt: null },
             orderBy: { sortOrder: 'asc' },
           },
         },

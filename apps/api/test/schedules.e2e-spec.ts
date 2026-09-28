@@ -57,7 +57,12 @@ describe('Schedules + Availability (e2e)', () => {
 
     const register = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName: `E2E Horarios ${runId}` });
+      .send({
+        email,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Horarios ${runId}`,
+      });
     const registerBody = register.body as {
       accessToken: string;
       user: { slug: string };
@@ -70,6 +75,7 @@ describe('Schedules + Availability (e2e)', () => {
       .send({
         email: otherEmail,
         password,
+        acceptTerms: true,
         businessName: `E2E Horarios Otro ${runId}`,
       });
     otherAccessToken = (registerOther.body as { accessToken: string })

@@ -31,6 +31,12 @@ export async function duplicateService(id: string): Promise<Service> {
 }
 
 export async function deleteService(id: string): Promise<Service> {
-  const { data } = await apiClient.delete<Service>(`/services/${id}`);
+  const { data} = await apiClient.delete<Service>(`/services/${id}`);
+  return data;
+}
+
+/** Returns every service whose plan state changed (the enabled one, plus the one swapped out). */
+export async function enableService(id: string): Promise<Service[]> {
+  const { data } = await apiClient.post<Service[]>(`/services/${id}/enable`);
   return data;
 }

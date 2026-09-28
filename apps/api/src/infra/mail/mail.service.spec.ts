@@ -125,5 +125,57 @@ describe('MailService', () => {
       expect(html).not.toContain('<img src=x onerror=alert(1)>');
       expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;');
     });
+
+    it('sends a welcome email for pending access', async () => {
+      await service.sendWelcomePending('nuevo@example.com', 'Salón Nuevo');
+
+      expect(sendMock).toHaveBeenCalledTimes(1);
+      const { to, subject } = sendMock.mock.calls[0][0];
+      expect(to).toBe('nuevo@example.com');
+      expect(subject).toBe('Tu registro en Agendya fue recibido');
+    });
+
+    it('sends a welcome email for approved access', async () => {
+      await service.sendWelcomeApproved('nuevo@example.com', 'Salón Nuevo');
+
+      expect(sendMock).toHaveBeenCalledTimes(1);
+      const { to, subject } = sendMock.mock.calls[0][0];
+      expect(to).toBe('nuevo@example.com');
+      expect(subject).toBe('Tu cuenta en Agendya está lista');
+    });
+
+    it('sends an account activated email', async () => {
+      await service.sendAccountActivated(
+        'pendiente@example.com',
+        'Salón Pendiente',
+      );
+
+      expect(sendMock).toHaveBeenCalledTimes(1);
+      const { to, subject } = sendMock.mock.calls[0][0];
+      expect(to).toBe('pendiente@example.com');
+      expect(subject).toContain('activada');
+    });
+
+    it('sends a forgot password email with reset link', async () => {
+      await service.sendForgotPassword(
+        'usuario@example.com',
+        'test-token-abc123',
+      );
+
+      expect(sendMock).toHaveBeenCalledTimes(1);
+      const { to, subject, html } = sendMock.mock.calls[0][0];
+      expect(to).toBe('usuario@example.com');
+      expect(subject).toContain('Recupera tu contraseña');
+      expect(html).toContain('reset-password?token=test-token-abc123');
+    });
+
+    it('sends a password changed confirmation email', async () => {
+      await service.sendPasswordChanged('usuario@example.com');
+
+      expect(sendMock).toHaveBeenCalledTimes(1);
+      const { to, subject } = sendMock.mock.calls[0][0];
+      expect(to).toBe('usuario@example.com');
+      expect(subject).toBe('Tu contraseña fue actualizada');
+    });
   });
 });

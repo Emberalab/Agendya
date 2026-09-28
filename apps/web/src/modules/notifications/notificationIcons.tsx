@@ -31,5 +31,14 @@ export function NotificationTypeIcon({ type }: { type: NotificationType }) {
       </svg>
     );
   }
+  if (type === 'APPOINTMENT_CANCELLED') {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <rect x="1.5" y="3" width="13" height="11" rx="2" stroke="currentColor" strokeWidth="1.4" />
+        <path d="M5 1.5v3M11 1.5v3M1.5 7h13" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        <path d="M6.5 9l3 3M9.5 9l-3 3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      </svg>
+    );
+  }
   return <BellIcon size={16} />;
 }
