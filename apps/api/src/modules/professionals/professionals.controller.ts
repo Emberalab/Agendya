@@ -11,14 +11,24 @@ import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApprovedAccessGuard } from '../auth/guards/approved-access.guard';
 import { ProfessionalsService } from './professionals.service';
+import { ActivityService } from '../activity/activity.service';
 
 @Controller('professionals')
 @UseGuards(JwtAuthGuard, ApprovedAccessGuard)
 export class ProfessionalsController {
-  constructor(private readonly professionalsService: ProfessionalsService) {}
+  constructor(
+    private readonly professionalsService: ProfessionalsService,
+    private readonly activity: ActivityService,
+  ) {}
 
+  /**
+   * The dashboard loads this on every visit, so it doubles as the (at most
+   * once a day) "the professional opened Agendya" signal for the Backoffice
+   * activity panel.
+   */
   @Get('me')
-  getMe(@CurrentUser() user: Professional) {
+  async getMe(@CurrentUser() user: Professional) {
+    await this.activity.recordDailyVisit(user);
     return this.professionalsService.getProfile(user.id);
   }
 

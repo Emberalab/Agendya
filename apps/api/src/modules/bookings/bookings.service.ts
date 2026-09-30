@@ -10,6 +10,7 @@ import type { Booking, Professional } from '@prisma/client';
 import {
   PLAN_MONTHLY_BOOKING_LIMITS,
   effectivePlan,
+  type ActivityActor,
   type AgendaBooking,
   type CreateBookingInput,
   type CreateManualBookingInput,
@@ -21,6 +22,10 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
+import {
+  ActivityService,
+  type RecordActivityInput,
+} from '../activity/activity.service';
 import { UsageAlertsService } from '../notifications/usage-alerts.service';
 import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
 import { bookableServiceWhere } from '../services/service-plan-limit';
@@ -44,6 +49,7 @@ export class BookingsService {
     private readonly mailService: MailService,
     private readonly notifications: NotificationsService,
     private readonly usageAlerts: UsageAlertsService,
+    private readonly activity: ActivityService,
   ) {}
 
   async createPublicBooking(
@@ -94,6 +100,14 @@ export class BookingsService {
     await this.notifications
       .notifyAppointmentCreated(professional, booking)
       .catch(() => undefined);
+    await this.activity.record(
+      professional.id,
+      'BOOKING_CREATED',
+      bookingActivity(booking, 'CUSTOMER', {
+        source: booking.source,
+        atHome: booking.atHome,
+      }),
+    );
 
     if (booking.customerEmail) {
       await this.mailService.sendBookingConfirmation({
@@ -166,7 +180,23 @@ export class BookingsService {
       existingBookingId: booking.id,
     });
 
-    if (oldStartAt.getTime() !== startAt.getTime()) {
+    const rescheduled = oldStartAt.getTime() !== startAt.getTime();
+    const serviceChanged =
+      booking.serviceNameSnapshot !== updated.serviceNameSnapshot;
+    await this.activity.record(
+      professional.id,
+      rescheduled ? 'BOOKING_RESCHEDULED' : 'BOOKING_UPDATED',
+      bookingActivity(updated, 'CUSTOMER', {
+        ...(rescheduled
+          ? { from: oldStartAt.toISOString(), to: startAt.toISOString() }
+          : {}),
+        ...(serviceChanged
+          ? { previousServiceName: booking.serviceNameSnapshot }
+          : {}),
+      }),
+    );
+
+    if (rescheduled) {
       if (updated.customerEmail) {
         await this.mailService.sendBookingRescheduled({
           to: updated.customerEmail,
@@ -251,6 +281,15 @@ export class BookingsService {
       endAt,
       source: 'MANUAL',
     });
+
+    await this.activity.record(
+      professionalId,
+      'BOOKING_CREATED',
+      bookingActivity(booking, 'PROFESSIONAL', {
+        source: booking.source,
+        atHome: booking.atHome,
+      }),
+    );
 
     // No in-app notification: the professional created it themselves.
     if (booking.customerEmail) {
@@ -575,6 +614,12 @@ export class BookingsService {
       },
     });
 
+    await this.activity.record(
+      booking.professionalId,
+      'BOOKING_CANCELLED',
+      bookingActivity(updated, 'CUSTOMER'),
+    );
+
     await this.notifications
       .notifyAppointmentCancelled(booking.professional, booking)
       .catch(() => undefined);
@@ -636,6 +681,15 @@ export class BookingsService {
       booking.professionalId,
       newStartAt,
       newEndAt,
+    );
+
+    await this.activity.record(
+      booking.professionalId,
+      'BOOKING_RESCHEDULED',
+      bookingActivity(updated, 'CUSTOMER', {
+        from: oldStartAt.toISOString(),
+        to: newStartAt.toISOString(),
+      }),
     );
 
     // Notificar al cliente
@@ -713,6 +767,12 @@ export class BookingsService {
       },
     });
 
+    await this.activity.record(
+      professionalId,
+      'BOOKING_CANCELLED',
+      bookingActivity(updated, 'PROFESSIONAL'),
+    );
+
     if (booking.customerEmail) {
       await this.mailService.sendBookingCancelled({
         to: booking.customerEmail,
@@ -754,6 +814,14 @@ export class BookingsService {
       where: { id: bookingId },
       data: { status: 'COMPLETED' },
     });
+
+    await this.activity.record(
+      professionalId,
+      'BOOKING_COMPLETED',
+      bookingActivity(updated, 'PROFESSIONAL', {
+        previousStatus: booking.status,
+      }),
+    );
 
     return this.toAgendaBooking(updated, professional);
   }
@@ -797,6 +865,15 @@ export class BookingsService {
       professionalId,
       newStartAt,
       newEndAt,
+    );
+
+    await this.activity.record(
+      professionalId,
+      'BOOKING_RESCHEDULED',
+      bookingActivity(updated, 'PROFESSIONAL', {
+        from: oldStartAt.toISOString(),
+        to: newStartAt.toISOString(),
+      }),
     );
 
     if (booking.customerEmail) {
@@ -976,4 +1053,26 @@ export class BookingsService {
       cancelledBy: booking.cancelledBy ?? null,
     };
   }
+}
+
+/**
+ * Activity entry for a booking. Carries the service and slot only — never
+ * the customer's name or contact details.
+ */
+function bookingActivity(
+  booking: Booking,
+  actor: ActivityActor,
+  metadata: Record<string, unknown> = {},
+): RecordActivityInput {
+  return {
+    actor,
+    entityType: 'Booking',
+    entityId: booking.id,
+    subject: booking.serviceNameSnapshot,
+    metadata: {
+      serviceName: booking.serviceNameSnapshot,
+      startAt: booking.startAt.toISOString(),
+      ...metadata,
+    },
+  };
 }

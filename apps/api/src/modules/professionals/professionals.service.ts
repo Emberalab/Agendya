@@ -15,10 +15,36 @@ import {
 import { PrismaService } from '../../database/prisma.service';
 import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
 import { countBookingsThisMonth } from '../bookings/booking-usage';
+import { ActivityService, diffFields } from '../activity/activity.service';
+
+/** Profile fields tracked in the activity timeline. */
+const TRACKED_PROFILE_FIELDS = [
+  'businessName',
+  'slug',
+  'category',
+  'description',
+  'photoUrl',
+  'logoUrl',
+  'coverImageUrl',
+  'brandColor',
+  'timezone',
+  'cancellationPolicyHours',
+] as const;
+
+/** Free text and image URLs: recorded as "changed", without their values. */
+const OPAQUE_PROFILE_FIELDS = [
+  'description',
+  'photoUrl',
+  'logoUrl',
+  'coverImageUrl',
+] as const;
 
 @Injectable()
 export class ProfessionalsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activity: ActivityService,
+  ) {}
 
   toProfile(
     professional: Professional,
@@ -88,6 +114,10 @@ export class ProfessionalsService {
       }
     }
 
+    const before = await this.prisma.professional.findUniqueOrThrow({
+      where: { id: professionalId },
+    });
+
     const professional = await this.prisma.professional.update({
       where: { id: professionalId },
       data: {
@@ -113,6 +143,20 @@ export class ProfessionalsService {
           : {}),
       },
     });
+
+    const changes = diffFields(
+      before,
+      professional,
+      TRACKED_PROFILE_FIELDS,
+      OPAQUE_PROFILE_FIELDS,
+    );
+    if (Object.keys(changes).length > 0) {
+      await this.activity.record(professionalId, 'PROFILE_UPDATED', {
+        entityType: 'Professional',
+        entityId: professionalId,
+        metadata: { changes },
+      });
+    }
 
     const [bookingsThisMonth, serviceCount] = await Promise.all([
       this.countBookingsThisMonth(professionalId),

@@ -4,13 +4,16 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
-import type {
-  CreateScheduleExceptionInput,
-  ScheduleException,
-  SetWorkingHoursInput,
-  WorkingHour,
+import {
+  WEEKDAYS,
+  type CreateScheduleExceptionInput,
+  type ScheduleException,
+  type SetWorkingHoursInput,
+  type WorkingDaySummary,
+  type WorkingHour,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 import {
   dateOnlyUtc,
   formatDateOnly,
@@ -19,7 +22,10 @@ import {
 
 @Injectable()
 export class SchedulesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly activity: ActivityService,
+  ) {}
 
   async getWorkingHours(professionalId: string): Promise<WorkingHour[]> {
     const hours = await this.prisma.workingHour.findMany({
@@ -39,6 +45,8 @@ export class SchedulesService {
     professionalId: string,
     input: SetWorkingHoursInput,
   ): Promise<WorkingHour[]> {
+    const before = summarizeWeek(await this.getWorkingHours(professionalId));
+
     await this.prisma.$transaction([
       this.prisma.workingHour.deleteMany({ where: { professionalId } }),
       this.prisma.workingHour.createMany({
@@ -51,7 +59,18 @@ export class SchedulesService {
       }),
     ]);
 
-    return this.getWorkingHours(professionalId);
+    const hours = await this.getWorkingHours(professionalId);
+    const after = summarizeWeek(hours);
+    // The editor saves the whole week; only record saves that changed it.
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await this.activity.record(professionalId, 'WORKING_HOURS_UPDATED', {
+        entityType: 'WorkingHours',
+        entityId: professionalId,
+        metadata: { before, after },
+      });
+    }
+
+    return hours;
   }
 
   async listExceptions(professionalId: string): Promise<ScheduleException[]> {
@@ -89,6 +108,17 @@ export class SchedulesService {
         professionalId,
         input.date,
       );
+
+      await this.activity.record(professionalId, 'SCHEDULE_EXCEPTION_CREATED', {
+        entityType: 'ScheduleException',
+        entityId: exception.id,
+        subject: input.date,
+        metadata: {
+          date: input.date,
+          reason: exception.reason,
+          affectedBookingsCount,
+        },
+      });
 
       return {
         id: exception.id,
@@ -143,5 +173,24 @@ export class SchedulesService {
     }
 
     await this.prisma.scheduleException.delete({ where: { id: exceptionId } });
+
+    const date = formatDateOnly(exception.date);
+    await this.activity.record(professionalId, 'SCHEDULE_EXCEPTION_DELETED', {
+      entityType: 'ScheduleException',
+      entityId: exceptionId,
+      subject: date,
+      metadata: { date },
+    });
   }
+}
+
+/** The week as `{ dayOfWeek, blocks: [[start, end], …] }`, Sunday first. */
+export function summarizeWeek(hours: WorkingHour[]): WorkingDaySummary[] {
+  return WEEKDAYS.flatMap((dayOfWeek) => {
+    const blocks = hours
+      .filter((hour) => hour.dayOfWeek === dayOfWeek)
+      .sort((a, b) => a.startMinute - b.startMinute)
+      .map((hour): [number, number] => [hour.startMinute, hour.endMinute]);
+    return blocks.length > 0 ? [{ dayOfWeek, blocks }] : [];
+  });
 }

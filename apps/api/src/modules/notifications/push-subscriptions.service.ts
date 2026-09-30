@@ -5,6 +5,7 @@ import webpush, {
 } from 'web-push';
 import type { PushMessage, PushSubscribeInput } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
 
 /**
  * Stores browser Web Push subscriptions and fans a {@link PushMessage} out to
@@ -26,6 +27,7 @@ export class PushSubscriptionsService {
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
+    private readonly activity: ActivityService,
   ) {
     const publicKey = config.get<string>('webPush.publicKey');
     const privateKey = config.get<string>('webPush.privateKey');
@@ -59,7 +61,11 @@ export class PushSubscriptionsService {
     input: PushSubscribeInput,
     userAgent?: string,
   ): Promise<void> {
-    await this.prisma.pushSubscription.upsert({
+    const existing = await this.prisma.pushSubscription.findUnique({
+      where: { endpoint: input.endpoint },
+      select: { professionalId: true },
+    });
+    const subscription = await this.prisma.pushSubscription.upsert({
       where: { endpoint: input.endpoint },
       create: {
         professionalId,
@@ -76,13 +82,25 @@ export class PushSubscriptionsService {
         lastActiveAt: new Date(),
       },
     });
+
+    // A refresh of a device this professional already registered is not news;
+    // the endpoint itself (a capability URL) is never recorded.
+    if (existing?.professionalId !== professionalId) {
+      await this.activity.record(professionalId, 'PUSH_ENABLED', {
+        entityType: 'PushSubscription',
+        entityId: subscription.id,
+      });
+    }
   }
 
   /** Drops one subscription. Scoped so a professional can only remove their own. */
   async unsubscribe(professionalId: string, endpoint: string): Promise<void> {
-    await this.prisma.pushSubscription.deleteMany({
+    const { count } = await this.prisma.pushSubscription.deleteMany({
       where: { endpoint, professionalId },
     });
+    if (count > 0) {
+      await this.activity.record(professionalId, 'PUSH_DISABLED');
+    }
   }
 
   /** Whether the professional has at least one registered device. */

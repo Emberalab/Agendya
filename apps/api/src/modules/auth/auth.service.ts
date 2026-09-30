@@ -26,6 +26,7 @@ import {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
+import { ActivityService } from '../activity/activity.service';
 import { ensureUniqueSlug, slugify } from '../../common/utils/slug.util';
 import {
   effectiveAccessStatus,
@@ -67,6 +68,7 @@ export class AuthService {
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
     private readonly mailService: MailService,
+    private readonly activity: ActivityService,
   ) {}
 
   async register(input: RegisterInput): Promise<AuthResponse> {
@@ -100,6 +102,12 @@ export class AuthService {
     });
 
     await this.ensureAllowlistGrant(professional.email, accessStatus, grant);
+
+    await this.activity.record(professional.id, 'ACCOUNT_CREATED', {
+      entityType: 'Professional',
+      entityId: professional.id,
+      metadata: { method: 'password', accessStatus },
+    });
 
     // Enviar correo de bienvenida según accessStatus
     if (accessStatus === 'PENDING') {
@@ -145,6 +153,10 @@ export class AuthService {
 
     this.assertNotDeclined(professional.accessStatus);
 
+    await this.activity.record(professional.id, 'LOGGED_IN', {
+      metadata: { method: 'password' },
+    });
+
     return this.buildAuthResponse(professional);
   }
 
@@ -154,6 +166,7 @@ export class AuthService {
     let professional = await this.prisma.professional.findUnique({
       where: { googleId: googleUser.googleId },
     });
+    let created = false;
 
     if (!professional) {
       professional = await this.prisma.professional.findUnique({
@@ -189,6 +202,13 @@ export class AuthService {
           accessStatus,
           grant,
         );
+        created = true;
+
+        await this.activity.record(professional.id, 'ACCOUNT_CREATED', {
+          entityType: 'Professional',
+          entityId: professional.id,
+          metadata: { method: 'google', accessStatus },
+        });
 
         // Enviar correo de bienvenida solo si es cuenta nueva
         if (accessStatus === 'PENDING') {
@@ -206,6 +226,12 @@ export class AuthService {
     }
 
     this.assertNotDeclined(professional.accessStatus);
+
+    if (!created) {
+      await this.activity.record(professional.id, 'LOGGED_IN', {
+        metadata: { method: 'google' },
+      });
+    }
 
     return this.buildAuthResponse(professional);
   }
@@ -372,6 +398,8 @@ export class AuthService {
         data: { passwordHash },
       });
     });
+
+    await this.activity.record(resetToken.professionalId, 'PASSWORD_RESET');
 
     // Enviar correo de confirmación fuera de la transacción
     await this.mailService.sendPasswordChanged(resetToken.professional.email);

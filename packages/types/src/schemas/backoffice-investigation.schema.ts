@@ -118,7 +118,8 @@ export const appointmentInvestigationSchema = z.object({
   booking: z.object({
     id: z.string().uuid(),
     customerName: z.string(),
-    customerEmail: z.string(),
+    // Null for manual bookings created without an email.
+    customerEmail: z.string().nullable(),
     customerPhone: z.string(),
     serviceNameSnapshot: z.string(),
     durationMinutesSnapshot: z.number(),

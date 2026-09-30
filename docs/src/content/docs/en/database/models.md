@@ -170,3 +170,29 @@ expiry writes no row: it is derived from `Professional.trialEndsAt`.
 | `createdAt` | `DateTime @default(now())` | When |
 
 Index: `@@index([professionalId, createdAt(sort: Desc)])` for one account's history.
+
+## ProfessionalActivityEvent
+
+A professional's product activity ("how do they use Agendya?"), append-only.
+Not an audit log: `AuditLog` records what **Backoffice staff** do; this table
+records actions by the professional, their customers, or the system. Written by
+`apps/api` after each change commits (best-effort: a failed insert is logged and
+never affects the user's action) and read only by `apps/backoffice-api`. See
+[Professional activity](/en/features/professional-activity/).
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `type` | `ActivityEventType` | Account, login, daily visit, profile, services, working hours, blocked dates, appointment lifecycle (including reschedules) and push |
+| `category` | `ActivityCategory` | Always `ACTIVITY_EVENT_CATEGORY[type]` (`@agendya/types`); stored so category filters use an index |
+| `actor` | `ActivityActor` | `PROFESSIONAL` \| `CUSTOMER` \| `SYSTEM` |
+| `entityType` / `entityId` | `String?` | Polymorphic reference (`Booking`, `Service`, …), **no FK** so it survives deletes |
+| `subject` | `String?` | Entity name at the time (service, date); used by search |
+| `metadata` | `Json?` | Safe context only: never customer contact data, passwords, tokens or OAuth data |
+| `backfilled` | `Boolean` | `true` when the migration reconstructed it from existing timestamps |
+| `dedupeKey` | `String? @unique` | Idempotency for `DASHBOARD_VISITED` (one per professional per local day) |
+| `occurredAt` | `DateTime @default(now())` | When |
+
+Indexes: `(professionalId, occurredAt DESC)` for the timeline,
+`(professionalId, category, occurredAt DESC)` for category filters, and
+`(entityType, entityId)` for one appointment's or service's history.

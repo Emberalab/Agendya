@@ -20,6 +20,11 @@ import { BackofficeSearchController } from './search/search.controller';
 import { BackofficeSearchService } from './search/search.service';
 import { BackofficeDashboardController } from './dashboard/dashboard.controller';
 import { BackofficeDashboardService } from './dashboard/dashboard.service';
+import {
+  ProfessionalActivityController,
+  TrialAccountsController,
+} from './activity/professional-activity.controller';
+import { ProfessionalActivityService } from './activity/professional-activity.service';
 
 /**
  * Agendya Backoffice — internal operations & support (Phase 1 MVP). Entirely
@@ -58,6 +63,8 @@ import { BackofficeDashboardService } from './dashboard/dashboard.service';
     AppointmentsController,
     BackofficeSearchController,
     BackofficeDashboardController,
+    ProfessionalActivityController,
+    TrialAccountsController,
   ],
   providers: [
     InternalJwtStrategy,
@@ -69,6 +76,7 @@ import { BackofficeDashboardService } from './dashboard/dashboard.service';
     AppointmentsService,
     BackofficeSearchService,
     BackofficeDashboardService,
+    ProfessionalActivityService,
   ],
 })
 export class BackofficeModule {}

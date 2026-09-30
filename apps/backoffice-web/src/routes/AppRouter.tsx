@@ -44,6 +44,16 @@ const AppointmentInvestigationPage = lazy(() =>
     (m) => ({ default: m.AppointmentInvestigationPage }),
   ),
 );
+const ProfessionalActivityPage = lazy(() =>
+  import('../modules/backoffice/activity/ProfessionalActivityPage').then((m) => ({
+    default: m.ProfessionalActivityPage,
+  })),
+);
+const TrialsPage = lazy(() =>
+  import('../modules/backoffice/activity/TrialsPage').then((m) => ({
+    default: m.TrialsPage,
+  })),
+);
 const AuditLogPage = lazy(() =>
   import('../modules/backoffice/auditLog/AuditLogPage').then((m) => ({
     default: m.AuditLogPage,
@@ -85,6 +95,11 @@ export function AppRouter() {
                 path="/backoffice/professionals/:id"
                 element={<Professional360Page />}
               />
+              <Route
+                path="/backoffice/professionals/:id/activity"
+                element={<ProfessionalActivityPage />}
+              />
+              <Route path="/backoffice/trials" element={<TrialsPage />} />
               <Route
                 path="/backoffice/appointments/:id"
                 element={<AppointmentInvestigationPage />}

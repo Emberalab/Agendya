@@ -1,6 +1,12 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
+
+const activityService = {
+  record: jest.fn().mockResolvedValue(undefined),
+  recordDailyVisit: jest.fn().mockResolvedValue(undefined),
+};
 import { ProfessionalsService } from './professionals.service';
 
 const BASE_PROFESSIONAL = {
@@ -62,6 +68,7 @@ describe('ProfessionalsService', () => {
       providers: [
         ProfessionalsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ActivityService, useValue: activityService },
       ],
     }).compile();
 
