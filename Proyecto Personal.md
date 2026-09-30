@@ -18,6 +18,11 @@ created: 2026-09-03
 - [[Fase-3-Marketplace]]
 - [[Fase-4-Negocios-WhatsApp]]
 
+## Implementación actual
+
+- [[Estado de Implementacion]] — qué está construido hoy, en qué rama y dónde está documentado
+- Decisiones: [[Decision - Plan efectivo derivado para el periodo de prueba]]
+
 ## Arquitectura y stack
 
 - [[Arquitectura-Tecnica]]

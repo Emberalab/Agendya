@@ -1,6 +1,6 @@
 ---
 type: proyecto-personal
-status: planning
+status: en-desarrollo
 phase: mvp-v1
 category: web-app
 tech-stack: TBD
@@ -236,6 +236,11 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 - Sin comprobantes de pago
 
 **Razón**: El MVP valida la gestión de agenda, no procesamiento de dinero.
+
+> [!note] Implementación actual
+> Sigue sin haber pagos del **cliente** por las citas. Lo que sí se implementó es
+> el pago de la **suscripción del profesional** con Wompi (planes Básico,
+> Avanzado y Negocios). Ver [[Estado de Implementacion]].
 
 ---
 
@@ -499,12 +504,12 @@ Para mantener el alcance controlado y validar rápidamente el producto:
 ## 📝 Notas de Desarrollo
 
 **Fecha de inicio**: 2026-06-10
-**Estado actual**: Planificación
+**Estado actual**: En desarrollo (ver [[Estado de Implementacion]])
 **Próxima reunión**: TBD
-**Repo**: TBD
+**Repo**: monorepo `Agendya` (`apps/api`, `apps/web`, `packages/types`)
 
 ---
 
-**Estado**: 🟡 Planificación
-**Última actualización**: 2026-07-24
+**Estado**: 🟢 En desarrollo
+**Última actualización**: 2026-09-30
 **Volver**: [[Plataforma-Reservas-Servicios]] | [[Proyecto Personal]]

@@ -27,7 +27,7 @@ The barber/stylist account.
 | `plan` | `Plan @default(FREE)` | `FREE` \| `BASIC` \| `ADVANCED` \| `BUSINESS` |
 | `billingInterval` | `BillingInterval?` | `monthly` \| `annual`. Set by a Wompi payment. `null` on FREE or when Super Admin assigns the plan by hand |
 | `planStartedAt` | `DateTime?` | Wompi payment that opened the current period |
-| `planExpiresAt` | `DateTime?` | End of the paid window (UTC). Monthly = +1 month, annual = +1 year. No job demotes to FREE yet |
+| `planExpiresAt` | `DateTime?` | End of the paid window (UTC). Monthly = +1 month, annual = +1 year. `PlanExpiryScheduler` (hourly) demotes to FREE at expiry (cancelled) or after 3 grace days |
 | `lastWompiTransactionId` | `String? @unique` | Idempotency: the same Wompi `tx` does not extend the period again |
 | `role` | `PlatformRole @default(INDEPENDENT)` | `SUPER_ADMIN` \| `BUSINESS_ADMIN` \| `INDEPENDENT` |
 | `accessStatus` | `AccessStatus @default(APPROVED)` | `PENDING` \| `APPROVED` \| `DECLINED`. New signups without a grant in closed beta are born `PENDING`. Do not overload `isActive` for this |

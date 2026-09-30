@@ -33,7 +33,7 @@ description: Problemas habituales del desarrollo local y sus soluciones.
 | `GET /auth/google` → 404 / ruta ausente | Google sin configurar | Pon `GOOGLE_CLIENT_ID` **y** `GOOGLE_CLIENT_SECRET`; la estrategia solo se registra cuando ambos existen |
 | Callback de OAuth → JSON `403` o te deja en `localhost:4000` | Cookie `state` ausente/expirada o no coincide (Chrome a veces borra cookies de un bounce `:4000` → Google → `:4000`) | Reinicia desde el botón de Google en la app (`/login`); no recargues ni guardes la URL del callback. Tras el arreglo, esto redirige a `/login?error=oauth` |
 | Sesión cerrada justo tras el login con Google | `GoogleCallbackPage` no pudo alcanzar `/auth/me` | Revisa `VITE_API_URL` / que la API esté arriba; el token sigue puesto, solo falta `businessName` |
-| `/forgot-password` no hace nada | **No existe endpoint de restablecimiento** | Brecha conocida — ver [Seguridad](/security/#brechas-conocidas--todo) |
+| `/forgot-password` confirma pero no llega el correo | Sin `RESEND_API_KEY` no se envían correos: el API solo registra `[dev] Email a …`. La respuesta es la misma exista o no la cuenta | Revisa el log del API (muestra destinatario y asunto, no el enlace) o configura Resend. Ver [Autenticación](/features/authentication/) |
 
 ## CORS
 

@@ -110,8 +110,6 @@ clientes compitiendo por el mismo espacio: exactamente uno tiene éxito
 
 ## Brechas conocidas / TODO
 
-- El **restablecimiento de contraseña** no está implementado (la página
-  `/forgot-password` no tiene API).
 - Sin bloqueo de cuenta / backoff ante fuerza bruta más allá del throttle de
   5/60s.
 - Sin 2FA.

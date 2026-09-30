@@ -33,7 +33,7 @@ description: Common local-development problems and their fixes.
 | `GET /auth/google` → 404 / route missing | Google not configured | Set `GOOGLE_CLIENT_ID` **and** `GOOGLE_CLIENT_SECRET`; the strategy is only registered when both exist |
 | OAuth callback → JSON `403` or you land on `localhost:4000` | `state` cookie missing/expired or mismatched (Chrome can drop cookies on a `:4000` → Google → `:4000` bounce) | Restart from the in-app Google button (`/login`); don't reload or bookmark the callback URL. After the fix this redirects to `/login?error=oauth` |
 | Logged out immediately after Google login | `GoogleCallbackPage` couldn't reach `/auth/me` | Check `VITE_API_URL` / API is up; token still set, `businessName` just missing |
-| `/forgot-password` does nothing | **No reset endpoint exists** | Known gap — see [Security](/en/security/#known-gaps--todo) |
+| `/forgot-password` confirms but no email arrives | Without `RESEND_API_KEY` no email is sent: the API only logs `[dev] Email a …`. The response is the same whether or not the account exists | Check the API log (it shows recipient and subject, not the link), or configure Resend. See [Authentication](/en/features/authentication/) |
 
 ## CORS
 

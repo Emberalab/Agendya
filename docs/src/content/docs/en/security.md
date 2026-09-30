@@ -104,7 +104,6 @@ succeeds (e2e-tested).
 
 ## Known gaps / TODO
 
-- **Password reset** is not implemented (`/forgot-password` page has no API).
 - No account lockout / brute-force backoff beyond the 5/60s throttle.
 - No 2FA.
 - No audit log of professional actions.

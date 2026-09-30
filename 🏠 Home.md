@@ -11,3 +11,4 @@ Punto de entrada del vault.
 ## Proyectos
 
 - [[Proyecto Personal]]
+  - [[Estado de Implementacion]] — lo que ya está construido
