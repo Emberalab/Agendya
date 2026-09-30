@@ -6,6 +6,8 @@ import {
 import type { Professional } from '@prisma/client';
 import {
   PLAN_MONTHLY_BOOKING_LIMITS,
+  effectivePlan,
+  toTrialInfo,
   type ProfessionalProfile,
   type PublicProfessional,
   type UpdateProfileInput,
@@ -22,7 +24,11 @@ export class ProfessionalsService {
     professional: Professional,
     bookingsThisMonth = 0,
     serviceCount = 0,
+    now: Date = new Date(),
   ): ProfessionalProfile {
+    // Entitlement is resolved here, server-side, and sent to the client —
+    // the dashboard never derives it from its own clock.
+    const plan = effectivePlan(professional, now);
     return {
       id: professional.id,
       email: professional.email,
@@ -40,9 +46,11 @@ export class ProfessionalsService {
       billingInterval: professional.billingInterval,
       planExpiresAt: professional.planExpiresAt?.toISOString() ?? null,
       planCancelledAt: professional.planCancelledAt?.toISOString() ?? null,
+      effectivePlan: plan,
+      trial: toTrialInfo(professional, now),
       bookingsThisMonth,
       serviceCount,
-      monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[professional.plan],
+      monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[plan],
       createdAt: professional.createdAt.toISOString(),
       updatedAt: professional.updatedAt.toISOString(),
     };

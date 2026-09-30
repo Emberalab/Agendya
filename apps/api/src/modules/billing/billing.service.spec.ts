@@ -32,6 +32,7 @@ describe('BillingService', () => {
   let prisma: {
     professional: {
       findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
       update: jest.Mock;
       updateMany: jest.Mock;
     };
@@ -48,6 +49,12 @@ describe('BillingService', () => {
     prisma = {
       professional: {
         findUnique: jest.fn(),
+        // Row as re-read after the payment is applied (trial-aware limit).
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          plan: 'BASIC',
+          trialStartedAt: null,
+          trialEndsAt: null,
+        }),
         update: jest.fn(),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
@@ -89,6 +96,47 @@ describe('BillingService', () => {
     }).compile();
 
     service = moduleRef.get(BillingService);
+  });
+
+  describe('applyApprovedTransaction during a full-access trial', () => {
+    it('stores the paid plan without locking services the trial still covers', async () => {
+      const now = Date.now();
+      prisma.professional.findUnique.mockResolvedValue({
+        id: PROFESSIONAL_ID,
+        plan: 'FREE',
+        billingInterval: null,
+        planExpiresAt: null,
+        lastWompiTransactionId: null,
+      });
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({
+        plan: 'BASIC',
+        trialStartedAt: new Date(now - 86_400_000),
+        trialEndsAt: new Date(now + 10 * 86_400_000),
+      });
+      // 12 services > BASIC's 10: without the trial, 2 would be locked.
+      prisma.service.findMany.mockResolvedValue(
+        Array.from({ length: 12 }, (_, i) => ({
+          id: `svc-${i}`,
+          planLocked: false,
+          planEnabledAt: new Date(),
+        })),
+      );
+
+      const result = await service.applyApprovedTransaction({
+        id: 'tx-trial-upgrade',
+        status: 'APPROVED',
+        amount_in_cents: copToCents(PLAN_PRICE_COP.BASIC.monthly),
+        currency: 'COP',
+        reference: createBillingReference(PROFESSIONAL_ID, 'BASIC', 'monthly'),
+      });
+
+      expect(result).toBe('applied');
+      const [[update]] = prisma.professional.updateMany.mock.calls as [
+        { data: { plan: string } },
+      ][];
+      expect(update.data.plan).toBe('BASIC');
+      expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
   });
 
   describe('createCheckout', () => {

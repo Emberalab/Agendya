@@ -1,5 +1,6 @@
 export * from './plans/catalog';
 export * from './plans/billing';
+export * from './plans/trial';
 export * from './schemas/admin.schema';
 export * from './schemas/billing.schema';
 export * from './schemas/auth.schema';

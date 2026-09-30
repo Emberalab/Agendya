@@ -1,9 +1,11 @@
 import { Test } from '@nestjs/testing';
 import { AdminController } from './admin.controller';
 import { AdminService } from './admin.service';
+import { TrialService } from './trial.service';
 import type { Professional } from '@prisma/client';
 
 const mockSuperAdmin = {
+  id: 'admin-1',
   email: 'admin@agendya.co',
 } as Professional;
 
@@ -17,11 +19,19 @@ describe('AdminController', () => {
     getProfessionalByEmail: jest.fn(),
     changeProfessionalPlan: jest.fn(),
   };
+  const trialService = {
+    grantTrial: jest.fn(),
+    extendTrial: jest.fn(),
+    endTrial: jest.fn(),
+  };
 
   beforeEach(async () => {
     const module = await Test.createTestingModule({
       controllers: [AdminController],
-      providers: [{ provide: AdminService, useValue: adminService }],
+      providers: [
+        { provide: AdminService, useValue: adminService },
+        { provide: TrialService, useValue: trialService },
+      ],
     }).compile();
 
     controller = module.get(AdminController);
@@ -66,5 +76,39 @@ describe('AdminController', () => {
       'pro@example.com',
       'BASIC',
     );
+  });
+
+  describe('trial actions', () => {
+    it('grants a trial as the authenticated admin, never a body-supplied actor', async () => {
+      await controller.grantTrial(
+        'barber@example.com',
+        { allowRepeat: false },
+        mockSuperAdmin,
+      );
+      expect(trialService.grantTrial).toHaveBeenCalledWith(
+        'barber@example.com',
+        mockSuperAdmin,
+        { allowRepeat: false },
+      );
+    });
+
+    it('extends and ends with the authenticated admin as actor', async () => {
+      await controller.extendTrial(
+        'barber@example.com',
+        { days: 7 },
+        mockSuperAdmin,
+      );
+      await controller.endTrial('barber@example.com', {}, mockSuperAdmin);
+      expect(trialService.extendTrial).toHaveBeenCalledWith(
+        'barber@example.com',
+        mockSuperAdmin,
+        { days: 7 },
+      );
+      expect(trialService.endTrial).toHaveBeenCalledWith(
+        'barber@example.com',
+        mockSuperAdmin,
+        {},
+      );
+    });
   });
 });

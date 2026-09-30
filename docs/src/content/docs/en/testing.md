@@ -95,7 +95,9 @@ dashboard specs opt in with `test.use({ storageState })`.
 
 Specs: `smoke`, `auth/login`, `navigation/dashboard-nav`, `dashboard/profile`,
 `dashboard/services`, `dashboard/agenda`, `theme/system-preference`,
-`a11y/audit` (`@axe-core/playwright`), `public-booking/booking`.
+`a11y/audit` (`@axe-core/playwright`), `public-booking/booking`,
+`dashboard/trial` (trial banner and limits) and `admin/trial-admin`
+(search, Prueba column, grant/extend/end).
 
 ## Conventions
 

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { BILLING_INTERVALS } from '../plans/billing';
 import { planSchema } from '../plans/catalog';
+import { trialInfoSchema } from '../plans/trial';
 import { slugSchema } from './slug.schema';
 
 export const CANCELLATION_POLICY_HOURS_OPTIONS = [1, 2, 3, 4, 6, 24] as const;
@@ -79,11 +80,19 @@ export const professionalProfileSchema = z.object({
   billingInterval: z.enum(BILLING_INTERVALS).nullable(),
   planExpiresAt: z.string().datetime().nullable(),
   planCancelledAt: z.string().datetime().nullable(),
+  /**
+   * Plan whose limits and features apply right now — `plan` upgraded by an
+   * active trial. Use this (not `plan`) for any limit/feature check; `plan`
+   * stays the billed plan (checkout, renewal, cancellation).
+   */
+  effectivePlan: planSchema,
+  /** Full-access trial, if one was ever granted. `active` is server-computed. */
+  trial: trialInfoSchema.nullable(),
   /** Non-cancelled bookings created in the current calendar month. */
   bookingsThisMonth: z.number(),
   /** Non-deleted services — used for plan upsell, not a second list fetch. */
   serviceCount: z.number(),
-  /** Monthly booking allowance for the current plan; `null` means unlimited. */
+  /** Monthly booking allowance for the effective plan; `null` means unlimited. */
   monthlyBookingLimit: z.number().nullable(),
   createdAt: z.string(),
   updatedAt: z.string(),

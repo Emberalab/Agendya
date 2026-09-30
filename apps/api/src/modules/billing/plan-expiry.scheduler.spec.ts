@@ -18,6 +18,7 @@ describe('PlanExpiryScheduler', () => {
     professional: {
       findMany: jest.Mock;
       updateMany: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
     };
     service: {
       findMany: jest.Mock;
@@ -40,6 +41,12 @@ describe('PlanExpiryScheduler', () => {
       professional: {
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        // Row as re-read after the downgrade: FREE, no trial.
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          plan: 'FREE',
+          trialStartedAt: null,
+          trialEndsAt: null,
+        }),
       },
       service: {
         findMany: jest.fn().mockResolvedValue([]),
@@ -111,6 +118,37 @@ describe('PlanExpiryScheduler', () => {
       'FREE',
       'expired',
     );
+  });
+
+  it('keeps services unlocked when a full-access trial is still active', async () => {
+    const now = new Date('2026-08-04T14:00:00.000Z');
+    prisma.professional.findMany.mockResolvedValue([
+      {
+        id: 'prof-1',
+        email: 'test@example.com',
+        businessName: 'Test Business',
+        plan: 'BASIC',
+        planExpiresAt: new Date('2026-07-01T00:00:00.000Z'),
+        planCancelledAt: null,
+      },
+    ]);
+    prisma.professional.findUniqueOrThrow.mockResolvedValue({
+      plan: 'FREE',
+      trialStartedAt: new Date(now.getTime() - 86_400_000),
+      trialEndsAt: new Date(now.getTime() + 86_400_000),
+    });
+    prisma.service.findMany.mockResolvedValue([
+      { id: 'svc-1', planLocked: false, planEnabledAt: new Date() },
+      { id: 'svc-2', planLocked: false, planEnabledAt: new Date() },
+      { id: 'svc-3', planLocked: false, planEnabledAt: new Date() },
+      { id: 'svc-4', planLocked: false, planEnabledAt: new Date() },
+    ]);
+
+    await scheduler.handlePlanExpiry();
+
+    // The billed plan is downgraded, but the trial keeps full access.
+    expect(downgradeCall()).toMatchObject({ data: DOWNGRADE_DATA });
+    expect(prisma.service.updateMany).not.toHaveBeenCalled();
   });
 
   it('downgrades CANCELLED plan immediately (no grace period)', async () => {

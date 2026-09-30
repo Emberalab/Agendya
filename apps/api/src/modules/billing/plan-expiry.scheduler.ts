@@ -3,7 +3,7 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import { BILLING_GRACE_DAYS } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
-import { enforceServiceLimit } from '../services/service-plan-limit';
+import { enforceEffectiveServiceLimit } from '../services/service-plan-limit';
 
 /**
  * Hourly job that downgrades expired paid plans to FREE.
@@ -15,7 +15,7 @@ import { enforceServiceLimit } from '../services/service-plan-limit';
  * Side effects:
  * - Sets plan = 'FREE'
  * - Clears billingInterval, planStartedAt, planExpiresAt, planCancelledAt
- * - Calls enforceServiceLimit to lock excess services for FREE plan
+ * - Re-applies the effective service limit (FREE, unless a trial is active)
  * - Sends "Plan actualizado" email
  *
  * Idempotence:
@@ -166,7 +166,8 @@ export class PlanExpiryScheduler {
       });
       if (count === 0) return false;
 
-      await enforceServiceLimit(tx, professionalId, 'FREE');
+      // Effective, not 'FREE': an active trial keeps full access.
+      await enforceEffectiveServiceLimit(tx, professionalId, now);
       return true;
     });
     if (!downgraded) return false;

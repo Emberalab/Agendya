@@ -227,6 +227,60 @@ describe('AdminService', () => {
     });
   });
 
+  describe('searchProfessionals', () => {
+    it('matches email or business name case-insensitively, capped, and flags active trials', async () => {
+      const DAY = 86_400_000;
+      prisma.professional.findMany.mockResolvedValue([
+        {
+          id: 'p1',
+          email: 'gaitan9103@gmail.com',
+          businessName: 'Jorge Gaitan',
+          plan: 'FREE',
+          trialStartedAt: new Date(Date.now() - DAY),
+          trialEndsAt: new Date(Date.now() + 29 * DAY),
+        },
+        {
+          id: 'p2',
+          email: 'jorgeemherrera@gmail.com',
+          businessName: 'Jorge Herrera',
+          plan: 'BASIC',
+          trialStartedAt: new Date(Date.now() - 40 * DAY),
+          trialEndsAt: new Date(Date.now() - 10 * DAY),
+        },
+      ]);
+
+      const results = await service.searchProfessionals('JORGE');
+
+      expect(prisma.professional.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: {
+            OR: [
+              { email: { contains: 'JORGE', mode: 'insensitive' } },
+              { businessName: { contains: 'JORGE', mode: 'insensitive' } },
+            ],
+          },
+          take: 10,
+        }),
+      );
+      expect(results).toEqual([
+        {
+          id: 'p1',
+          email: 'gaitan9103@gmail.com',
+          businessName: 'Jorge Gaitan',
+          plan: 'FREE',
+          trialActive: true,
+        },
+        {
+          id: 'p2',
+          email: 'jorgeemherrera@gmail.com',
+          businessName: 'Jorge Herrera',
+          plan: 'BASIC',
+          trialActive: false,
+        },
+      ]);
+    });
+  });
+
   describe('getProfessionalByEmail', () => {
     it('throws not found when the email is unknown', async () => {
       prisma.professional.findUnique.mockResolvedValue(null);

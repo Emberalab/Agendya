@@ -49,6 +49,7 @@ tests/
     smoke.spec.ts          app loads, redirects, register link
     auth/login.spec.ts     email+password login, validation, server error
     navigation/            sidebar navigation, logout
-    dashboard/             profile / services / agenda flows
+    dashboard/             profile / services / agenda / trial flows
+    admin/                 Super Admin backoffice (trial search + actions)
     public-booking/        public landing + wizard start + not-found
 ```

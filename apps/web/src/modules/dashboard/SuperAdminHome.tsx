@@ -19,7 +19,7 @@ export function SuperAdminHome() {
           fontFamily: 'var(--font-body)',
         }}
       >
-        Panel de administrador para gestionar la lista de acceso, ver funcionalidades por plan, y cambiar suscripciones.
+        Panel de administrador para gestionar la lista de acceso, ver funcionalidades por plan, cambiar suscripciones y gestionar períodos de prueba.
       </p>
       <Link
         to="/dashboard/admin"

@@ -8,9 +8,10 @@ import {
 } from '@agendya/types';
 import { apiClient, isApiError } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { ProfessionalSearch } from './ProfessionalSearch';
+import { TrialManager } from './TrialManager';
 
 export function PlanChanger() {
-  const [searchEmail, setSearchEmail] = useState('');
   const [professional, setProfessional] =
     useState<ProfessionalForPlanChange | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -18,8 +19,10 @@ export function PlanChanger() {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSearch = async () => {
-    if (!searchEmail.trim()) {
+  /** Exact lookup by email — from a picked suggestion or "Buscar". */
+  const loadProfessional = async (email: string) => {
+    const target = email.trim();
+    if (!target) {
       setError('Escribe un correo electrónico.');
       return;
     }
@@ -29,7 +32,7 @@ export function PlanChanger() {
       setError(null);
       setSuccess(null);
       const { data } = await apiClient.get<ProfessionalForPlanChange>(
-        `/admin/professionals/${encodeURIComponent(searchEmail.trim())}`,
+        `/admin/professionals/${encodeURIComponent(target)}`,
       );
       setProfessional(data);
       setSelectedPlan(data.plan);
@@ -37,7 +40,7 @@ export function PlanChanger() {
       setProfessional(null);
       setError(
         isApiError(err) && err.status === 404
-          ? `No hay un profesional con el correo ${searchEmail}.`
+          ? `No hay un profesional con el correo ${target}. Elige una cuenta de la lista.`
           : getApiErrorMessage(err, 'No se pudo buscar el profesional.'),
       );
     } finally {
@@ -88,42 +91,15 @@ export function PlanChanger() {
           border: '1px solid var(--color-border)',
         }}
       >
-        <label className="block text-sm font-medium mb-2">
-          Buscar profesional por correo
-        </label>
-        <div className="flex gap-2">
-          <input
-            type="email"
-            value={searchEmail}
-            onChange={(e) => {
-              setSearchEmail(e.target.value);
-              setError(null);
-              setSuccess(null);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') void handleSearch();
-            }}
-            className="flex-1 px-3 py-2 rounded-lg"
-            style={{
-              backgroundColor: 'var(--color-surface-soft)',
-              border: '1px solid var(--color-border)',
-            }}
-            placeholder="usuario@ejemplo.com"
-          />
-          <button
-            type="button"
-            onClick={() => void handleSearch()}
-            disabled={loading}
-            className="px-4 py-2 rounded-lg text-sm font-medium"
-            style={{
-              backgroundColor: 'var(--color-brand-primary)',
-              color: 'var(--color-text-on-brand)',
-              opacity: loading ? 0.5 : 1,
-            }}
-          >
-            {loading ? 'Buscando…' : 'Buscar'}
-          </button>
-        </div>
+        <ProfessionalSearch
+          busy={loading}
+          onSelect={(email) => void loadProfessional(email)}
+          onSubmit={(text) => void loadProfessional(text)}
+          onType={() => {
+            setError(null);
+            setSuccess(null);
+          }}
+        />
       </div>
 
       {error && (
@@ -279,6 +255,16 @@ export function PlanChanger() {
           >
             {loading ? 'Guardando…' : 'Cambiar plan'}
           </button>
+
+          <TrialManager
+            professional={professional}
+            onUpdated={(updated) => {
+              setProfessional(updated);
+              setSelectedPlan(updated.plan);
+              setSuccess(null);
+              setError(null);
+            }}
+          />
         </div>
       )}
     </div>

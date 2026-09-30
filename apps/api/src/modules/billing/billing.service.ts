@@ -20,7 +20,7 @@ import {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
-import { enforceServiceLimit } from '../services/service-plan-limit';
+import { enforceEffectiveServiceLimit } from '../services/service-plan-limit';
 import {
   createBillingReference,
   parseBillingReference,
@@ -211,7 +211,7 @@ export class BillingService {
    *
    * Side effects:
    * - Clears planCancelledAt on successful payment
-   * - Calls enforceServiceLimit on plan transitions
+   * - Re-applies the effective (trial-aware) service limit on plan transitions
    */
   async applyApprovedTransaction(
     transaction: WompiTransaction,
@@ -307,7 +307,7 @@ export class BillingService {
     });
 
     await this.prisma.$transaction((tx) =>
-      enforceServiceLimit(tx, professional.id, parsed.plan),
+      enforceEffectiveServiceLimit(tx, professional.id),
     );
 
     // Send "Pago aprobado" email
