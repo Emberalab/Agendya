@@ -22,6 +22,16 @@ if (typeof globalThis.IntersectionObserver === 'undefined') {
     readonly root = null;
     readonly rootMargin = '';
     readonly thresholds = [];
+    // Real `IntersectionObserver` takes (callback, options) — declaring the
+    // same shape here (even unused) matters beyond style: without it, this
+    // stub's constructor takes zero parameters, and CodeQL's "superfluous
+    // trailing arguments" check flags every real call site in production
+    // code (useInViewport.ts, NotificationCenter.tsx) as passing arguments
+    // a constructor will silently discard.
+    constructor(
+      _callback: IntersectionObserverCallback,
+      _options?: IntersectionObserverInit,
+    ) {}
     observe() {}
     unobserve() {}
     disconnect() {}

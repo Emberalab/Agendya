@@ -2,10 +2,10 @@
 title: Modelo entidad-relación
 description: >-
   Las cinco entidades del esquema de la Fase 1 de Agendya y cómo se relacionan,
-  directo de apps/api/prisma/schema.prisma.
+  directo de packages/db/prisma/schema.prisma.
 ---
 
-Fuente: `apps/api/prisma/schema.prisma`. Provider PostgreSQL, todas las claves
+Fuente: `packages/db/prisma/schema.prisma`. Provider PostgreSQL, todas las claves
 primarias `String @id @default(uuid())`.
 
 ```mermaid

@@ -26,6 +26,19 @@ export function NavIcon({ id }: { id: NavItemId }) {
         <path d="M9 5v4l2.5 2.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
       </svg>
     );
+  if (id === 'soporte')
+    return (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.5" />
+        <path
+          d="M6.8 6.9a2.2 2.2 0 1 1 3.3 1.9c-.7.4-1.1.9-1.1 1.7v.2"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+        />
+        <path d="M9 12.7h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      </svg>
+    );
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
       <circle cx="9" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />

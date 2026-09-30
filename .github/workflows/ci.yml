@@ -52,15 +52,22 @@ jobs:
         run: npm run typecheck
 
       - name: Run database migrations
+        # apps/backoffice-api's prisma.config.ts resolves to the same
+        # packages/db/prisma files, so running this once from either app
+        # applies the shared migration history — no separate step needed.
         run: npx prisma migrate deploy
         working-directory: apps/api
 
       - name: Unit tests
         run: npm run test
 
-      - name: Backend e2e tests
+      - name: apps/api e2e tests
         run: npm run test:e2e
         working-directory: apps/api
+
+      - name: apps/backoffice-api e2e tests
+        run: npm run test:e2e
+        working-directory: apps/backoffice-api
 
       - name: Build
         run: npm run build
@@ -98,4 +105,38 @@ jobs:
           path: |
             apps/web/playwright-report
             apps/web/test-results
+          retention-days: 7
+
+  backoffice-web-e2e:
+    name: Backoffice Web E2E (Playwright)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npm run test:e2e:install --workspace apps/backoffice-web
+
+      # Stubs the Backoffice API at the network boundary — no Postgres/backend needed.
+      - name: Run Playwright tests
+        run: npm run test:e2e --workspace apps/backoffice-web
+
+      - name: Upload Playwright report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: backoffice-playwright-report
+          path: |
+            apps/backoffice-web/playwright-report
+            apps/backoffice-web/test-results
           retention-days: 7

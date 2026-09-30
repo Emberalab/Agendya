@@ -2,10 +2,10 @@
 title: Entity-relationship model
 description: >-
   The five entities in the Agendya Phase 1 schema and how they relate, straight
-  from apps/api/prisma/schema.prisma.
+  from packages/db/prisma/schema.prisma.
 ---
 
-Source: `apps/api/prisma/schema.prisma`. Provider PostgreSQL, all primary keys
+Source: `packages/db/prisma/schema.prisma`. Provider PostgreSQL, all primary keys
 `String @id @default(uuid())`.
 
 ```mermaid
