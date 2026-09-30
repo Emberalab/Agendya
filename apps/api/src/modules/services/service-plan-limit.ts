@@ -1,5 +1,5 @@
 import type { Plan, Prisma } from '@prisma/client';
-import { PLAN_SERVICE_LIMITS } from '@agendya/types';
+import { PLAN_SERVICE_LIMITS, effectivePlan } from '@agendya/types';
 
 /**
  * Where-clause for services a customer can see and book: switched on by the
@@ -67,8 +67,9 @@ export function resolveServicePlanChange(
 }
 
 /**
- * Applies the service limit of `plan` to a professional. Call on every plan
- * transition (payment, expiry job, admin change).
+ * Applies the service limit of `plan` to a professional. Prefer
+ * {@link enforceEffectiveServiceLimit} on plan/trial transitions so an active
+ * trial is never overridden by the billed plan.
  */
 export async function enforceServiceLimit(
   tx: Prisma.TransactionClient,
@@ -98,4 +99,25 @@ export async function enforceServiceLimit(
       data: { planLocked: false, planEnabledAt },
     });
   }
+}
+
+/**
+ * Re-reads the professional's billed plan and trial window inside `tx` and
+ * applies the service limit of the *effective* plan. Call on every plan or
+ * trial transition (payment, expiry jobs, admin plan change, trial
+ * grant/end). Idempotent: running it on an already-consistent account writes
+ * nothing. Returns the plan it enforced.
+ */
+export async function enforceEffectiveServiceLimit(
+  tx: Prisma.TransactionClient,
+  professionalId: string,
+  now: Date = new Date(),
+): Promise<Plan> {
+  const account = await tx.professional.findUniqueOrThrow({
+    where: { id: professionalId },
+    select: { plan: true, trialStartedAt: true, trialEndsAt: true },
+  });
+  const plan = effectivePlan(account, now);
+  await enforceServiceLimit(tx, professionalId, plan);
+  return plan;
 }

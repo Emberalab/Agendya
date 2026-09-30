@@ -37,8 +37,12 @@ Columna Auth: **ninguna** = público · **JWT** = `Authorization: Bearer` ·
 | `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · mismas reglas que el PATCH |
 | `GET` | `/admin/registrations` | — | `RegistrationEntry[]` (todas las cuentas `Professional`) |
 | `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` | `RegistrationEntry` · `403` si se declina a un Super Admin |
-| `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
+| `GET` | `/admin/professionals?q=` | `searchProfessionalsQuerySchema` | `ProfessionalSearchResult[]` (correo o negocio, `q` ≥ 3, máx. 10) · `400` |
+| `GET` | `/admin/professionals/:email` | — | `ProfessionalForPlanChange` (`plan`, `effectivePlan`, `trial`, `trialHistory`) · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | mismo objeto · `404` |
+| `POST` | `/admin/professionals/:email/trial` | `grantTrialSchema` | mismo objeto · `201` · `409` si ya está activa o ya se usó · `403` en tu propia cuenta |
+| `POST` | `/admin/professionals/:email/trial/extend` | `extendTrialSchema` | mismo objeto · `409` sin prueba activa |
+| `POST` | `/admin/professionals/:email/trial/end` | `endTrialSchema` | mismo objeto · `409` sin prueba activa |
 
 ## Billing — `modules/billing`
 
@@ -57,7 +61,7 @@ confía del callback del widget: solo de un evento autenticado o de
 
 | Método | Ruta | Auth | Cuerpo / Query | Respuesta |
 | --- | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit`) |
+| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `effectivePlan`, `trial`, `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit` del plan efectivo) |
 | `PATCH` | `/professionals/me` | JWT | parcial (`updateProfileSchema`) | `ProfessionalProfile` |
 | `GET` | `/professionals/check-slug` | JWT | `?slug` (`checkSlugQuerySchema`) | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | ninguna · 30/60s | — | `PublicProfessional` (perfil + servicios activos) |

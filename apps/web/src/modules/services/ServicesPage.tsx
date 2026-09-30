@@ -279,7 +279,8 @@ export function ServicesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null);
   const [swapTarget, setSwapTarget] = useState<Service | null>(null);
 
-  const plan = profile?.plan ?? 'FREE';
+  // Server-resolved (trial-aware) plan; `plan` is only the billed plan.
+  const plan = profile?.effectivePlan ?? 'FREE';
   const limit = PLAN_SERVICE_LIMITS[plan];
   const used = services?.length ?? 0;
   const atLimit = limit != null && used >= limit;

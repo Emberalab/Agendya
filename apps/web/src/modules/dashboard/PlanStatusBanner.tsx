@@ -1,5 +1,9 @@
 import { Link } from 'react-router-dom';
 import { planStatus, type ProfessionalProfile } from '@agendya/types';
+import {
+  formatTrialDate,
+  trialRemainingLabel,
+} from '../professionals/trial';
 
 interface PlanStatusBannerProps {
   profile: ProfessionalProfile;
@@ -12,21 +16,25 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
     profile.planCancelledAt ? new Date(profile.planCancelledAt) : null,
   );
 
-  // Solo mostrar banner para CANCELLED y GRACE
-  if (status !== 'CANCELLED' && status !== 'GRACE') {
-    return null;
-  }
-
-  // Solo mostrar si vence en ≤7 días
-  if (!profile.planExpiresAt) return null;
-
-  const expiresAt = new Date(profile.planExpiresAt);
   const now = new Date();
-  const daysRemaining = Math.ceil(
-    (expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
-  );
+  const expiresAt = profile.planExpiresAt
+    ? new Date(profile.planExpiresAt)
+    : null;
+  const daysRemaining = expiresAt
+    ? Math.ceil((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    : null;
 
-  if (daysRemaining > 7) return null;
+  // Payment warnings (CANCELLED / GRACE, ≤7 días) take priority: they need
+  // action. Otherwise an active trial gets its informative banner.
+  const paymentWarning =
+    (status === 'CANCELLED' || status === 'GRACE') &&
+    expiresAt !== null &&
+    daysRemaining !== null &&
+    daysRemaining <= 7;
+
+  if (!paymentWarning || !expiresAt || daysRemaining === null) {
+    return profile.trial?.active ? <TrialBanner profile={profile} /> : null;
+  }
 
   const isGrace = status === 'GRACE';
   const isCancelled = status === 'CANCELLED';
@@ -113,6 +121,67 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
           }}
         >
           {isGrace ? 'Renovar ahora' : 'Ver detalles'}
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+function TrialBanner({ profile }: PlanStatusBannerProps) {
+  const trial = profile.trial;
+  if (!trial) return null;
+
+  return (
+    <div
+      role="status"
+      className="w-full px-4 py-3"
+      style={{
+        backgroundColor: 'var(--color-brand-surface)',
+        borderBottom: '1px solid var(--color-brand-border)',
+      }}
+    >
+      <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-3">
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            aria-hidden="true"
+            style={{ color: 'var(--color-text-brand)', flexShrink: 0 }}
+          >
+            <path
+              d="M12 8v4l2.5 2.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <p
+            style={{
+              fontSize: '14px',
+              color: 'var(--color-text-primary)',
+            }}
+          >
+            <span style={{ fontWeight: 600 }}>
+              Estás disfrutando de acceso completo durante tu período de
+              prueba.
+            </span>{' '}
+            Tu período de prueba termina en {trialRemainingLabel(trial)} (
+            {formatTrialDate(trial.endsAt, profile.timezone)}).
+          </p>
+        </div>
+        <Link
+          to="/dashboard/profile"
+          className="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold"
+          style={{
+            backgroundColor: 'var(--color-brand-primary)',
+            color: 'var(--color-text-on-brand)',
+            textDecoration: 'none',
+          }}
+        >
+          Ver detalles
         </Link>
       </div>
     </div>

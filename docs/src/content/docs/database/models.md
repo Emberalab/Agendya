@@ -28,6 +28,8 @@ La cuenta del barbero/peluquero.
 | `planStartedAt` | `DateTime?` | Momento del pago Wompi que abrió el periodo actual |
 | `planExpiresAt` | `DateTime?` | Fin del periodo pagado (UTC). Mensual = +1 mes, anual = +1 año. Aún no hay job que baje a FREE |
 | `lastWompiTransactionId` | `String? @unique` | Idempotencia: el mismo `tx` de Wompi no vuelve a alargar el periodo |
+| `trialStartedAt` | `DateTime?` | Inicio del período de prueba de acceso completo (lo fija Super Admin). Queda puesto al terminar: marca la prueba como ya usada |
+| `trialEndsAt` | `DateTime?` | Fin de la prueba (UTC). Activa mientras `trialStartedAt <= now < trialEndsAt`. Índice propio para el barrido horario |
 | `role` | `PlatformRole @default(INDEPENDENT)` | `SUPER_ADMIN` \| `BUSINESS_ADMIN` \| `INDEPENDENT` |
 | `accessStatus` | `AccessStatus @default(APPROVED)` | `PENDING` \| `APPROVED` \| `DECLINED`. Cuentas nuevas sin grant en beta cerrada nacen `PENDING`. `isActive` no se usa para esto |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rechaza tokens de cuentas inactivas |
@@ -165,3 +167,21 @@ por dispositivo/navegador.
 un profesional. Web Push es un canal de entrega best-effort de la fila
 `Notification`, nunca la fuente de verdad: un push que falla (o un dispositivo
 offline) deja la fila legible desde `GET /notifications`.
+
+## TrialEvent
+
+Historial de auditoría, solo inserción, de las acciones de Super Admin sobre
+el período de prueba. Ver [Panel de Administrador › Período de prueba](/features/admin-panel/#período-de-prueba).
+El vencimiento natural no escribe fila: se deriva de `Professional.trialEndsAt`.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `action` | `TrialEventAction` | `GRANTED` \| `EXTENDED` \| `ENDED` |
+| `actorId` / `actorEmail` | `String` | Quién lo hizo. **Sin FK** a propósito: la auditoría sobrevive al borrado de la cuenta del actor |
+| `previousEndsAt` | `DateTime?` | Fin de la prueba antes de la acción (`null` en la primera activación) |
+| `endsAt` | `DateTime` | Fin de la prueba después de la acción |
+| `note` | `String?` | Nota opcional del admin (≤ 200 caracteres) |
+| `createdAt` | `DateTime @default(now())` | Cuándo |
+
+Índice: `@@index([professionalId, createdAt(sort: Desc)])` para el historial de una cuenta.

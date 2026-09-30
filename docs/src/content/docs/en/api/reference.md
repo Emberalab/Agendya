@@ -36,8 +36,12 @@ cookie. Schemas in parentheses live in `@agendya/types`.
 | `DELETE` | `/admin/allowlist/:email` | — | `{ deleted: true }` · same rules as PATCH |
 | `GET` | `/admin/registrations` | — | `RegistrationEntry[]` (every `Professional` account) |
 | `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` | `RegistrationEntry` · `403` if declining a Super Admin |
-| `GET` | `/admin/professionals/:email` | — | `{ id, email, businessName, slug, plan }` · `404` |
+| `GET` | `/admin/professionals?q=` | `searchProfessionalsQuerySchema` | `ProfessionalSearchResult[]` (email or business, `q` ≥ 3, max 10) · `400` |
+| `GET` | `/admin/professionals/:email` | — | `ProfessionalForPlanChange` (`plan`, `effectivePlan`, `trial`, `trialHistory`) · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `changeProfessionalPlanSchema` | same object · `404` |
+| `POST` | `/admin/professionals/:email/trial` | `grantTrialSchema` | same object · `201` · `409` if active or already used · `403` on your own account |
+| `POST` | `/admin/professionals/:email/trial/extend` | `extendTrialSchema` | same object · `409` without an active trial |
+| `POST` | `/admin/professionals/:email/trial/end` | `endTrialSchema` | same object · `409` without an active trial |
 
 ## Billing — `modules/billing`
 
@@ -56,7 +60,7 @@ taken from the widget callback — only from an authenticated event or
 
 | Method | Path | Auth | Body / Query | Response |
 | --- | --- | --- | --- | --- |
-| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit`) |
+| `GET` | `/professionals/me` | JWT | — | `ProfessionalProfile` (+ `effectivePlan`, `trial`, `bookingsThisMonth`, `serviceCount`, `monthlyBookingLimit` for the effective plan) |
 | `PATCH` | `/professionals/me` | JWT | partial (`updateProfileSchema`) | `ProfessionalProfile` |
 | `GET` | `/professionals/check-slug` | JWT | `?slug` (`checkSlugQuerySchema`) | `{ available: boolean }` |
 | `GET` | `/public/professionals/:slug` | none · 30/60s | — | `PublicProfessional` (profile + active services) |

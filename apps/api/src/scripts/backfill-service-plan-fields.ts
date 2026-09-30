@@ -14,7 +14,7 @@
 
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { PLAN_SERVICE_LIMITS, PLANS } from '@agendya/types';
+import { PLAN_SERVICE_LIMITS, PLANS, effectivePlan } from '@agendya/types';
 import {
   enforceServiceLimit,
   resolveServicePlanChange,
@@ -32,11 +32,19 @@ async function main() {
   );
   const professionals = await prisma.professional.findMany({
     where: { plan: { in: limitedPlans } },
-    select: { id: true, email: true, plan: true },
+    select: {
+      id: true,
+      email: true,
+      plan: true,
+      trialStartedAt: true,
+      trialEndsAt: true,
+    },
   });
 
   let changedCount = 0;
   for (const professional of professionals) {
+    // Trial-aware: an active trial must not be locked down to the billed plan.
+    const plan = effectivePlan(professional);
     const services = await prisma.service.findMany({
       where: { professionalId: professional.id, deletedAt: null },
       orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
@@ -44,7 +52,7 @@ async function main() {
     });
     const { lockIds, enable } = resolveServicePlanChange(
       services,
-      PLAN_SERVICE_LIMITS[professional.plan],
+      PLAN_SERVICE_LIMITS[plan],
     );
     const unlockCount = enable.filter(
       (e) => services.find((s) => s.id === e.id)?.planLocked,
@@ -53,11 +61,11 @@ async function main() {
 
     changedCount++;
     console.log(
-      `  ${professional.email} (${professional.plan}): lock ${lockIds.length}, unlock ${unlockCount}`,
+      `  ${professional.email} (${plan}): lock ${lockIds.length}, unlock ${unlockCount}`,
     );
     if (!DRY_RUN) {
       await prisma.$transaction((tx) =>
-        enforceServiceLimit(tx, professional.id, professional.plan),
+        enforceServiceLimit(tx, professional.id, plan),
       );
     }
   }
