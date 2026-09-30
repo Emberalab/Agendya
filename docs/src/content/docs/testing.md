@@ -97,7 +97,9 @@ panel se apuntan con `test.use({ storageState })`.
 
 Specs: `smoke`, `auth/login`, `navigation/dashboard-nav`, `dashboard/profile`,
 `dashboard/services`, `dashboard/agenda`, `theme/system-preference`,
-`a11y/audit` (`@axe-core/playwright`), `public-booking/booking`.
+`a11y/audit` (`@axe-core/playwright`), `public-booking/booking`,
+`dashboard/trial` (banner y límites del período de prueba) y `admin/trial-admin`
+(buscador, columna Prueba, activar/extender/terminar).
 
 ## Convenciones
 

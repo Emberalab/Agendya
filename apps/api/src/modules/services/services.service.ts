@@ -6,6 +6,7 @@ import {
 import type { Service as ServiceModel } from '@prisma/client';
 import {
   PLAN_SERVICE_LIMITS,
+  effectivePlan,
   type CreateServiceInput,
   type Service,
   type UpdateServiceInput,
@@ -201,11 +202,11 @@ export class ServicesService {
         return [this.toDto(target)];
       }
 
-      const { plan } = await tx.professional.findUniqueOrThrow({
+      const account = await tx.professional.findUniqueOrThrow({
         where: { id: professionalId },
-        select: { plan: true },
+        select: { plan: true, trialStartedAt: true, trialEndsAt: true },
       });
-      const limit = PLAN_SERVICE_LIMITS[plan];
+      const limit = PLAN_SERVICE_LIMITS[effectivePlan(account)];
       const changed: Service[] = [];
 
       if (limit !== null) {
@@ -242,13 +243,17 @@ export class ServicesService {
   }
 
   private async assertWithinPlanLimit(professionalId: string) {
-    const professional = await this.prisma.professional.findUniqueOrThrow({
+    const account = await this.prisma.professional.findUniqueOrThrow({
       where: { id: professionalId },
-      select: { plan: true },
+      select: { plan: true, trialStartedAt: true, trialEndsAt: true },
     });
-    const limit = PLAN_SERVICE_LIMITS[professional.plan];
-    if (limit === null) return professional.plan;
+    const plan = effectivePlan(account);
+    const limit = PLAN_SERVICE_LIMITS[plan];
+    if (limit === null) return plan;
 
+    // Locked services count too: data kept from a bigger plan or an ended
+    // trial is preserved, but no new service fits until the catalog is
+    // back under the limit.
     const count = await this.prisma.service.count({
       where: { professionalId, deletedAt: null },
     });
@@ -257,7 +262,7 @@ export class ServicesService {
         'Alcanzaste el límite de servicios de tu plan.',
       );
     }
-    return professional.plan;
+    return plan;
   }
 
   private async findOwnedOrThrow(

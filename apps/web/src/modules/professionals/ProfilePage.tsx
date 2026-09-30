@@ -5,13 +5,17 @@ import { Controller, useForm } from 'react-hook-form';
 import { z } from 'zod';
 import {
   CANCELLATION_POLICY_HOURS_OPTIONS,
+  PLAN_LABELS,
+  PLAN_SERVICE_LIMITS,
   formatPlanWithInterval,
   cancellationPolicyHoursSchema,
   hexColorSchema,
   pickMissingFeatures,
   planStatus,
   slugSchema,
+  type Plan,
   type ProfessionalProfile,
+  type TrialInfo,
 } from '@agendya/types';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { publicBookingUrl } from '../../shared/config/publicSiteUrl';
@@ -29,6 +33,7 @@ import { UpgradePlanDialog } from './UpgradePlanDialog';
 import { UpgradeSuccessDialog } from './UpgradeSuccessDialog';
 import { hexToHue, hueToHex } from './color';
 import { downscaleImage } from './image';
+import { formatTrialDate, trialRemainingLabel } from './trial';
 
 const profileFormSchema = z.object({
   businessName: z
@@ -169,7 +174,7 @@ export function ProfilePage() {
   });
 
   const missingFeatures = profile
-    ? pickMissingFeatures(profile.plan, {
+    ? pickMissingFeatures(profile.effectivePlan, {
         serviceCount: profile.serviceCount,
         bookingsThisMonth: profile.bookingsThisMonth,
         seed: profile.id,
@@ -556,6 +561,17 @@ export function ProfilePage() {
                   }
                   return null;
                 })()}
+                {profile.trial?.active && (
+                  <span
+                    className="px-2 py-0.5 rounded text-xs font-semibold"
+                    style={{
+                      backgroundColor: 'var(--color-brand-tint)',
+                      color: 'var(--color-text-brand)',
+                    }}
+                  >
+                    Prueba · acceso completo
+                  </span>
+                )}
               </div>
               <p
                 style={{
@@ -578,6 +594,14 @@ export function ProfilePage() {
                 >
                   Podrás seguir usando tu plan hasta la fecha de vencimiento.
                 </p>
+              )}
+              {profile.trial && (
+                <TrialNote
+                  trial={profile.trial}
+                  plan={profile.plan}
+                  timezone={profile.timezone}
+                  serviceCount={profile.serviceCount}
+                />
               )}
             </div>
             <div className="min-w-[180px]">
@@ -1198,6 +1222,57 @@ function ColorPicker({
           {value.toUpperCase()}
         </span>
       </div>
+    </div>
+  );
+}
+
+/**
+ * What the trial gives, when it ends and what happens after — in plain terms,
+ * without pressure. After the trial the billed plan applies again; data is
+ * kept, and services over that plan's limit are paused (never deleted).
+ */
+function TrialNote({
+  trial,
+  plan,
+  timezone,
+  serviceCount,
+}: {
+  trial: TrialInfo;
+  plan: Plan;
+  timezone: string;
+  serviceCount: number;
+}) {
+  const textStyle = {
+    fontSize: '13px',
+    color: 'var(--color-text-secondary)',
+    marginTop: '4px',
+  } as const;
+
+  if (!trial.active) {
+    return (
+      <p style={textStyle}>
+        Tu período de prueba terminó el{' '}
+        {formatTrialDate(trial.endsAt, timezone, true)}.
+      </p>
+    );
+  }
+
+  const serviceLimit = PLAN_SERVICE_LIMITS[plan];
+  const overLimit = serviceLimit !== null && serviceCount > serviceLimit;
+
+  return (
+    <div style={textStyle}>
+      <p>
+        Estás disfrutando de acceso completo durante tu período de prueba.
+        Termina en {trialRemainingLabel(trial)}, el{' '}
+        {formatTrialDate(trial.endsAt, timezone, true)}.
+      </p>
+      <p style={{ marginTop: '4px' }}>
+        Después seguirás en el plan {PLAN_LABELS[plan]} con sus límites. Tus
+        citas, servicios y horarios se conservan.
+        {overLimit &&
+          ` Solo ${serviceLimit} de tus servicios seguirán disponibles para reservar; los demás quedarán en pausa, no se borran.`}
+      </p>
     </div>
   );
 }

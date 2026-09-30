@@ -15,7 +15,8 @@ con `access = SUPER_ADMIN`. El login no escala ni degrada el rol.
 ## Registros
 
 Lista **todas** las cuentas `Professional` (email, negocio, `accessStatus`,
-plan, fecha). **Aceptar** pone `APPROVED` y hace upsert `ALLOWLISTED` en
+plan, prueba, fecha). La columna **Prueba** muestra "Activa · hasta …" o
+"Terminó el …" según `trial.active`, calculado en el servidor. **Aceptar** pone `APPROVED` y hace upsert `ALLOWLISTED` en
 `PlatformAccessEmail`. **Declinar** pone `DECLINED` (la fila no se borra). No
 se puede declinar a un Super Admin.
 
@@ -61,9 +62,66 @@ reasignar a mano.
 
 ## Cambiar plan
 
-Busca un `Professional` por email y hace `PATCH` solo de `plan`. No toca
+El buscador sugiere cuentas mientras escribes, a partir de **3 caracteres**
+(`ADMIN_SEARCH_MIN_CHARS`). Coincide por correo o nombre del negocio, sin
+distinguir mayúsculas, con un máximo de 10 resultados. Cada sugerencia muestra
+el plan y una etiqueta **Prueba** si tiene una prueba activa. Se navega con
+↑/↓ y Enter. Enter sin sugerencia marcada, o **Buscar**, hace la búsqueda
+exacta por correo.
+
+Tras elegir una cuenta, hace `PATCH` solo de `plan`. No toca
 `role`. El JWT no lleva plan: el profesional ve el cambio en el siguiente
-`GET /professionals/me`.
+`GET /professionals/me`. Los servicios se bloquean o desbloquean según el
+plan **efectivo**, así que una prueba activa no se recorta.
+
+## Período de prueba
+
+Prueba de **acceso completo** (`TRIAL_PLAN` = `BUSINESS`) por
+`TRIAL_DURATION_DAYS` = **30 días**, para cuentas elegidas. Ambas constantes
+viven en `packages/types/src/plans/trial.ts`. Se gestiona en la pestaña
+**Plan y prueba**, debajo de "Cambiar plan", tras buscar la cuenta.
+
+- **Dueño:** la cuenta comercial es el `Professional`. La prueba son dos
+  campos, `trialStartedAt` y `trialEndsAt`. No toca `plan`, que sigue siendo
+  el plan facturado.
+- **Plan efectivo:** `effectivePlan()` devuelve `TRIAL_PLAN` mientras
+  `trialStartedAt <= now < trialEndsAt`, y `plan` en otro caso. Todos los
+  límites del API (servicios, reservas al mes, avisos de uso) y el perfil
+  (`effectivePlan`, `trial`, `monthlyBookingLimit`) pasan por ahí. El front
+  nunca calcula el acceso con su reloj.
+- **Duración:** 30 × 24 h exactas desde la activación (instante UTC), igual
+  que los periodos pagados. No le afecta el horario de verano. Las fechas se
+  muestran en la zona del profesional.
+- **Vencimiento:** no escribe nada. Al pasar `trialEndsAt` la cuenta ya es
+  FREE, entre o no al panel. `TrialExpiryScheduler` (cada hora) solo
+  re-aplica el límite de servicios a las pruebas que terminaron en los
+  últimos 7 días. Los servicios de más quedan `planLocked` (pausados, fuera
+  de la página pública). **No se borra nada:** ni citas, ni servicios, ni
+  horarios.
+- **Plan pagado:** si compra durante la prueba, el plan pagado queda
+  guardado y aplica cuando la prueba termine. Durante la prueba manda el
+  mayor de los dos.
+- **Una sola vez:** `trialStartedAt` puesto = prueba usada. Para repetirla
+  hace falta `allowRepeat: true` explícito del admin.
+
+Acciones (todas validadas en el servidor, sin fechas desde el cliente):
+
+- **Activar**: `409` si ya hay una activa o si ya la usó sin `allowRepeat`.
+  `400` si la cuenta no está aprobada o su plan ya es `BUSINESS`. `403` si es
+  tu propia cuenta.
+- **Extender**: suma 1–`TRIAL_MAX_EXTENSION_DAYS` (30) días al fin actual.
+  Solo con una prueba activa.
+- **Terminar**: pone `trialEndsAt = now` y aplica ya los límites del plan
+  facturado.
+
+Cada acción escribe una fila `TrialEvent` (quién, cuándo, fin anterior y
+nuevo, nota) en la misma transacción. Un `updateMany` condicionado al estado
+leído evita la doble activación por doble clic o dos admins a la vez. El
+detalle de la cuenta muestra los últimos 20 eventos.
+
+El profesional ve un banner informativo mientras la prueba está activa, y en
+Perfil › Tu plan cuándo termina y qué pasa después. No hay correo ni
+notificación de aviso previo todavía.
 
 ## Endpoints
 
@@ -75,7 +133,11 @@ Todos: JWT + `SUPER_ADMIN`.
 | `POST` | `/admin/allowlist` | `createAllowlistEntrySchema` · `409` si el correo ya existe |
 | `PATCH` | `/admin/allowlist/:email` | `{ access }` · `403`/`400` según las reglas de arriba |
 | `DELETE` | `/admin/allowlist/:email` | `{ deleted: true }` |
-| `GET` | `/admin/registrations` | `RegistrationEntry[]` |
+| `GET` | `/admin/registrations` | `RegistrationEntry[]` (incluye `trial`, con `active` calculado en el servidor) |
 | `PATCH` | `/admin/registrations/:email` | `{ status: "APPROVED" \| "DECLINED" }` · `403` si se declina a un Super Admin |
-| `GET` | `/admin/professionals/:email` | `{ id, email, businessName, slug, plan }` · `404` |
+| `GET` | `/admin/professionals?q=` | `searchProfessionalsQuerySchema` (`q` ≥ 3 caracteres) · `{ id, email, businessName, plan, trialActive }[]`, máx. 10 · `400` si `q` es corto |
+| `GET` | `/admin/professionals/:email` | `{ id, email, businessName, slug, plan, billingInterval, planExpiresAt, effectivePlan, trial, trialHistory }` · `404` |
 | `PATCH` | `/admin/professionals/:email/plan` | `{ plan }` (`planSchema`) · `404` |
+| `POST` | `/admin/professionals/:email/trial` | `grantTrialSchema` `{ allowRepeat?, note? }` · `201` mismo objeto · `400`/`403`/`404`/`409` |
+| `POST` | `/admin/professionals/:email/trial/extend` | `extendTrialSchema` `{ days: 1–30, note? }` · `409` si no hay prueba activa |
+| `POST` | `/admin/professionals/:email/trial/end` | `endTrialSchema` `{ note? }` · `409` si no hay prueba activa |

@@ -32,7 +32,10 @@ function makeService(overrides: Partial<Service>): Service {
   return { ...BASE_SERVICE, ...overrides };
 }
 
-function setProfilePlan(plan: 'FREE' | 'BASIC' | 'ADVANCED' | 'BUSINESS') {
+type TestPlan = 'FREE' | 'BASIC' | 'ADVANCED' | 'BUSINESS';
+
+/** `effectivePlan` is what the API resolves (e.g. BUSINESS during a trial). */
+function setProfilePlan(plan: TestPlan, effectivePlan: TestPlan = plan) {
   vi.mocked(profileApi.getMyProfile).mockResolvedValue({
     id: 'prof-1',
     email: 'pro@example.com',
@@ -49,9 +52,19 @@ function setProfilePlan(plan: 'FREE' | 'BASIC' | 'ADVANCED' | 'BUSINESS') {
     plan,
     billingInterval: null,
     planExpiresAt: null,
+    planCancelledAt: null,
+    effectivePlan,
+    trial:
+      effectivePlan === plan
+        ? null
+        : {
+            startedAt: '2026-09-01T15:00:00.000Z',
+            endsAt: '2026-10-01T15:00:00.000Z',
+            active: true,
+          },
     bookingsThisMonth: 0,
     serviceCount: 0,
-    monthlyBookingLimit: plan === 'FREE' ? 100 : null,
+    monthlyBookingLimit: effectivePlan === 'FREE' ? 100 : null,
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });
@@ -113,6 +126,27 @@ describe('ServicesPage', () => {
     );
 
     expect(await screen.findByText('NEW FORM')).toBeInTheDocument();
+  });
+
+  it('uses the server-resolved trial plan, not the billed FREE plan, for the limit', async () => {
+    setProfilePlan('FREE', 'BUSINESS');
+    vi.mocked(api.listServices).mockResolvedValue([
+      makeService({ id: 's1' }),
+      makeService({ id: 's2' }),
+      makeService({ id: 's3' }),
+    ]);
+    const user = userEvent.setup();
+    renderPage();
+    await screen.findAllByText('Corte de cabello');
+
+    await user.click(
+      screen.getAllByRole('button', { name: 'Crear servicio' })[0],
+    );
+
+    expect(await screen.findByText('NEW FORM')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Límite de servicios alcanzado'),
+    ).not.toBeInTheDocument();
   });
 
   it('opens the plan-limit dialog instead of the form when at the limit', async () => {

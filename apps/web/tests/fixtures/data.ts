@@ -1,6 +1,7 @@
 import type {
   AgendaBooking,
   AuthUser,
+  ProfessionalForPlanChange,
   ProfessionalProfile,
   PublicProfessional,
   ScheduleException,
@@ -20,6 +21,16 @@ export const TEST_USER: AuthUser = {
   businessName: process.env.E2E_USER_BUSINESS_NAME ?? 'Barbería E2E',
   slug: 'barberia-e2e',
   role: 'INDEPENDENT',
+  accessStatus: 'APPROVED',
+};
+
+/** Platform admin used by the Backoffice ("Panel de Administrador") specs. */
+export const SUPER_ADMIN_USER: AuthUser = {
+  id: '00000000-0000-4000-8000-0000000000ad',
+  email: 'admin@agendya.test',
+  businessName: 'Agendya Admin',
+  slug: 'agendya-admin',
+  role: 'SUPER_ADMIN',
   accessStatus: 'APPROVED',
 };
 
@@ -49,6 +60,8 @@ export function makeProfile(
     billingInterval: null,
     planExpiresAt: null,
     planCancelledAt: null,
+    effectivePlan: 'FREE',
+    trial: null,
     bookingsThisMonth: 12,
     serviceCount: 3,
     monthlyBookingLimit: 100,
@@ -267,5 +280,64 @@ export function makeAvailabilitySlots(date: string): string[] {
     `${date}T14:00:00.000Z`,
     `${date}T14:30:00.000Z`,
     `${date}T15:00:00.000Z`,
+  ];
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** A full-access trial window around "now", as the API reports it. */
+export function makeTrial(
+  { daysLeft, active = daysLeft > 0 }: { daysLeft: number; active?: boolean },
+  now: Date = new Date(),
+): NonNullable<ProfessionalProfile['trial']> {
+  const endsAt = new Date(now.getTime() + daysLeft * DAY_MS);
+  return {
+    startedAt: new Date(endsAt.getTime() - 30 * DAY_MS).toISOString(),
+    endsAt: endsAt.toISOString(),
+    active,
+  };
+}
+
+/** Accounts the Super Admin can find and manage in "Plan y prueba". */
+export function makeAdminAccounts(): ProfessionalForPlanChange[] {
+  const account = (
+    id: string,
+    email: string,
+    businessName: string,
+    overrides: Partial<ProfessionalForPlanChange> = {},
+  ): ProfessionalForPlanChange => ({
+    id,
+    email,
+    businessName,
+    slug: businessName.toLowerCase().replace(/\s+/g, '-'),
+    plan: 'FREE',
+    billingInterval: null,
+    planExpiresAt: null,
+    effectivePlan: 'FREE',
+    trial: null,
+    trialHistory: [],
+    ...overrides,
+  });
+  return [
+    account(
+      '00000000-0000-4000-8000-0000000000a1',
+      'gaitan9103@gmail.com',
+      'Jorge Gaitan',
+    ),
+    account(
+      '00000000-0000-4000-8000-0000000000a2',
+      'jorgeemherrera@gmail.com',
+      'Jorge Herrera',
+      { plan: 'BASIC', effectivePlan: 'BASIC' },
+    ),
+    account(
+      '00000000-0000-4000-8000-0000000000a3',
+      'lucia@barberia.test',
+      'Barbería Lucía',
+      {
+        trial: makeTrial({ daysLeft: -10 }),
+        trialHistory: [],
+      },
+    ),
   ];
 }

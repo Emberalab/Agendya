@@ -14,7 +14,7 @@ export function AdminPanel() {
     { id: 'registrations', label: 'Registros' },
     { id: 'allowlist', label: 'Lista de Acceso' },
     { id: 'features', label: 'Funcionalidades' },
-    { id: 'plans', label: 'Cambiar Plan' },
+    { id: 'plans', label: 'Plan y prueba' },
     { id: 'billing', label: 'Precios' },
   ];
 

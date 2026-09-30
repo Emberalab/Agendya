@@ -9,6 +9,7 @@ import { Prisma } from '@prisma/client';
 import type { Booking, Professional } from '@prisma/client';
 import {
   PLAN_MONTHLY_BOOKING_LIMITS,
+  effectivePlan,
   type AgendaBooking,
   type CreateBookingInput,
   type CreateManualBookingInput,
@@ -73,7 +74,7 @@ export class BookingsService {
 
     const booking = await this.commitBookingSlot({
       professionalId: professional.id,
-      plan: professional.plan,
+      plan: effectivePlan(professional),
       service: {
         id: primaryServiceId,
         name: serviceNames,
@@ -106,7 +107,7 @@ export class BookingsService {
       });
     }
 
-    await this.checkBookingUsage(professional.id, professional.plan);
+    await this.checkBookingUsage(professional.id, effectivePlan(professional));
 
     return this.toPublicBooking(booking, professional);
   }
@@ -153,7 +154,7 @@ export class BookingsService {
     const oldStartAt = booking.startAt;
     const updated = await this.commitBookingSlot({
       professionalId: professional.id,
-      plan: professional.plan,
+      plan: effectivePlan(professional),
       service: {
         id: primaryServiceId,
         name: serviceNames,
@@ -232,7 +233,7 @@ export class BookingsService {
 
     const booking = await this.commitBookingSlot({
       professionalId: professional.id,
-      plan: professional.plan,
+      plan: effectivePlan(professional),
       service: {
         id: primaryServiceId,
         name: serviceNames,
@@ -264,7 +265,7 @@ export class BookingsService {
       });
     }
 
-    await this.checkBookingUsage(professionalId, professional.plan);
+    await this.checkBookingUsage(professionalId, effectivePlan(professional));
 
     return this.toAgendaBooking(booking, professional);
   }
@@ -798,16 +799,18 @@ export class BookingsService {
       newEndAt,
     );
 
-    await this.mailService.sendBookingRescheduled({
-      to: booking.customerEmail!,
-      customerName: booking.customerName,
-      businessName: professional.businessName,
-      serviceName: booking.serviceNameSnapshot,
-      oldStartAt,
-      newStartAt,
-      cancellationToken: booking.cancellationToken,
-      timezone: professional.timezone,
-    });
+    if (booking.customerEmail) {
+      await this.mailService.sendBookingRescheduled({
+        to: booking.customerEmail,
+        customerName: booking.customerName,
+        businessName: professional.businessName,
+        serviceName: booking.serviceNameSnapshot,
+        oldStartAt,
+        newStartAt,
+        cancellationToken: booking.cancellationToken,
+        timezone: professional.timezone,
+      });
+    }
 
     return this.toAgendaBooking(updated, professional);
   }

@@ -155,6 +155,51 @@ describe('ServicesService', () => {
       expect(prisma.service.create).not.toHaveBeenCalled();
     });
 
+    describe('with a full-access trial', () => {
+      const DAY = 86_400_000;
+      const input = {
+        name: 'Servicio 21',
+        durationMinutes: 30,
+        priceCents: 1000000,
+        isActive: true,
+        homeServiceEnabled: false,
+      };
+
+      it('ignores the FREE service limit while the trial is active', async () => {
+        prisma.professional.findUniqueOrThrow.mockResolvedValue({
+          plan: 'FREE',
+          trialStartedAt: new Date(Date.now() - DAY),
+          trialEndsAt: new Date(Date.now() + DAY),
+        });
+        prisma.service.count.mockResolvedValue(20);
+        prisma.service.create.mockImplementation(({ data }) =>
+          Promise.resolve({ ...BASE_SERVICE, ...data, id: 'service-21' }),
+        );
+
+        await expect(service.create('prof-1', input)).resolves.toBeDefined();
+        expect(usageAlerts.checkServiceLimits).toHaveBeenCalledWith(
+          'prof-1',
+          21,
+          'BUSINESS',
+        );
+      });
+
+      it('enforces the FREE limit again once the trial has expired, keeping existing services', async () => {
+        prisma.professional.findUniqueOrThrow.mockResolvedValue({
+          plan: 'FREE',
+          trialStartedAt: new Date(Date.now() - 31 * DAY),
+          trialEndsAt: new Date(Date.now() - DAY),
+        });
+        prisma.service.count.mockResolvedValue(20);
+
+        await expect(service.create('prof-1', input)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(prisma.service.create).not.toHaveBeenCalled();
+        expect(prisma.service.update).not.toHaveBeenCalled();
+      });
+    });
+
     it('allows unlimited services on the ADVANCED plan', async () => {
       prisma.professional.findUniqueOrThrow.mockResolvedValue({
         plan: 'ADVANCED',

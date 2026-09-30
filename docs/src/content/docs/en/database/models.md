@@ -29,6 +29,8 @@ The barber/stylist account.
 | `planStartedAt` | `DateTime?` | Wompi payment that opened the current period |
 | `planExpiresAt` | `DateTime?` | End of the paid window (UTC). Monthly = +1 month, annual = +1 year. No job demotes to FREE yet |
 | `lastWompiTransactionId` | `String? @unique` | Idempotency: the same Wompi `tx` does not extend the period again |
+| `trialStartedAt` | `DateTime?` | Start of the full-access trial (set by Super Admin). Stays set after the trial ends: marks the trial as already used |
+| `trialEndsAt` | `DateTime?` | Trial end (UTC). Active while `trialStartedAt <= now < trialEndsAt`. Indexed for the hourly sweep |
 | `role` | `PlatformRole @default(INDEPENDENT)` | `SUPER_ADMIN` \| `BUSINESS_ADMIN` \| `INDEPENDENT` |
 | `accessStatus` | `AccessStatus @default(APPROVED)` | `PENDING` \| `APPROVED` \| `DECLINED`. New signups without a grant in closed beta are born `PENDING`. Do not overload `isActive` for this |
 | `isActive` | `Boolean @default(true)` | `JwtStrategy` rejects tokens for inactive accounts |
@@ -150,3 +152,21 @@ Index: `@@index([professionalId])` — delivery loads every subscription for one
 professional. Web Push is a best-effort delivery channel for the `Notification`
 row, never the source of truth: a push that fails (or a device that was offline)
 still leaves the row readable from `GET /notifications`.
+
+## TrialEvent
+
+Append-only audit trail of Super Admin trial actions. See
+[Admin Panel › Trial period](/en/features/admin-panel/#trial-period). Natural
+expiry writes no row: it is derived from `Professional.trialEndsAt`.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `action` | `TrialEventAction` | `GRANTED` \| `EXTENDED` \| `ENDED` |
+| `actorId` / `actorEmail` | `String` | Who did it. **No FK** on purpose: the audit row survives the actor's account being deleted |
+| `previousEndsAt` | `DateTime?` | Trial end before the action (`null` on a first grant) |
+| `endsAt` | `DateTime` | Trial end after the action |
+| `note` | `String?` | Optional admin note (≤ 200 chars) |
+| `createdAt` | `DateTime @default(now())` | When |
+
+Index: `@@index([professionalId, createdAt(sort: Desc)])` for one account's history.

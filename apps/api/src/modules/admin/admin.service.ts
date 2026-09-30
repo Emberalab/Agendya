@@ -7,19 +7,75 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { MailService } from '../../infra/mail/mail.service';
-import { enforceServiceLimit } from '../services/service-plan-limit';
+import { enforceEffectiveServiceLimit } from '../services/service-plan-limit';
 import {
+  ADMIN_SEARCH_LIMIT,
+  effectivePlan,
+  isTrialActive,
   planPeriodStart,
   planRank,
+  toTrialInfo,
   type AllowlistEntry,
   type BillingInterval,
   type CreateAllowlistEntryInput,
   type Plan,
   type PlatformRole,
   type ProfessionalForPlanChange,
+  type ProfessionalSearchResult,
   type RegistrationEntry,
+  type TrialEventAction,
   type UpdateAllowlistEntryInput,
 } from '@agendya/types';
+
+/** Trial history rows returned with the account detail (newest first). */
+const TRIAL_HISTORY_LIMIT = 20;
+
+/** Everything `toPlanChange` needs, selected once for every caller. */
+const PLAN_CHANGE_SELECT = {
+  id: true,
+  email: true,
+  businessName: true,
+  slug: true,
+  plan: true,
+  billingInterval: true,
+  planExpiresAt: true,
+  trialStartedAt: true,
+  trialEndsAt: true,
+  trialEvents: {
+    orderBy: { createdAt: 'desc' },
+    take: TRIAL_HISTORY_LIMIT,
+    select: {
+      id: true,
+      action: true,
+      actorEmail: true,
+      previousEndsAt: true,
+      endsAt: true,
+      note: true,
+      createdAt: true,
+    },
+  },
+} as const;
+
+type PlanChangeRow = {
+  id: string;
+  email: string;
+  businessName: string;
+  slug: string;
+  plan: Plan;
+  billingInterval: BillingInterval | null;
+  planExpiresAt: Date | null;
+  trialStartedAt: Date | null;
+  trialEndsAt: Date | null;
+  trialEvents: {
+    id: string;
+    action: TrialEventAction;
+    actorEmail: string;
+    previousEndsAt: Date | null;
+    endsAt: Date;
+    note: string | null;
+    createdAt: Date;
+  }[];
+};
 
 type AllowlistPlanSnapshot = {
   plan: Plan;
@@ -56,6 +112,8 @@ export class AdminService {
         accessStatus: true,
         role: true,
         plan: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
         createdAt: true,
       },
     });
@@ -100,6 +158,8 @@ export class AdminService {
         accessStatus: true,
         role: true,
         plan: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
         createdAt: true,
       },
     });
@@ -204,20 +264,46 @@ export class AdminService {
     });
   }
 
+  /**
+   * Case-insensitive partial match on email or business name, for the
+   * type-ahead in "Plan y prueba". `q` is already trimmed and ≥ 3 chars
+   * (searchProfessionalsQuerySchema). Prisma parameterises `contains`.
+   */
+  async searchProfessionals(q: string): Promise<ProfessionalSearchResult[]> {
+    const now = new Date();
+    const rows = await this.prisma.professional.findMany({
+      where: {
+        OR: [
+          { email: { contains: q, mode: 'insensitive' } },
+          { businessName: { contains: q, mode: 'insensitive' } },
+        ],
+      },
+      orderBy: { email: 'asc' },
+      take: ADMIN_SEARCH_LIMIT,
+      select: {
+        id: true,
+        email: true,
+        businessName: true,
+        plan: true,
+        trialStartedAt: true,
+        trialEndsAt: true,
+      },
+    });
+    return rows.map((row) => ({
+      id: row.id,
+      email: row.email,
+      businessName: row.businessName,
+      plan: row.plan,
+      trialActive: isTrialActive(row, now),
+    }));
+  }
+
   async getProfessionalByEmail(
     email: string,
   ): Promise<ProfessionalForPlanChange> {
     const professional = await this.prisma.professional.findUnique({
       where: { email: email.trim().toLowerCase() },
-      select: {
-        id: true,
-        email: true,
-        businessName: true,
-        slug: true,
-        plan: true,
-        billingInterval: true,
-        planExpiresAt: true,
-      },
+      select: PLAN_CHANGE_SELECT,
     });
     if (!professional) {
       throw new NotFoundException(
@@ -242,17 +328,9 @@ export class AdminService {
           planExpiresAt: null,
           planCancelledAt: null,
         },
-        select: {
-          id: true,
-          email: true,
-          businessName: true,
-          slug: true,
-          plan: true,
-          billingInterval: true,
-          planExpiresAt: true,
-        },
+        select: PLAN_CHANGE_SELECT,
       });
-      await enforceServiceLimit(tx, row.id, plan);
+      await enforceEffectiveServiceLimit(tx, row.id);
       return row;
     });
 
@@ -361,15 +439,10 @@ export class AdminService {
     };
   }
 
-  private toPlanChange(row: {
-    id: string;
-    email: string;
-    businessName: string;
-    slug: string;
-    plan: Plan;
-    billingInterval: BillingInterval | null;
-    planExpiresAt: Date | null;
-  }): ProfessionalForPlanChange {
+  private toPlanChange(
+    row: PlanChangeRow,
+    now: Date = new Date(),
+  ): ProfessionalForPlanChange {
     return {
       id: row.id,
       email: row.email,
@@ -378,6 +451,17 @@ export class AdminService {
       plan: row.plan,
       billingInterval: row.billingInterval,
       planExpiresAt: row.planExpiresAt?.toISOString() ?? null,
+      effectivePlan: effectivePlan(row, now),
+      trial: toTrialInfo(row, now),
+      trialHistory: row.trialEvents.map((event) => ({
+        id: event.id,
+        action: event.action,
+        actorEmail: event.actorEmail,
+        previousEndsAt: event.previousEndsAt?.toISOString() ?? null,
+        endsAt: event.endsAt.toISOString(),
+        note: event.note,
+        createdAt: event.createdAt.toISOString(),
+      })),
     };
   }
 
@@ -389,6 +473,8 @@ export class AdminService {
     accessStatus: RegistrationEntry['accessStatus'];
     role: PlatformRole;
     plan: Plan;
+    trialStartedAt: Date | null;
+    trialEndsAt: Date | null;
     createdAt: Date;
   }): RegistrationEntry {
     return {
@@ -399,6 +485,7 @@ export class AdminService {
       accessStatus: row.accessStatus,
       role: row.role,
       plan: row.plan,
+      trial: toTrialInfo(row),
       createdAt: row.createdAt.toISOString(),
     };
   }

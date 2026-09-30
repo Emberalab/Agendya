@@ -3,6 +3,7 @@ import {
   ACCESS_STATUS_LABELS,
   type AccessStatus,
   type RegistrationEntry,
+  type TrialInfo,
 } from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
@@ -37,6 +38,44 @@ function statusStyle(status: AccessStatus): CSSProperties {
   };
 }
 
+/** Agendya operates from Colombia; admin dates are shown in its time. */
+function formatTrialDate(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-CO', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: 'America/Bogota',
+  });
+}
+
+/** Trial column: server-computed `active`, never the browser clock. */
+function TrialCell({ trial }: { trial: TrialInfo | null }) {
+  if (!trial) {
+    return <span style={{ color: 'var(--color-text-muted)' }}>—</span>;
+  }
+  if (trial.active) {
+    return (
+      <span
+        className="px-2 py-1 rounded text-xs font-medium whitespace-nowrap"
+        style={{
+          backgroundColor: 'var(--color-brand-tint)',
+          color: 'var(--color-text-brand)',
+        }}
+        title={`Acceso completo hasta el ${formatTrialDate(trial.endsAt)}`}
+      >
+        Activa · hasta {formatTrialDate(trial.endsAt)}
+      </span>
+    );
+  }
+  return (
+    <span
+      className="whitespace-nowrap"
+      style={{ color: 'var(--color-text-secondary)' }}
+    >
+      Terminó el {formatTrialDate(trial.endsAt)}
+    </span>
+  );
+}
+
 export function RegistrationsManager() {
   const [entries, setEntries] = useState<RegistrationEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -45,8 +84,9 @@ export function RegistrationsManager() {
   const loadEntries = async () => {
     try {
       setLoading(true);
-      const { data } =
-        await apiClient.get<RegistrationEntry[]>('/admin/registrations');
+      const { data } = await apiClient.get<RegistrationEntry[]>(
+        '/admin/registrations',
+      );
       setEntries(data);
       setError(null);
     } catch (err) {
@@ -65,7 +105,9 @@ export function RegistrationsManager() {
     status: 'APPROVED' | 'DECLINED',
   ) => {
     const verb = status === 'APPROVED' ? 'aceptar' : 'declinar';
-    if (!confirm(`¿${verb.charAt(0).toUpperCase() + verb.slice(1)} a ${email}?`)) {
+    if (
+      !confirm(`¿${verb.charAt(0).toUpperCase() + verb.slice(1)} a ${email}?`)
+    ) {
       return;
     }
 
@@ -148,6 +190,9 @@ export function RegistrationsManager() {
                   Plan
                 </th>
                 <th className="px-4 py-3 text-left text-sm font-semibold">
+                  Prueba
+                </th>
+                <th className="px-4 py-3 text-left text-sm font-semibold">
                   Registro
                 </th>
                 <th className="px-4 py-3 text-right text-sm font-semibold">
@@ -181,6 +226,9 @@ export function RegistrationsManager() {
                     style={{ color: 'var(--color-text-secondary)' }}
                   >
                     {entry.plan}
+                  </td>
+                  <td className="px-4 py-3 text-sm">
+                    <TrialCell trial={entry.trial} />
                   </td>
                   <td
                     className="px-4 py-3 text-sm"

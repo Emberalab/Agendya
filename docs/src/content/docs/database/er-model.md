@@ -16,6 +16,7 @@ erDiagram
   Professional ||--o{ Booking : "recibe"
   Professional ||--o{ Notification : "recibe avisos"
   Professional ||--o{ PushSubscription : "registra dispositivos"
+  Professional ||--o{ TrialEvent : "historial de prueba"
   Service ||--o{ Booking : "reservado como (nullable)"
 
   Professional {
@@ -38,6 +39,8 @@ erDiagram
     datetime planStartedAt "nullable"
     datetime planExpiresAt "nullable"
     string lastWompiTransactionId UK "nullable"
+    datetime trialStartedAt "nullable"
+    datetime trialEndsAt "nullable"
     boolean isActive "default true"
     datetime createdAt
     datetime updatedAt
@@ -113,6 +116,18 @@ erDiagram
     datetime createdAt
   }
 
+  TrialEvent {
+    string id PK
+    string professionalId FK
+    enum action "GRANTED | EXTENDED | ENDED"
+    string actorId
+    string actorEmail
+    datetime previousEndsAt "nullable"
+    datetime endsAt
+    string note "nullable"
+    datetime createdAt
+  }
+
   PushSubscription {
     string id PK
     string professionalId FK
@@ -135,6 +150,7 @@ erDiagram
 | `Booking.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Notification.professional` | `Professional` | muchos a uno | `Cascade` |
 | `PushSubscription.professional` | `Professional` | muchos a uno | `Cascade` |
+| `TrialEvent.professional` | `Professional` | muchos a uno | `Cascade` |
 | `Booking.service` | `Service` | muchos a uno, **opcional** | `SetNull` — al borrar un servicio se conservan sus reservas; `serviceId` pasa a `null`, y `serviceNameSnapshot` / `durationMinutesSnapshot` preservan lo que se reservó |
 
 ## Enums
@@ -144,6 +160,7 @@ erDiagram
 | `Weekday` | `SUNDAY`, `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY` |
 | `BookingStatus` | `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, `EXPIRED` |
 | `Plan` | `FREE`, `BASIC`, `ADVANCED`, `BUSINESS` |
+| `TrialEventAction` | `GRANTED`, `EXTENDED`, `ENDED` |
 | `NotificationType` | `APPOINTMENT_CREATED`, `APPOINTMENT_CANCELLED` (el enum se ampliará) |
 
 ## Notas de diseño
