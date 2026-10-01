@@ -137,8 +137,8 @@ export function BlockFormDrawer({
             <div
               className="flex gap-3 rounded-xl p-4"
               style={{
-                backgroundColor: '#FFF7ED',
-                border: '1px solid #FED7AA',
+                backgroundColor: 'var(--color-warning-surface)',
+                border: '1px solid var(--color-warning-border)',
               }}
             >
               <svg
@@ -152,23 +152,23 @@ export function BlockFormDrawer({
                   cx="9"
                   cy="9"
                   r="7.25"
-                  stroke="#EA580C"
+                  stroke="var(--color-warning)"
                   strokeWidth="1.5"
                 />
                 <path
                   d="M9 5.5V9.5"
-                  stroke="#EA580C"
+                  stroke="var(--color-warning)"
                   strokeWidth="1.6"
                   strokeLinecap="round"
                 />
-                <circle cx="9" cy="12.2" r="0.9" fill="#EA580C" />
+                <circle cx="9" cy="12.2" r="0.9" fill="var(--color-warning)" />
               </svg>
               <div>
                 <p
                   style={{
                     fontWeight: 600,
                     fontSize: '13px',
-                    color: '#C2410C',
+                    color: 'var(--color-warning)',
                     marginBottom: '2px',
                   }}
                 >
@@ -177,7 +177,7 @@ export function BlockFormDrawer({
                 <p
                   style={{
                     fontSize: '13px',
-                    color: '#9A3412',
+                    color: 'var(--color-text-primary)',
                     lineHeight: '1.5',
                   }}
                 >
@@ -216,7 +216,9 @@ export function BlockFormDrawer({
               backgroundColor: canSave
                 ? 'var(--color-brand-primary)'
                 : 'var(--color-border)',
-              color: canSave ? '#fff' : 'var(--color-text-muted)',
+              color: canSave
+                ? 'var(--color-text-on-brand)'
+                : 'var(--color-text-muted)',
               border: 'none',
               cursor: canSave ? 'pointer' : 'not-allowed',
             }}
@@ -267,7 +269,7 @@ function TimeField({
           width: '100%',
           height: '46px',
           borderRadius: '8px',
-          border: `1px solid ${invalid ? '#FCA5A5' : 'var(--color-border)'}`,
+          border: `1px solid ${invalid ? 'var(--color-danger)' : 'var(--color-border-strong)'}`,
           padding: '0 12px',
           backgroundColor: 'var(--color-surface)',
           fontFamily: 'var(--font-body)',

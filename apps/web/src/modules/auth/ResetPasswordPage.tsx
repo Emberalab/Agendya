@@ -29,8 +29,18 @@ function StatusCard({
   label: string;
   variant?: 'success' | 'neutral' | 'error';
 }) {
-  const bg = variant === 'success' ? '#F0FDF4' : variant === 'error' ? '#FFF7F7' : 'var(--color-surface-soft)';
-  const border = variant === 'success' ? '#BBF7D0' : variant === 'error' ? '#FECACA' : 'var(--color-border)';
+  const bg =
+    variant === 'success'
+      ? 'var(--color-success-surface)'
+      : variant === 'error'
+        ? 'var(--color-danger-surface)'
+        : 'var(--color-surface-soft)';
+  const border =
+    variant === 'success'
+      ? 'var(--color-success-border)'
+      : variant === 'error'
+        ? 'var(--color-danger-border)'
+        : 'var(--color-border)';
   return (
     <div
       className="flex flex-col items-center gap-2 py-5 rounded-xl mb-5"
@@ -120,10 +130,10 @@ export function ResetPasswordPage() {
 
           <div className="flex-1 flex items-center py-10">
             <div className="w-full max-w-sm mx-auto">
-              <IconBox color="#FFF7F7">
+              <IconBox color="var(--color-danger-surface)">
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <circle cx="11" cy="11" r="9" stroke="#EF4444" strokeWidth="1.5" />
-                  <path d="M11 7v4M11 15h.01" stroke="#EF4444" strokeWidth="1.5" strokeLinecap="round" />
+                  <circle cx="11" cy="11" r="9" stroke="var(--color-danger)" strokeWidth="1.5" />
+                  <path d="M11 7v4M11 15h.01" stroke="var(--color-danger)" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </IconBox>
 
@@ -245,10 +255,10 @@ export function ResetPasswordPage() {
 
           <div className="flex-1 flex items-center py-10">
             <div className="w-full max-w-sm mx-auto">
-              <IconBox color="#F0FDF4">
+              <IconBox color="var(--color-success-surface)">
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <circle cx="11" cy="11" r="9" stroke="#10B981" strokeWidth="1.5" />
-                  <path d="M7 11l3 3 5-6" stroke="#10B981" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  <circle cx="11" cy="11" r="9" stroke="var(--color-success)" strokeWidth="1.5" />
+                  <path d="M7 11l3 3 5-6" stroke="var(--color-success)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
               </IconBox>
 
@@ -361,9 +371,9 @@ export function ResetPasswordPage() {
           <div className="w-full max-w-sm mx-auto">
             <IconBox>
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <rect x="5" y="9" width="12" height="9" rx="2" stroke="#64748B" strokeWidth="1.5" />
-                <path d="M8 9V6a3 3 0 0 1 6 0v3" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" />
-                <circle cx="11" cy="13.5" r="1" fill="#64748B" />
+                <rect x="5" y="9" width="12" height="9" rx="2" stroke="var(--color-text-muted)" strokeWidth="1.5" />
+                <path d="M8 9V6a3 3 0 0 1 6 0v3" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="11" cy="13.5" r="1" fill="var(--color-text-muted)" />
               </svg>
             </IconBox>
 

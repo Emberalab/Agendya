@@ -6,6 +6,8 @@ import type { SignOptions } from 'jsonwebtoken';
 import { InternalJwtStrategy } from './auth/internal-jwt.strategy';
 import { BackofficeAuthController } from './auth/backoffice-auth.controller';
 import { BackofficeAuthService } from './auth/backoffice-auth.service';
+import { BackofficeGoogleStrategy } from './auth/backoffice-google.strategy';
+import { MailService } from '../../infra/mail/mail.service';
 import { AuditLogController } from './audit-log/audit-log.controller';
 import { AuditLogService } from './audit-log/audit-log.service';
 import { InternalUsersController } from './internal-users/internal-users.controller';
@@ -68,7 +70,9 @@ import { ProfessionalActivityService } from './activity/professional-activity.se
   ],
   providers: [
     InternalJwtStrategy,
+    BackofficeGoogleStrategy,
     BackofficeAuthService,
+    MailService,
     AuditLogService,
     InternalUsersService,
     TicketsService,

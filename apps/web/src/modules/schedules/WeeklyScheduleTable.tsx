@@ -249,7 +249,7 @@ export function WeeklyScheduleTable({ hours }: { hours: WorkingHour[] }) {
             color:
               !dirty || setWorkingHours.isPending
                 ? 'var(--color-text-muted)'
-                : '#fff',
+                : 'var(--color-text-on-brand)',
             border: 'none',
             cursor:
               !dirty || setWorkingHours.isPending ? 'not-allowed' : 'pointer',
@@ -306,7 +306,7 @@ function UnsavedBadge() {
         padding: '2px 8px',
         borderRadius: '999px',
         backgroundColor: 'var(--color-brand-primary)',
-        color: '#fff',
+        color: 'var(--color-text-on-brand)',
         whiteSpace: 'nowrap',
       }}
     >

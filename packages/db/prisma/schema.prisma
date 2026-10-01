@@ -134,27 +134,27 @@ model Professional {
   isActive                Boolean          @default(true)
   termsAcceptedAt         DateTime?
   termsVersion            String?
-  createdAt               DateTime     @default(now())
-  updatedAt               DateTime     @updatedAt
+  createdAt               DateTime         @default(now())
+  updatedAt               DateTime         @updatedAt
 
-  services              Service[]
-  workingHours          WorkingHour[]
-  scheduleExceptions    ScheduleException[]
-  bookings              Booking[]
-  notifications         Notification[]
-  pushSubscriptions     PushSubscription[]
-  passwordResetTokens   PasswordResetToken[]
-  usageLimitAlerts      UsageLimitAlert[]
-  billingNotices        BillingNotice[]
+  services                Service[]
+  workingHours            WorkingHour[]
+  scheduleExceptions      ScheduleException[]
+  bookings                Booking[]
+  notifications           Notification[]
+  pushSubscriptions       PushSubscription[]
+  passwordResetTokens     PasswordResetToken[]
+  usageLimitAlerts        UsageLimitAlert[]
+  billingNotices          BillingNotice[]
   // Backoffice: this professional's support tickets. See SupportTicket.
-  supportTickets        SupportTicket[]
+  supportTickets          SupportTicket[]
   // Backoffice: messages this professional authored on their own tickets.
   // See SupportMessage.authorProfessionalId.
   authoredSupportMessages SupportMessage[]
   // Super Admin trial grants/extensions/ends. See TrialEvent.
-  trialEvents           TrialEvent[]
+  trialEvents             TrialEvent[]
   // Product activity timeline (Backoffice). See ProfessionalActivityEvent.
-  activityEvents        ProfessionalActivityEvent[]
+  activityEvents          ProfessionalActivityEvent[]
 
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
@@ -431,39 +431,66 @@ enum AuditAction {
   INTERNAL_USER_CREATED
   INTERNAL_USER_ROLE_CHANGED
   INTERNAL_USER_DEACTIVATED
+  // Self-service auth events: the actor is the staff member themselves.
+  INTERNAL_USER_PASSWORD_RESET
+  INTERNAL_USER_GOOGLE_LINKED
 }
 
 model InternalUser {
-  id           String       @id @default(uuid())
-  email        String       @unique
-  passwordHash String
-  name         String
-  role         InternalRole @default(SUPPORT)
-  isActive     Boolean      @default(true)
-  createdAt    DateTime     @default(now())
-  updatedAt    DateTime     @updatedAt
+  id                String       @id @default(uuid())
+  email             String       @unique
+  passwordHash      String
+  // Set the first time this staff member signs in with Google. Google
+  // sign-in only ever links to an existing account (matched by verified
+  // email); it never creates one — there is no self-registration.
+  googleId          String?      @unique
+  name              String
+  role              InternalRole @default(SUPPORT)
+  isActive          Boolean      @default(true)
+  // Backoffice JWTs issued before this instant are rejected (see
+  // InternalJwtStrategy), so a password reset also ends every other session.
+  passwordChangedAt DateTime?
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
-  assignedTickets SupportTicket[]  @relation("TicketAssignee")
-  messages        SupportMessage[]
-  auditLogs       AuditLog[]
+  assignedTickets     SupportTicket[]              @relation("TicketAssignee")
+  messages            SupportMessage[]
+  auditLogs           AuditLog[]
+  passwordResetTokens InternalPasswordResetToken[]
+}
+
+// Password recovery for Backoffice staff. Same shape and rules as the
+// professional-facing PasswordResetToken, kept separate because the two
+// identities (InternalUser vs Professional) must never share auth state.
+model InternalPasswordResetToken {
+  id             String       @id @default(uuid())
+  internalUserId String
+  internalUser   InternalUser @relation(fields: [internalUserId], references: [id], onDelete: Cascade)
+  // SHA-256 hash of the token (never store the plain token)
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([internalUserId])
 }
 
 model SupportTicket {
-  id                String         @id @default(uuid())
-  professionalId    String
-  professional      Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  subject           String
-  category          TicketCategory
-  priority          TicketPriority @default(NORMAL)
-  status            TicketStatus   @default(OPEN)
-  assignedToId      String?
-  assignedTo        InternalUser?  @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
+  id               String         @id @default(uuid())
+  professionalId   String
+  professional     Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  subject          String
+  category         TicketCategory
+  priority         TicketPriority @default(NORMAL)
+  status           TicketStatus   @default(OPEN)
+  assignedToId     String?
+  assignedTo       InternalUser?  @relation("TicketAssignee", fields: [assignedToId], references: [id], onDelete: SetNull)
   // Optional link to the appointment this ticket is about — powers the
   // ticket <-> appointment cross-navigation in the troubleshooting view.
-  relatedBookingId  String?
-  relatedBooking    Booking?       @relation(fields: [relatedBookingId], references: [id], onDelete: SetNull)
-  createdAt         DateTime       @default(now())
-  updatedAt         DateTime       @updatedAt
+  relatedBookingId String?
+  relatedBooking   Booking?       @relation(fields: [relatedBookingId], references: [id], onDelete: SetNull)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   messages SupportMessage[]
 

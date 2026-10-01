@@ -19,7 +19,7 @@ const fieldStyle = {
   width: '100%',
   height: '46px',
   borderRadius: '8px',
-  border: '1px solid var(--color-border)',
+  border: '1px solid var(--color-border-strong)',
   padding: '0 12px',
   backgroundColor: 'var(--color-surface)',
   fontFamily: 'var(--font-body)',
@@ -156,7 +156,7 @@ export function BlockedDatesManager() {
             backgroundColor: canSubmit
               ? 'var(--color-brand-primary)'
               : 'var(--color-border)',
-            color: canSubmit ? '#fff' : 'var(--color-text-muted)',
+            color: canSubmit ? 'var(--color-text-on-brand)' : 'var(--color-text-muted)',
             border: 'none',
             cursor: canSubmit ? 'pointer' : 'not-allowed',
           }}

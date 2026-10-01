@@ -3,12 +3,39 @@ import type { SupportTicketSummary, TicketStatus } from '@agendya/types';
 import { useMyTickets } from './hooks/useMyTickets';
 import { TICKET_CATEGORY_LABELS, TICKET_STATUS_LABELS } from './labels';
 
-const STATUS_COLORS: Record<TicketStatus, { bg: string; fg: string }> = {
-  OPEN: { bg: '#FEF2F2', fg: '#DC2626' },
-  IN_PROGRESS: { bg: '#EFF6FF', fg: '#2563EB' },
-  WAITING_FOR_CUSTOMER: { bg: '#FFFBEB', fg: '#D97706' },
-  RESOLVED: { bg: '#F0FDF4', fg: '#16A34A' },
-  CLOSED: { bg: '#F1F5F9', fg: '#64748B' },
+// Same status → color family mapping as the Backoffice's TicketStatusBadge
+// (apps/backoffice-web/.../shared/badges.tsx), so a ticket reads the same on
+// both sides of the conversation. Token-based, so it adapts to dark mode; the
+// previous hand-picked pastels measured 3.1–4.4:1 in light mode (AA is 4.5).
+const STATUS_COLORS: Record<
+  TicketStatus,
+  { bg: string; fg: string; border: string }
+> = {
+  OPEN: {
+    bg: 'var(--color-danger-surface)',
+    fg: 'var(--color-danger)',
+    border: 'var(--color-danger-border)',
+  },
+  IN_PROGRESS: {
+    bg: 'var(--color-brand-surface)',
+    fg: 'var(--color-text-brand)',
+    border: 'var(--color-brand-border)',
+  },
+  WAITING_FOR_CUSTOMER: {
+    bg: 'var(--color-warning-surface)',
+    fg: 'var(--color-warning)',
+    border: 'var(--color-warning-border)',
+  },
+  RESOLVED: {
+    bg: 'var(--color-success-surface)',
+    fg: 'var(--color-success)',
+    border: 'var(--color-success-border)',
+  },
+  CLOSED: {
+    bg: 'var(--color-surface-soft)',
+    fg: 'var(--color-text-muted)',
+    border: 'var(--color-border)',
+  },
 };
 
 function StatusPill({ status }: { status: TicketStatus }) {
@@ -19,6 +46,7 @@ function StatusPill({ status }: { status: TicketStatus }) {
       style={{
         backgroundColor: colors.bg,
         color: colors.fg,
+        border: `1px solid ${colors.border}`,
         fontFamily: 'var(--font-body)',
         fontSize: '12px',
         fontWeight: 600,
@@ -109,7 +137,7 @@ export function SupportTicketsPage() {
           style={{
             fontFamily: 'var(--font-body)',
             backgroundColor: 'var(--color-brand-primary)',
-            color: '#fff',
+            color: 'var(--color-text-on-brand)',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -214,7 +242,7 @@ export function SupportTicketsPage() {
             style={{
               fontFamily: 'var(--font-body)',
               backgroundColor: 'var(--color-brand-primary)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: 'pointer',
             }}

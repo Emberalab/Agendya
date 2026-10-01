@@ -181,7 +181,7 @@ function ConfirmDeleteDialog({
         className="w-full max-w-[400px] rounded-3xl p-7 flex flex-col items-center"
         style={{
           backgroundColor: 'var(--color-surface)',
-          boxShadow: '0 24px 64px rgba(15,23,42,0.2)',
+          boxShadow: 'var(--shadow-dialog)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -192,7 +192,7 @@ function ConfirmDeleteDialog({
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <path
               d="M4 6h14M8 6V4h6v2M6 6l1 12h8l1-12"
-              stroke="#EF4444"
+              stroke="var(--color-danger)"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -247,7 +247,7 @@ function ConfirmDeleteDialog({
             style={{
               fontFamily: 'var(--font-body)',
               backgroundColor: 'var(--color-danger-fill)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: pending ? 'not-allowed' : 'pointer',
             }}
@@ -360,7 +360,7 @@ export function ServicesPage() {
           style={{
             fontFamily: 'var(--font-body)',
             backgroundColor: 'var(--color-brand-primary)',
-            color: '#fff',
+            color: 'var(--color-text-on-brand)',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -468,7 +468,7 @@ export function ServicesPage() {
               className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
               style={{
                 border: '2px dashed var(--color-brand-border)',
-                backgroundColor: '#F5F3FF',
+                backgroundColor: 'var(--color-brand-surface)',
               }}
             >
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
@@ -478,12 +478,12 @@ export function ServicesPage() {
                   width="18"
                   height="13"
                   rx="2"
-                  stroke="#6366F1"
+                  stroke="var(--color-text-brand)"
                   strokeWidth="1.7"
                 />
                 <path
                   d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4h5A1.5 1.5 0 0 1 16 5.5V7"
-                  stroke="#6366F1"
+                  stroke="var(--color-text-brand)"
                   strokeWidth="1.7"
                   strokeLinecap="round"
                 />
@@ -519,7 +519,7 @@ export function ServicesPage() {
               style={{
                 fontFamily: 'var(--font-body)',
                 backgroundColor: 'var(--color-brand-primary)',
-                color: '#fff',
+                color: 'var(--color-text-on-brand)',
                 border: 'none',
                 cursor: 'pointer',
               }}

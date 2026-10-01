@@ -117,7 +117,7 @@ export function Calendar({ value, min, onChange }: CalendarProps) {
                 fontSize: '14px',
                 fontWeight: selected ? 700 : 500,
                 color: selected
-                  ? '#fff'
+                  ? 'var(--color-text-on-brand)'
                   : disabled
                     ? 'var(--color-text-muted)'
                     : 'var(--color-text-primary)',

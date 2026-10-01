@@ -85,7 +85,7 @@ export function AffectedBookingsPanel({
           style={{
             maxHeight: '88vh',
             backgroundColor: 'var(--color-surface-soft)',
-            boxShadow: '0 24px 64px rgba(15,23,42,0.22)',
+            boxShadow: 'var(--shadow-dialog)',
           }}
           onClick={(e) => e.stopPropagation()}
         >

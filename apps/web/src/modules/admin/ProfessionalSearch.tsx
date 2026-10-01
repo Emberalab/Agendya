@@ -152,7 +152,7 @@ export function ProfessionalSearch({
               style={{
                 backgroundColor: 'var(--color-surface)',
                 border: '1px solid var(--color-border)',
-                boxShadow: '0 8px 24px rgba(0, 0, 0, 0.18)',
+                boxShadow: 'var(--shadow-menu)',
               }}
             >
               {state.status === 'loading' && (

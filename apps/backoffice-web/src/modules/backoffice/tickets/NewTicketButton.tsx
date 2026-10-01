@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import type { TicketCategory, TicketPriority, TicketProfessionalSummary } from '@agendya/types';
+import type {
+  TicketCategory,
+  TicketPriority,
+  TicketProfessionalSummary,
+} from '@agendya/types';
 import { TICKET_CATEGORIES, TICKET_PRIORITIES } from '@agendya/types';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/Button';
@@ -11,6 +15,8 @@ import { searchBackoffice } from '../dashboard/api';
 import { useCreateTicket } from './hooks/useTicketMutations';
 import { TICKET_CATEGORY_LABELS } from '../shared/categoryLabels';
 import { TICKET_PRIORITY_LABELS } from '../shared/badges';
+import { useFocusTrap } from '../../../shared/a11y/useFocusTrap';
+import { InlineError } from '../../../shared/components/InlineError';
 
 export function NewTicketButton() {
   const [open, setOpen] = useState(false);
@@ -27,9 +33,13 @@ export function NewTicketButton() {
 function NewTicketModal({ onClose }: { onClose: () => void }) {
   const navigate = useNavigate();
   const createTicket = useCreateTicket();
+  // Focus moves into the dialog, Tab stays inside it, Escape closes it and
+  // focus returns to "Nuevo ticket" — none of which happened before.
+  const dialogRef = useFocusTrap<HTMLDivElement>(true, onClose);
 
   const [professionalQuery, setProfessionalQuery] = useState('');
-  const [professional, setProfessional] = useState<TicketProfessionalSummary | null>(null);
+  const [professional, setProfessional] =
+    useState<TicketProfessionalSummary | null>(null);
   const [subject, setSubject] = useState('');
   const [category, setCategory] = useState<TicketCategory>('OTHER');
   const [priority, setPriority] = useState<TicketPriority>('NORMAL');
@@ -41,18 +51,24 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
     enabled: !professional && professionalQuery.trim().length >= 2,
   });
 
-  const canSubmit = !!professional && subject.trim().length >= 3 && body.trim().length > 0;
+  const canSubmit =
+    !!professional && subject.trim().length >= 3 && body.trim().length > 0;
 
   const onSubmit = async () => {
     if (!professional) return;
-    const ticket = await createTicket.mutateAsync({
-      professionalId: professional.id,
-      subject: subject.trim(),
-      category,
-      priority,
-      body: body.trim(),
-      visibility: 'INTERNAL_NOTE',
-    });
+    let ticket;
+    try {
+      ticket = await createTicket.mutateAsync({
+        professionalId: professional.id,
+        subject: subject.trim(),
+        category,
+        priority,
+        body: body.trim(),
+        visibility: 'INTERNAL_NOTE',
+      });
+    } catch {
+      return; // shown below via createTicket.error
+    }
     onClose();
     navigate(`/backoffice/tickets/${ticket.id}`);
   };
@@ -60,12 +76,21 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--color-overlay-scrim)] p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="new-ticket-title"
+      onClick={onClose}
     >
-      <div className="w-full max-w-md rounded-xl border border-border bg-surface p-5 shadow-menu">
-        <h2 id="new-ticket-title" className="text-lg font-bold text-text-primary">
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="new-ticket-title"
+        onClick={(event) => event.stopPropagation()}
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-xl border border-border bg-surface p-5 shadow-dialog focus:outline-none"
+      >
+        <h2
+          id="new-ticket-title"
+          className="text-lg font-bold text-text-primary"
+        >
           Nuevo ticket
         </h2>
 
@@ -73,7 +98,12 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
           {professional ? (
             <div className="flex items-center justify-between rounded-control px-3 py-2 text-sm shadow-[inset_0_0_0_1px_var(--color-border)]">
               <span>{professional.businessName}</span>
-              <button type="button" className="text-xs text-text-muted hover:underline" onClick={() => setProfessional(null)}>
+              <button
+                type="button"
+                className="text-xs font-semibold text-text-brand hover:underline"
+                aria-label={`Cambiar profesional (${professional.businessName})`}
+                onClick={() => setProfessional(null)}
+              >
                 Cambiar
               </button>
             </div>
@@ -106,17 +136,33 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
             </div>
           )}
 
-          <Input label="Asunto" value={subject} onChange={(event) => setSubject(event.target.value)} />
+          <Input
+            label="Asunto"
+            value={subject}
+            onChange={(event) => setSubject(event.target.value)}
+          />
 
           <div className="grid grid-cols-2 gap-3">
-            <Select label="Categoría" value={category} onChange={(event) => setCategory(event.target.value as TicketCategory)}>
+            <Select
+              label="Categoría"
+              value={category}
+              onChange={(event) =>
+                setCategory(event.target.value as TicketCategory)
+              }
+            >
               {TICKET_CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {TICKET_CATEGORY_LABELS[c]}
                 </option>
               ))}
             </Select>
-            <Select label="Prioridad" value={priority} onChange={(event) => setPriority(event.target.value as TicketPriority)}>
+            <Select
+              label="Prioridad"
+              value={priority}
+              onChange={(event) =>
+                setPriority(event.target.value as TicketPriority)
+              }
+            >
               {TICKET_PRIORITIES.map((p) => (
                 <option key={p} value={p}>
                   {TICKET_PRIORITY_LABELS[p]}
@@ -125,14 +171,25 @@ function NewTicketModal({ onClose }: { onClose: () => void }) {
             </Select>
           </div>
 
-          <Textarea label="Descripción (nota interna)" rows={3} value={body} onChange={(event) => setBody(event.target.value)} />
+          <Textarea
+            label="Descripción (nota interna)"
+            rows={3}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+          />
         </div>
+
+        <InlineError error={createTicket.error} className="mt-3" />
 
         <div className="mt-5 flex justify-end gap-2">
           <Button variant="outline" size="sm" onClick={onClose}>
             Cancelar
           </Button>
-          <Button size="sm" disabled={!canSubmit || createTicket.isPending} onClick={onSubmit}>
+          <Button
+            size="sm"
+            disabled={!canSubmit || createTicket.isPending}
+            onClick={onSubmit}
+          >
             {createTicket.isPending ? 'Creando…' : 'Crear ticket'}
           </Button>
         </div>

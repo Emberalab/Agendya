@@ -92,3 +92,56 @@ test('logging out returns to the login screen', async ({ page }) => {
     page.getByRole('heading', { name: 'Inicia sesión' }),
   ).toBeVisible();
 });
+
+test.describe('below the lg breakpoint (phone / tablet / installed PWA)', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('the avatar opens an account menu that can log out', async ({
+    page,
+  }) => {
+    await page.goto('/dashboard/agenda');
+    await expect(
+      page.getByRole('heading', { name: 'Tu agenda' }),
+    ).toBeVisible();
+
+    // The desktop sidebar (and its logout button) is hidden at this width.
+    await expect(page.getByRole('complementary')).toBeHidden();
+
+    // Icon-only "Nueva cita" still has an accessible name on mobile.
+    await expect(
+      page.getByRole('button', { name: 'Nueva cita' }),
+    ).toBeVisible();
+
+    const avatar = page.getByRole('button', { name: /^Cuenta de / });
+    await avatar.click();
+    const menu = page.getByRole('dialog', { name: 'Cuenta' });
+    await expect(menu).toBeVisible();
+
+    // Escape closes it and returns focus to the avatar.
+    await page.keyboard.press('Escape');
+    await expect(menu).toBeHidden();
+    await expect(avatar).toBeFocused();
+
+    await avatar.click();
+    await menu.getByRole('button', { name: 'Cerrar sesión' }).click();
+    await expect(page).toHaveURL(/\/login$/);
+  });
+
+  test('the page never scrolls horizontally', async ({ page }) => {
+    for (const path of [
+      '/dashboard/agenda',
+      '/dashboard/services',
+      '/dashboard/schedule',
+      '/dashboard/profile',
+    ]) {
+      await page.goto(path);
+      await page.getByRole('main').waitFor();
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth -
+          document.documentElement.clientWidth,
+      );
+      expect(overflow, `${path} overflows horizontally`).toBeLessThanOrEqual(0);
+    }
+  });
+});

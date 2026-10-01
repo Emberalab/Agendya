@@ -15,4 +15,29 @@ export default () => ({
   backofficeWebUrl: (
     process.env.BACKOFFICE_WEB_URL ?? 'http://localhost:5174'
   ).replace(/\/+$/, ''),
+  // Google sign-in for staff. Optional: when the client id/secret are unset
+  // the "Continuar con Google" button redirects back with
+  // `?error=google_unavailable` instead of failing. Use a Google OAuth client
+  // of its own (not apps/api's) so the two consent screens and redirect URIs
+  // stay independent.
+  google: {
+    clientId: process.env.GOOGLE_CLIENT_ID || undefined,
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET || undefined,
+    callbackUrl:
+      process.env.GOOGLE_CALLBACK_URL ??
+      'http://localhost:4001/backoffice/auth/google/callback',
+    // Comma-separated, e.g. "agendya.co". Empty = any verified Google email
+    // that matches an existing active staff account.
+    allowedDomains: (process.env.GOOGLE_ALLOWED_DOMAINS ?? '')
+      .split(',')
+      .map((domain) => domain.trim().toLowerCase())
+      .filter(Boolean),
+  },
+  // Transactional email (password recovery). Without RESEND_API_KEY emails
+  // are only logged — fine for local dev, never for production.
+  resendApiKey: process.env.RESEND_API_KEY || undefined,
+  mail: {
+    from: process.env.MAIL_FROM ?? 'Agendya Backoffice <no-reply@agendya.co>',
+    replyTo: process.env.MAIL_REPLY_TO ?? 'info@agendya.co',
+  },
 });

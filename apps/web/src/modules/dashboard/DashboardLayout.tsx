@@ -13,6 +13,7 @@ import { useNotificationsRealtime } from '../notifications/hooks/useNotification
 import { disablePush } from '../../shared/push/pushManager';
 import { PlanStatusBanner } from './PlanStatusBanner';
 import { useProfile } from '../professionals/hooks/useProfile';
+import { MobileAccountMenu } from './MobileAccountMenu';
 
 export function DashboardLayout() {
   const user = useAuthStore((state) => state.user);
@@ -55,6 +56,9 @@ function SuperAdminShell() {
         backgroundColor: 'var(--color-surface-soft)',
       }}
     >
+      <a href="#main-content" className="agendia-skip-link">
+        Saltar al contenido principal
+      </a>
       <header
         className="flex items-center justify-between px-4 py-4 lg:px-8"
         style={{
@@ -82,11 +86,12 @@ function SuperAdminShell() {
           <button
             type="button"
             onClick={logout}
-            className="text-sm font-medium"
+            className="rounded-lg px-3 text-sm font-medium"
             style={{
-              color: 'var(--color-text-muted)',
+              minHeight: '40px',
+              color: 'var(--color-text-secondary)',
               background: 'none',
-              border: 'none',
+              border: '1px solid var(--color-border)',
               cursor: 'pointer',
               fontFamily: 'var(--font-body)',
             }}
@@ -110,6 +115,12 @@ function ProfessionalDashboardShell() {
   const user = useAuthStore((state) => state.user);
   const initial = user?.businessName?.charAt(0).toUpperCase() ?? '?';
   const { data: profile } = useProfile();
+  const clearSession = useAuthStore((state) => state.logout);
+  // Same order as the desktop Sidebar: drop this browser's push subscription
+  // while the token still exists, then clear the session.
+  const logout = () => {
+    void disablePush().finally(() => clearSession());
+  };
 
   // Single mount point for the real-time connection: toasts, the notification
   // centre cache, and the unread badge all update from here.
@@ -140,14 +151,12 @@ function ProfessionalDashboardShell() {
           <div className="flex items-center gap-2">
             <NotificationBell />
             <ThemeToggle />
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center"
-              style={{ backgroundColor: 'var(--color-brand-primary)' }}
-            >
-              <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: '14px', color: 'var(--color-text-on-brand)' }}>
-                {initial}
-              </span>
-            </div>
+            <MobileAccountMenu
+              initial={initial}
+              name={user?.businessName ?? ''}
+              email={user?.email ?? ''}
+              onLogout={logout}
+            />
           </div>
         </div>
 

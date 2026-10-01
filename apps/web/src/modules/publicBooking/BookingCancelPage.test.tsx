@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -115,6 +115,12 @@ describe('BookingCancelPage', () => {
 
     await screen.findByText('Corte de cabello');
     await user.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
+    // Irreversible → asks first.
+    expect(api.cancelBookingByToken).not.toHaveBeenCalled();
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(
+      within(dialog).getByRole('button', { name: 'Sí, cancelar' }),
+    );
 
     await waitFor(() => {
       expect(api.cancelBookingByToken).toHaveBeenCalled();
@@ -122,5 +128,20 @@ describe('BookingCancelPage', () => {
     expect(
       await screen.findByText('Esta reserva ya fue cancelada.'),
     ).toBeInTheDocument();
+  });
+
+  it('keeps the booking when the cancel confirmation is dismissed', async () => {
+    vi.mocked(api.getBookingByToken).mockResolvedValue(BASE_BOOKING);
+
+    const user = userEvent.setup();
+    renderPage();
+
+    await screen.findByText('Corte de cabello');
+    await user.click(screen.getByRole('button', { name: 'Cancelar reserva' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Volver' }));
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(api.cancelBookingByToken).not.toHaveBeenCalled();
   });
 });

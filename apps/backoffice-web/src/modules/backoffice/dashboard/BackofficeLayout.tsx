@@ -4,6 +4,7 @@ import { useBackofficeAuthStore } from '../auth/backofficeAuthStore';
 import { roleHasPermission, ROLE_LABELS } from '../shared/permissions';
 import { ThemeToggle } from '../../../shared/theme/ThemeToggle';
 import { BackofficeNavIcon, type BackofficeNavIconId } from './BackofficeNavIcon';
+import { MobileAccountMenu } from './MobileAccountMenu';
 
 interface NavItem {
   id: BackofficeNavIconId;
@@ -45,6 +46,10 @@ export function BackofficeLayout() {
 
   return (
     <div className="flex min-h-screen">
+      <a href="#main-content" className="agendia-skip-link">
+        Saltar al contenido principal
+      </a>
+
       <aside
         className="sticky top-0 hidden h-screen w-[200px] shrink-0 flex-col border-r border-border bg-surface py-6 lg:flex"
         aria-label="Backoffice"
@@ -112,13 +117,16 @@ export function BackofficeLayout() {
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
-            <div className="flex size-8 items-center justify-center rounded-full bg-brand-primary">
-              <span className="text-xs font-bold text-on-brand">{initial}</span>
-            </div>
+            <MobileAccountMenu
+              initial={initial}
+              name={user?.name ?? ''}
+              detail={user ? ROLE_LABELS[user.role] : ''}
+              onLogout={logout}
+            />
           </div>
         </div>
 
-        <main id="main-content" className="w-full flex-1 overflow-x-hidden">
+        <main id="main-content" tabIndex={-1} className="w-full flex-1 overflow-x-hidden focus:outline-none">
           <Outlet />
         </main>
       </div>

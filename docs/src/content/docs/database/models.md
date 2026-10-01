@@ -211,3 +211,29 @@ registra en el log y la acción del usuario no se ve afectada) y solo la lee
 Índices: `(professionalId, occurredAt DESC)` para la línea de tiempo,
 `(professionalId, category, occurredAt DESC)` para el filtro por categoría y
 `(entityType, entityId)` para el historial de una cita o servicio.
+
+## InternalUser
+
+Cuenta de staff del Backoffice (`apps/backoffice-api`). Identidad totalmente separada de `Professional`.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `email` | `String @unique` | En minúsculas |
+| `passwordHash` | `String` | bcrypt. Lo fija quien crea la cuenta (seed o un administrador); no hay autorregistro |
+| `googleId` | `String? @unique` | Se fija la primera vez que la persona entra con Google. El acceso con Google **solo vincula** una cuenta existente y activa con el mismo correo verificado por Google (y dentro de `GOOGLE_ALLOWED_DOMAINS` si está definido); nunca crea cuentas. Un correo ya vinculado a otra cuenta de Google se rechaza |
+| `role` | `InternalRole @default(SUPPORT)` | `READ_ONLY` \| `SUPPORT` \| `ADMIN` \| `SUPER_ADMIN` |
+| `isActive` | `Boolean @default(true)` | Cuentas inactivas no pueden entrar ni pedir recuperación |
+| `passwordChangedAt` | `DateTime?` | `InternalJwtStrategy` rechaza todo JWT con `iat` anterior: restablecer la contraseña cierra las demás sesiones |
+
+## InternalPasswordResetToken
+
+Enlace de recuperación de contraseña del staff. Mismas reglas que `PasswordResetToken`, en tabla propia para no mezclar las dos identidades.
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `internalUserId` | `String` | FK a `InternalUser`, `onDelete: Cascade` |
+| `tokenHash` | `String @unique` | SHA-256 del token (32 bytes, base64url). Nunca se guarda el token en claro |
+| `expiresAt` | `DateTime` | 1 hora |
+| `usedAt` | `DateTime?` | Un solo uso. Pedir un enlace nuevo invalida los anteriores |
+
+`POST /backoffice/auth/forgot-password` responde igual exista o no la cuenta (sin enumeración). El restablecimiento queda en `AuditLog` como `INTERNAL_USER_PASSWORD_RESET` y la primera vinculación con Google como `INTERNAL_USER_GOOGLE_LINKED`, ambos con la propia persona como actor.

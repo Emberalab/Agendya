@@ -279,7 +279,7 @@ export function PublicBookingPage() {
             style={{
               background:
                 'linear-gradient(135deg, #6366F1 0%, var(--color-brand-primary) 100%)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               fontSize: '16px',
               cursor: 'pointer',

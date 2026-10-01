@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import type { InputHTMLAttributes } from 'react';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -8,46 +8,67 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, helperText, className = '', ...props }, ref) => {
+  ({ label, error, helperText, className = '', id, ...props }, ref) => {
     const hasError = !!error;
+    // Without an explicit `id` the <label htmlFor> pointed at nothing (e.g.
+    // the "Nueva fecha" field on the booking-management page had no
+    // accessible name). Fall back to a generated one.
+    const generatedId = useId();
+    const inputId = id ?? generatedId;
+    const messageId = `${inputId}-message`;
 
     return (
       <div className="w-full">
         {label && (
           <label
-            htmlFor={props.id}
-            className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300"
+            htmlFor={inputId}
+            className="mb-1.5 block text-sm font-medium text-[var(--color-text-secondary)]"
           >
             {label}
-            {props.required && <span className="ml-1 text-red-500 dark:text-red-400">*</span>}
+            {props.required && (
+              <span className="ml-1 text-[var(--color-danger)]">*</span>
+            )}
           </label>
         )}
         <input
           ref={ref}
+          id={inputId}
+          aria-invalid={hasError || undefined}
+          aria-describedby={error || helperText ? messageId : undefined}
           className={`
-            w-full rounded-lg border px-3 py-2 bg-white text-gray-900 transition-colors
-            dark:bg-gray-900 dark:text-gray-100
-            placeholder:text-gray-400 dark:placeholder:text-gray-500
-            focus:outline-none focus:ring-2 focus:ring-offset-1 dark:focus:ring-offset-gray-900
-            disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500
-            dark:disabled:bg-gray-800 dark:disabled:text-gray-500
-            ${hasError
-              ? 'border-red-300 focus:border-red-500 focus:ring-red-500 dark:border-red-700'
-              : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500 dark:border-gray-600'
+            min-h-11 w-full rounded-[var(--radius-control)] bg-[var(--color-surface)] px-3 py-2 text-[15px] text-[var(--color-text-primary)] transition-shadow
+            placeholder:text-[var(--color-text-muted)]
+            focus:outline-none
+            disabled:cursor-not-allowed disabled:bg-[var(--color-surface-soft)] disabled:text-[var(--color-text-muted)]
+            ${
+              hasError
+                ? 'shadow-[inset_0_0_0_2px_var(--color-danger)]'
+                : 'shadow-[inset_0_0_0_1px_var(--color-border-strong)] focus:shadow-[inset_0_0_0_2px_var(--color-brand-primary)]'
             }
             ${className}
           `}
           {...props}
         />
         {error && (
-          <p role="alert" className="mt-1.5 text-sm text-red-600 dark:text-red-400">{error}</p>
+          <p
+            id={messageId}
+            role="alert"
+            className="mt-1.5 text-sm text-[var(--color-danger)]"
+          >
+            {error}
+          </p>
         )}
         {helperText && !error && (
-          <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">{helperText}</p>
+          <p
+            id={messageId}
+            className="mt-1.5 text-sm text-[var(--color-text-muted)]"
+          >
+            {helperText}
+          </p>
         )}
       </div>
     );
-  }
+  },
 );
 
 Input.displayName = 'Input';

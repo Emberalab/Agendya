@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ProfessionalForPlanChange } from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 import { TrialManager } from './TrialManager';
@@ -25,10 +25,15 @@ const BASE: ProfessionalForPlanChange = {
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** Accepts the in-app confirmation dialog (which replaced window.confirm). */
+async function confirmDialog(confirmLabel: string) {
+  const dialog = await screen.findByRole('alertdialog');
+  await userEvent.click(
+    within(dialog).getByRole('button', { name: confirmLabel }),
+  );
+}
+
 describe('TrialManager', () => {
-  beforeEach(() => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
-  });
   afterEach(() => {
     vi.restoreAllMocks();
     vi.mocked(apiClient.post).mockReset();
@@ -42,6 +47,7 @@ describe('TrialManager', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Activar prueba de 30 días' }),
     );
+    await confirmDialog('Activar prueba');
 
     expect(apiClient.post).toHaveBeenCalledWith(
       '/admin/professionals/barber%40example.com/trial',
@@ -72,6 +78,7 @@ describe('TrialManager', () => {
     expect(grant).toBeDisabled();
     await userEvent.click(screen.getByRole('checkbox'));
     await userEvent.click(grant);
+    await confirmDialog('Activar prueba');
     expect(apiClient.post).toHaveBeenCalledWith(
       '/admin/professionals/barber%40example.com/trial',
       { allowRepeat: true },
@@ -113,6 +120,7 @@ describe('TrialManager', () => {
     ).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Extender' }));
+    await confirmDialog('Extender');
     expect(apiClient.post).toHaveBeenCalledWith(
       '/admin/professionals/barber%40example.com/trial/extend',
       { days: 7 },
@@ -121,9 +129,25 @@ describe('TrialManager', () => {
     await userEvent.click(
       screen.getByRole('button', { name: 'Terminar prueba' }),
     );
+    await confirmDialog('Terminar prueba');
     expect(apiClient.post).toHaveBeenCalledWith(
       '/admin/professionals/barber%40example.com/trial/end',
       {},
     );
+  });
+
+  it('does nothing when the confirmation is cancelled', async () => {
+    render(<TrialManager professional={BASE} onUpdated={vi.fn()} />);
+
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Activar prueba de 30 días' }),
+    );
+    const dialog = await screen.findByRole('alertdialog');
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Cancelar' }),
+    );
+
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(apiClient.post).not.toHaveBeenCalled();
   });
 });

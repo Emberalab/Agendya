@@ -10,8 +10,10 @@ import { apiClient, isApiError } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { ProfessionalSearch } from './ProfessionalSearch';
 import { TrialManager } from './TrialManager';
+import { useConfirmDialog } from '../../shared/components/useConfirmDialog';
 
 export function PlanChanger() {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [professional, setProfessional] =
     useState<ProfessionalForPlanChange | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
@@ -55,9 +57,12 @@ export function PlanChanger() {
 
     const from = PLAN_LABELS[professional.plan];
     const to = PLAN_LABELS[selectedPlan];
-    if (!confirm(`¿Cambiar el plan de ${professional.email} de ${from} a ${to}?`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: '¿Cambiar el plan?',
+      description: `${professional.email} pasará de ${from} a ${to}.`,
+      confirmLabel: 'Cambiar plan',
+    });
+    if (!confirmed) return;
 
     try {
       setLoading(true);
@@ -267,6 +272,7 @@ export function PlanChanger() {
           />
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

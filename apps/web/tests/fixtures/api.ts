@@ -8,6 +8,8 @@ import type {
   PublicBooking,
   RegistrationEntry,
   Service,
+  SupportTicketSummary,
+  TicketStatus,
   TrialEvent,
   WorkingHour,
 } from '@agendya/types';
@@ -462,6 +464,37 @@ export class ApiMock {
         route,
         this.buildPublicBooking(method === 'PATCH' ? body : undefined),
       );
+    }
+
+    // --- Support (the professional's own tickets) ---------------------------
+    // One ticket per status, so the list exercises every status pill.
+    if (path === '/support/tickets' && method === 'GET') {
+      const statuses: TicketStatus[] = [
+        'OPEN',
+        'IN_PROGRESS',
+        'WAITING_FOR_CUSTOMER',
+        'RESOLVED',
+        'CLOSED',
+      ];
+      const items: SupportTicketSummary[] = statuses.map((status, i) => ({
+        id: `00000000-0000-4000-8000-0000000000e${i}`,
+        professional: {
+          id: this.profile.id,
+          businessName: this.profile.businessName,
+          email: this.profile.email,
+          slug: this.profile.slug,
+        },
+        subject: `Ticket de prueba ${i + 1}`,
+        category: 'OTHER',
+        priority: 'NORMAL',
+        status,
+        assignedTo: null,
+        relatedBookingId: null,
+        messageCount: 1,
+        createdAt: '2099-01-01T00:00:00.000Z',
+        updatedAt: '2099-01-01T00:00:00.000Z',
+      }));
+      return json(route, { items, nextCursor: null });
     }
 
     // eslint-disable-next-line no-console

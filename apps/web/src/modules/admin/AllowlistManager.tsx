@@ -6,6 +6,7 @@ import {
 } from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { useConfirmDialog } from '../../shared/components/useConfirmDialog';
 
 function formatAdminDate(iso: string | null): string {
   if (!iso) {
@@ -19,6 +20,7 @@ function formatAdminDate(iso: string | null): string {
 }
 
 export function AllowlistManager() {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [entries, setEntries] = useState<AllowlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,7 +86,13 @@ export function AllowlistManager() {
   };
 
   const handleDelete = async (email: string) => {
-    if (!confirm(`¿Eliminar el acceso de ${email}? Si ya tiene cuenta, pasará a Pendiente y perderá el panel.`)) return;
+    const confirmed = await confirm({
+      title: '¿Eliminar el acceso?',
+      description: `${email} perderá el acceso. Si ya tiene cuenta, pasará a Pendiente y perderá el panel.`,
+      confirmLabel: 'Eliminar acceso',
+      destructive: true,
+    });
+    if (!confirmed) return;
 
     try {
       await apiClient.delete(`/admin/allowlist/${encodeURIComponent(email)}`);
@@ -102,7 +110,16 @@ export function AllowlistManager() {
       currentAccess === 'SUPER_ADMIN' ? 'ALLOWLISTED' : 'SUPER_ADMIN';
     const label = nextAccess === 'SUPER_ADMIN' ? 'Super Admin' : 'Permitido';
 
-    if (!confirm(`¿Cambiar el grant de ${email} a ${label}?`)) return;
+    const confirmed = await confirm({
+      title: `¿Cambiar el acceso a ${label}?`,
+      description:
+        nextAccess === 'SUPER_ADMIN'
+          ? `${email} tendrá acceso completo al panel de administrador.`
+          : `${email} dejará de ser Super Admin y conservará el acceso normal.`,
+      confirmLabel: 'Cambiar acceso',
+      destructive: nextAccess !== 'SUPER_ADMIN',
+    });
+    if (!confirmed) return;
 
     try {
       await apiClient.patch(`/admin/allowlist/${encodeURIComponent(email)}`, {
@@ -332,6 +349,7 @@ export function AllowlistManager() {
           </table>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

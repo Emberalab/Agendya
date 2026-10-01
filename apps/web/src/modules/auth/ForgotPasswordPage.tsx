@@ -29,8 +29,18 @@ function StatusCard({
   label: string;
   variant?: 'success' | 'neutral' | 'error';
 }) {
-  const bg = variant === 'success' ? '#F0FDF4' : variant === 'error' ? '#FFF7F7' : 'var(--color-surface-soft)';
-  const border = variant === 'success' ? '#BBF7D0' : variant === 'error' ? '#FECACA' : 'var(--color-border)';
+  const bg =
+    variant === 'success'
+      ? 'var(--color-success-surface)'
+      : variant === 'error'
+        ? 'var(--color-danger-surface)'
+        : 'var(--color-surface-soft)';
+  const border =
+    variant === 'success'
+      ? 'var(--color-success-border)'
+      : variant === 'error'
+        ? 'var(--color-danger-border)'
+        : 'var(--color-border)';
   return (
     <div
       className="flex flex-col items-center gap-2 py-5 rounded-xl mb-5"
@@ -128,8 +138,8 @@ export function ForgotPasswordPage() {
             <div className="w-full max-w-sm mx-auto">
               <IconBox>
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <rect x="2" y="5" width="18" height="13" rx="2" stroke="#64748B" strokeWidth="1.5" />
-                  <path d="M2 8l9 6 9-6" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" />
+                  <rect x="2" y="5" width="18" height="13" rx="2" stroke="var(--color-text-muted)" strokeWidth="1.5" />
+                  <path d="M2 8l9 6 9-6" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" />
                 </svg>
               </IconBox>
 
@@ -261,8 +271,8 @@ export function ForgotPasswordPage() {
           <div className="w-full max-w-sm mx-auto">
             <IconBox>
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <circle cx="11" cy="11" r="4" stroke="#64748B" strokeWidth="1.5" />
-                <path d="M11 3v2M11 17v2M3 11h2M17 11h2" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" />
+                <circle cx="11" cy="11" r="4" stroke="var(--color-text-muted)" strokeWidth="1.5" />
+                <path d="M11 3v2M11 17v2M3 11h2M17 11h2" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </IconBox>
 

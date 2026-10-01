@@ -7,6 +7,30 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   fullWidth?: boolean;
 }
 
+// Agendya tokens, same variant set and look as apps/backoffice-web's Button
+// and this app's `.moon-button` (brand fill, --radius-control, brand focus
+// ring). This used to be a generic Tailwind template (blue-600 / gray-*),
+// which made the customer-facing booking-management page the one screen that
+// didn't look like Agendya.
+const VARIANT_CLASSES = {
+  primary:
+    'bg-[var(--color-brand-primary)] text-[var(--color-text-on-brand)] hover:bg-[var(--color-brand-primary-hover)]',
+  secondary:
+    'bg-[var(--color-text-primary)] text-[var(--color-surface)] hover:opacity-90',
+  outline:
+    'bg-transparent text-[var(--color-text-primary)] shadow-[inset_0_0_0_1px_var(--color-border-strong)] hover:bg-[var(--color-surface-soft)] hover:shadow-[inset_0_0_0_1px_var(--color-brand-primary)]',
+  danger:
+    'bg-[var(--color-danger-fill)] text-[var(--color-text-on-brand)] hover:opacity-90',
+  ghost:
+    'bg-transparent text-[var(--color-text-secondary)] hover:bg-[var(--color-surface-soft)]',
+};
+
+const SIZE_CLASSES = {
+  sm: 'min-h-9 px-3 text-sm',
+  md: 'min-h-11 px-4 text-sm',
+  lg: 'min-h-12 px-6 text-base',
+};
+
 export function Button({
   children,
   variant = 'primary',
@@ -16,27 +40,9 @@ export function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 dark:ring-offset-gray-900';
-
-  const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 disabled:bg-blue-300 dark:disabled:bg-blue-900/60',
-    secondary: 'bg-gray-600 text-white hover:bg-gray-700 focus:ring-gray-500 disabled:bg-gray-300 dark:disabled:bg-gray-700',
-    outline: 'border-2 border-gray-300 text-gray-700 hover:bg-gray-50 focus:ring-gray-500 disabled:border-gray-200 disabled:text-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-800 dark:disabled:border-gray-700 dark:disabled:text-gray-600',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 disabled:bg-red-300 dark:disabled:bg-red-900/60',
-    ghost: 'text-gray-700 hover:bg-gray-100 focus:ring-gray-500 disabled:text-gray-400 dark:text-gray-300 dark:hover:bg-gray-800 dark:disabled:text-gray-600',
-  };
-
-  const sizeClasses = {
-    sm: 'px-3 py-1.5 text-sm',
-    md: 'px-4 py-2 text-base',
-    lg: 'px-6 py-3 text-lg',
-  };
-
-  const widthClass = fullWidth ? 'w-full' : '';
-
   return (
     <button
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${widthClass} ${disabled ? 'cursor-not-allowed opacity-60' : ''} ${className}`}
+      className={`inline-flex items-center justify-center gap-2 rounded-[var(--radius-control)] font-semibold transition-colors focus-visible:shadow-[var(--shadow-focus-brand)] ${VARIANT_CLASSES[variant]} ${SIZE_CLASSES[size]} ${fullWidth ? 'w-full' : ''} ${disabled ? 'cursor-not-allowed opacity-55' : 'cursor-pointer'} ${className}`}
       disabled={disabled}
       {...props}
     >

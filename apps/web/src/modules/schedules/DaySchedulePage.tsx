@@ -415,7 +415,7 @@ function DayScheduleEditor({ weekday }: { weekday: Weekday }) {
               color:
                 !dirty || setWorkingHours.isPending
                   ? 'var(--color-text-muted)'
-                  : '#fff',
+                  : 'var(--color-text-on-brand)',
               border: 'none',
               lineHeight: 1.25,
               cursor:
@@ -480,7 +480,7 @@ function ConfirmDeleteBlockDialog({
         className="w-full max-w-[400px] rounded-3xl p-7 flex flex-col items-center"
         style={{
           backgroundColor: 'var(--color-surface)',
-          boxShadow: '0 24px 64px rgba(15,23,42,0.2)',
+          boxShadow: 'var(--shadow-dialog)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -491,17 +491,17 @@ function ConfirmDeleteBlockDialog({
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
             <path
               d="M11 3.5l8 14H3l8-14z"
-              stroke="#EF4444"
+              stroke="var(--color-danger)"
               strokeWidth="1.8"
               strokeLinejoin="round"
             />
             <path
               d="M11 9v3.5"
-              stroke="#EF4444"
+              stroke="var(--color-danger)"
               strokeWidth="1.8"
               strokeLinecap="round"
             />
-            <circle cx="11" cy="15" r="1" fill="#EF4444" />
+            <circle cx="11" cy="15" r="1" fill="var(--color-danger)" />
           </svg>
         </div>
         <h2
@@ -552,7 +552,7 @@ function ConfirmDeleteBlockDialog({
             style={{
               fontFamily: 'var(--font-body)',
               backgroundColor: 'var(--color-danger-fill)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: 'pointer',
             }}

@@ -4,6 +4,8 @@ import type { TicketPriority, TicketStatus } from '@agendya/types';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@agendya/types';
 import { useTickets } from './hooks/useTickets';
 import { Card } from '../../../shared/components/Card';
+import { LoadError } from '../../../shared/components/LoadError';
+import { LoadMore } from '../../../shared/components/LoadMore';
 import { Select } from '../../../shared/components/Select';
 import { TicketPriorityBadge, TicketStatusBadge, TICKET_STATUS_LABELS, TICKET_PRIORITY_LABELS } from '../shared/badges';
 import { NewTicketButton } from './NewTicketButton';
@@ -12,10 +14,11 @@ export function TicketsListPage() {
   const [status, setStatus] = useState<TicketStatus | ''>('');
   const [priority, setPriority] = useState<TicketPriority | ''>('');
 
-  const { data, isLoading } = useTickets({
+  const { data, isLoading, isError, refetch, hasNextPage, isFetchingNextPage, fetchNextPage } = useTickets({
     status: status || undefined,
     priority: priority || undefined,
   });
+  const items = data?.pages.flatMap((page) => page.items);
 
   return (
     <div className="mx-auto max-w-4xl p-6">
@@ -57,10 +60,11 @@ export function TicketsListPage() {
 
       <Card className="mt-4" padding="none">
         {isLoading && <p className="p-4 text-sm text-text-muted">Cargando…</p>}
-        {data && data.items.length === 0 && <p className="p-4 text-sm text-text-muted">No hay tickets con estos filtros.</p>}
-        {data && data.items.length > 0 && (
+        {isError && <LoadError what="los tickets" onRetry={() => void refetch()} />}
+        {items && items.length === 0 && <p className="p-4 text-sm text-text-muted">No hay tickets con estos filtros.</p>}
+        {items && items.length > 0 && (
           <ul className="divide-y divide-border">
-            {data.items.map((ticket) => (
+            {items.map((ticket) => (
               <li key={ticket.id}>
                 <Link
                   to={`/backoffice/tickets/${ticket.id}`}
@@ -82,6 +86,12 @@ export function TicketsListPage() {
           </ul>
         )}
       </Card>
+
+      <LoadMore
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={() => void fetchNextPage()}
+      />
     </div>
   );
 }

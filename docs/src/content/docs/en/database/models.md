@@ -196,3 +196,29 @@ never affects the user's action) and read only by `apps/backoffice-api`. See
 Indexes: `(professionalId, occurredAt DESC)` for the timeline,
 `(professionalId, category, occurredAt DESC)` for category filters, and
 `(entityType, entityId)` for one appointment's or service's history.
+
+## InternalUser
+
+A Backoffice staff account (`apps/backoffice-api`). Fully separate identity from `Professional`.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `email` | `String @unique` | Lowercased |
+| `passwordHash` | `String` | bcrypt. Set by whoever creates the account (seed script or an admin); there is no self-registration |
+| `googleId` | `String? @unique` | Set the first time the person signs in with Google. Google sign-in **only links** an existing, active account with the same Google-verified email (and inside `GOOGLE_ALLOWED_DOMAINS` when set); it never creates accounts. An email already linked to a different Google account is refused |
+| `role` | `InternalRole @default(SUPPORT)` | `READ_ONLY` \| `SUPPORT` \| `ADMIN` \| `SUPER_ADMIN` |
+| `isActive` | `Boolean @default(true)` | Inactive accounts can't sign in or request recovery |
+| `passwordChangedAt` | `DateTime?` | `InternalJwtStrategy` rejects any JWT whose `iat` is earlier: resetting the password ends every other session |
+
+## InternalPasswordResetToken
+
+Staff password-recovery link. Same rules as the professional-facing `PasswordResetToken`, in its own table so the two identities never share auth state.
+
+| Field | Type | Notes |
+| --- | --- | --- |
+| `internalUserId` | `String` | FK to `InternalUser`, `onDelete: Cascade` |
+| `tokenHash` | `String @unique` | SHA-256 of the token (32 bytes, base64url). The plain token is never stored |
+| `expiresAt` | `DateTime` | 1 hour |
+| `usedAt` | `DateTime?` | Single use. Requesting a new link invalidates older ones |
+
+`POST /backoffice/auth/forgot-password` answers the same whether or not the account exists (no enumeration). A reset is recorded in `AuditLog` as `INTERNAL_USER_PASSWORD_RESET` and the first Google link as `INTERNAL_USER_GOOGLE_LINKED`, both with the person themselves as actor.

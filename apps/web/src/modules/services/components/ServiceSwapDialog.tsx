@@ -31,7 +31,7 @@ export function ServiceSwapDialog({
       aria-modal="true"
       aria-labelledby="swap-dialog-title"
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ backgroundColor: 'rgba(15, 23, 42, 0.75)' }}
+      style={{ backgroundColor: 'var(--overlay-scrim)' }}
       onClick={onCancel}
     >
       <div
@@ -155,7 +155,7 @@ export function ServiceSwapDialog({
               backgroundColor: selectedService
                 ? 'var(--color-brand-primary)'
                 : 'var(--color-border)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: selectedService ? 'pointer' : 'not-allowed',
             }}

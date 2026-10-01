@@ -241,7 +241,7 @@ export function RescheduleModal({
           aria-modal="true"
           aria-label="Modificar fecha y hora"
           className="w-full max-w-[480px] lg:max-w-[680px] rounded-3xl flex flex-col overflow-hidden"
-          style={{ maxHeight: '88vh', backgroundColor: 'var(--color-surface-soft)', boxShadow: '0 24px 64px rgba(15,23,42,0.22)' }}
+          style={{ maxHeight: '88vh', backgroundColor: 'var(--color-surface-soft)', boxShadow: 'var(--shadow-dialog)' }}
           onClick={(e) => e.stopPropagation()}
         >
           {panelContent}
@@ -252,7 +252,7 @@ export function RescheduleModal({
 
   return (
     <>
-      <div className="fixed inset-0 z-40" style={{ backgroundColor: 'rgba(15,23,42,0.3)' }} onClick={onClose} />
+      <div className="fixed inset-0 z-40" style={{ backgroundColor: 'var(--overlay-scrim)' }} onClick={onClose} />
 
       <div
         ref={dialogRef}
@@ -264,7 +264,7 @@ export function RescheduleModal({
         style={{
           maxWidth: '440px',
           backgroundColor: 'var(--color-surface-soft)',
-          boxShadow: '-8px 0 40px rgba(15,23,42,0.14)',
+          boxShadow: 'var(--shadow-drawer)',
         }}
       >
         {panelContent}

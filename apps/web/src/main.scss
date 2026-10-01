@@ -5,6 +5,14 @@
 :root {
   color-scheme: light;
 
+  // Moon Design System types every component and its `text-*` utilities in
+  // `var(--font-default)` ("DM Sans"), a font this app never loads. The
+  // `.text-*` override further down only caught the bare class names, so
+  // responsive variants (`lg:text-sm`, used by most page subtitles) still fell
+  // back to the browser's serif. Pointing Moon's own token at our body font
+  // fixes it at the root for every Moon utility and component.
+  --font-default: 'Plus Jakarta Sans', sans-serif;
+
   // Brand + surface palette
   --color-brand-primary: #4F46E5;
   --color-brand-primary-hover: #4338CA;
@@ -57,6 +65,34 @@
   --color-brand-border: #C7D2FE;
   --color-danger-surface: #FFF1F2;
   --color-danger-border: #FECDD3;
+
+  // Success / warning families, same values as apps/backoffice-web's
+  // tailwind.css so a "success" or "warning" surface means the same thing in
+  // both products. Before these existed, ~40 call sites hardcoded their own
+  // light-only pastels (#F0FDF4, #FEF3C7, #F59E0B…) that stayed bright in dark
+  // mode and, in several places, failed 4.5:1 even in light mode.
+  // There is deliberately no separate "info" family: informational surfaces
+  // use the brand tint (--color-brand-surface/-border + --color-text-brand).
+  --color-success-surface: #F0FDF4;
+  --color-success-border: #BBF7D0;
+  --color-warning: #B45309;
+  --color-warning-surface: #FFFBEB;
+  --color-warning-border: #FDE68A;
+  // Solid fill behind white text (warning CTA buttons). #B45309 keeps 5.0:1
+  // with white; the old amber-600 (#D97706) fill was 3.2:1. Same in both themes.
+  --color-warning-fill: #B45309;
+
+  // Border for interactive form controls (inputs, selects, textareas). The
+  // decorative --color-border is ~1.2:1 against the surface — fine for cards
+  // and dividers, but WCAG 2.2 SC 1.4.11 wants 3:1 for the boundary that
+  // identifies a control. 3.5:1 on --color-surface, 3.3:1 on --color-surface-soft.
+  --color-border-strong: #7C8BA1;
+
+  // Elevation for real overlays only (resting cards stay border-first).
+  // Previously ~10 hand-written slate shadows (0.14–0.22 alpha) that all but
+  // vanish on the dark surfaces; the dark theme below swaps in black.
+  --shadow-dialog: 0 24px 64px rgba(15, 23, 42, 0.2);
+  --shadow-drawer: -8px 0 40px rgba(15, 23, 42, 0.14);
 
   // Booking status badges — see modules/bookings/statusConfig.ts. Each status
   // keeps its own hue (amber/emerald/red/indigo/red) across both themes —
@@ -145,6 +181,17 @@ html[data-theme='dark'] {
   --color-brand-border: rgba(99, 102, 241, 0.4);
   --color-danger-surface: rgba(239, 68, 68, 0.16);
   --color-danger-border: rgba(239, 68, 68, 0.4);
+  --color-success-surface: rgba(16, 185, 129, 0.16);
+  --color-success-border: rgba(16, 185, 129, 0.4);
+  --color-warning: #FBBF24;
+  --color-warning-surface: rgba(245, 158, 11, 0.16);
+  --color-warning-border: rgba(245, 158, 11, 0.4);
+
+  // 3.3:1 on --color-surface, 3.7:1 on --color-surface-soft (see light theme).
+  --color-border-strong: #5F6D88;
+
+  --shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.6);
+  --shadow-drawer: -8px 0 40px rgba(0, 0, 0, 0.5);
 
   --status-pending-color: #FBBF24;
   --status-pending-bg: rgba(245, 158, 11, 0.16);
@@ -352,15 +399,36 @@ html[data-theme='dark'] .moon-form-group-error .moon-form-hint {
   color: var(--color-danger);
 }
 
-/* Moon input — visible border using design system tokens */
-.moon-input.moon-input-outline {
-  box-shadow: inset 0 0 0 1px var(--color-border);
+/* Moon form controls — one border / focus / error language for Input, Select
+   and Textarea (and the same one apps/backoffice-web's Input/Select/Textarea
+   use). Previously only Input was overridden, so Select and Textarea kept
+   Moon's own 1px "info" blue focus ring next to Input's 2px brand ring. */
+.moon-input.moon-input-outline,
+.moon-select.moon-select-outline,
+.moon-textarea.moon-textarea-outline {
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
   border-radius: var(--radius-control);
   font-family: var(--font-body);
 }
-.moon-input.moon-input-outline:focus {
+.moon-input.moon-input-outline:focus,
+.moon-select.moon-select-outline:focus,
+.moon-textarea.moon-textarea-outline:focus {
   box-shadow: inset 0 0 0 2px var(--color-brand-primary);
   outline: none;
+}
+/* Error state must out-rank the outline rule above (Moon's own
+   `.moon-form-group-error :where(input)` is lower specificity, so the outline
+   override used to silently erase the red error border). */
+.moon-input.moon-input-error,
+.moon-select.moon-select-error,
+.moon-textarea.moon-textarea-error,
+.moon-form-group-error .moon-input.moon-input-outline,
+.moon-form-group-error .moon-select.moon-select-outline,
+.moon-form-group-error .moon-textarea.moon-textarea-outline,
+.moon-input.moon-input-outline[aria-invalid='true'],
+.moon-select.moon-select-outline[aria-invalid='true'],
+.moon-textarea.moon-textarea-outline[aria-invalid='true'] {
+  box-shadow: inset 0 0 0 2px var(--color-danger);
 }
 
 /* Moon checkbox label — use body font */
@@ -486,6 +554,37 @@ label:has(.moon-checkbox) span {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 99px; }
+
+/* Global reduced-motion floor. Individual components already opt out of
+   their own keyframes (notification rows, drawers, theme toggle); this catches
+   everything else — hover scales, width transitions, inline `transition`s —
+   without touching component code. Durations go to ~0 rather than `none` so
+   `transitionend`/`animationend` listeners still fire. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Visible focus for hand-rolled text fields. ProfilePage, ServiceFormPage,
+   the schedule drawers and the agenda's mobile search build their own
+   <input>/<select>/<textarea> with an inline `outline: 'none'` and no
+   replacement, so keyboard users had no focus indicator at all there (WCAG
+   2.4.7). `!important` is what lets a stylesheet beat that inline style; the
+   inset offset keeps the ring inside `overflow: hidden` wrappers (e.g. the
+   "agendya.co/" slug field). Moon controls are excluded — they already draw
+   their own 2px brand ring via box-shadow above. */
+input:not([type='checkbox']):not([type='radio']):not([type='range']):not(.moon-input):focus-visible,
+select:not(.moon-select):focus-visible,
+textarea:not(.moon-textarea):focus-visible {
+  outline: 2px solid var(--color-brand-primary) !important;
+  outline-offset: -2px;
+}
 
 a,
 button {

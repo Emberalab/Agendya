@@ -10,6 +10,7 @@ import {
 import { useBackofficeAuthStore } from '../auth/backofficeAuthStore';
 import { ROLE_LABELS } from '../shared/permissions';
 import { Card } from '../../../shared/components/Card';
+import { LoadError } from '../../../shared/components/LoadError';
 import { Button } from '../../../shared/components/Button';
 import { Input } from '../../../shared/components/Input';
 import { Select } from '../../../shared/components/Select';
@@ -17,7 +18,7 @@ import { Badge } from '../../../shared/components/Badge';
 
 export function InternalUsersPage() {
   const currentUser = useBackofficeAuthStore((state) => state.user);
-  const { data: users, isLoading } = useInternalUsers();
+  const { data: users, isLoading, isError, refetch } = useInternalUsers();
   const createUser = useCreateInternalUser();
   const updateRole = useUpdateInternalUserRole();
   const updateStatus = useUpdateInternalUserStatus();
@@ -81,6 +82,7 @@ export function InternalUsersPage() {
 
       <Card className="mt-4" padding="none">
         {isLoading && <p className="p-4 text-sm text-text-muted">Cargando…</p>}
+        {isError && <LoadError what="los usuarios internos" onRetry={() => void refetch()} />}
         {users && (
           <ul className="divide-y divide-border">
             {users.map((u) => (

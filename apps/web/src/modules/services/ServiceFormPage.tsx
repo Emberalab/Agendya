@@ -145,7 +145,7 @@ function PriceField({
     <div
       className="flex items-center gap-1.5 rounded-lg px-3"
       style={{
-        border: '1px solid var(--color-border)',
+        border: '1px solid var(--color-border-strong)',
         height: '46px',
         backgroundColor: 'var(--color-surface)',
       }}
@@ -416,7 +416,7 @@ export function ServiceFormPage() {
                   width: '100%',
                   minHeight: '104px',
                   borderRadius: '8px',
-                  border: '1px solid var(--color-border)',
+                  border: '1px solid var(--color-border-strong)',
                   padding: '12px 14px',
                   backgroundColor: 'var(--color-surface)',
                   fontFamily: 'var(--font-body)',
@@ -657,7 +657,7 @@ export function ServiceFormPage() {
             style={{
               fontFamily: 'var(--font-body)',
               backgroundColor: 'var(--color-brand-primary)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: pending ? 'not-allowed' : 'pointer',
             }}

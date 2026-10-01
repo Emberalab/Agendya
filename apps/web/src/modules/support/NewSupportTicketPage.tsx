@@ -159,7 +159,7 @@ export function NewSupportTicketPage() {
             style={{
               fontFamily: 'var(--font-body)',
               backgroundColor: 'var(--color-brand-primary)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: createTicket.isPending ? 'not-allowed' : 'pointer',
             }}

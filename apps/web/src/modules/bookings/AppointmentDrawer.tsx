@@ -58,11 +58,11 @@ function ConfirmCompleteDialog({
         aria-modal="true"
         aria-label="Marcar como completada"
         className="rounded-3xl p-8 flex flex-col items-center gap-4 w-full max-w-sm"
-        style={{ backgroundColor: 'var(--color-surface)', boxShadow: '0 24px 64px rgba(15,23,42,0.18)' }}
+        style={{ backgroundColor: 'var(--color-surface)', boxShadow: 'var(--shadow-dialog)' }}
       >
         <div className="w-12 h-12 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-brand-surface)' }}>
           <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-            <path d="M5 11l4.5 4.5L17 6" stroke="#6366F1" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M5 11l4.5 4.5L17 6" stroke="var(--color-text-brand)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
           </svg>
         </div>
         <h2
@@ -101,7 +101,7 @@ function ConfirmCompleteDialog({
             style={{
               fontFamily: 'var(--font-body)',
               backgroundColor: 'var(--color-brand-primary)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: pending ? 'not-allowed' : 'pointer',
             }}
@@ -409,7 +409,7 @@ export function AppointmentDrawer({
           style={{
             fontFamily: 'var(--font-body)',
             backgroundColor: 'var(--color-brand-primary)',
-            color: '#fff',
+            color: 'var(--color-text-on-brand)',
             border: 'none',
             cursor: 'pointer',
           }}
@@ -446,7 +446,7 @@ export function AppointmentDrawer({
             style={{
               maxHeight: '88vh',
               backgroundColor: 'var(--color-surface-soft)',
-              boxShadow: '0 24px 64px rgba(15,23,42,0.22)',
+              boxShadow: 'var(--shadow-dialog)',
             }}
             onClick={(e) => e.stopPropagation()}
           >
@@ -490,7 +490,7 @@ export function AppointmentDrawer({
     <>
       <div
         className="hidden lg:block fixed inset-0 z-[90]"
-        style={{ backgroundColor: 'rgba(15,23,42,0.3)' }}
+        style={{ backgroundColor: 'var(--overlay-scrim)' }}
         onClick={onClose}
       />
 
@@ -501,7 +501,7 @@ export function AppointmentDrawer({
         aria-modal="true"
         aria-label="Detalle de la cita"
         className="fixed inset-0 z-[100] flex flex-col lg:inset-y-0 lg:left-auto lg:right-0 lg:w-[420px]"
-        style={{ backgroundColor: 'var(--color-surface-soft)', boxShadow: '-8px 0 40px rgba(15,23,42,0.14)' }}
+        style={{ backgroundColor: 'var(--color-surface-soft)', boxShadow: 'var(--shadow-drawer)' }}
       >
         {/* Header */}
         <div

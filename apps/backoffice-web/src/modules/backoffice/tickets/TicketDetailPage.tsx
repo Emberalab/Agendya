@@ -1,6 +1,10 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import type { MessageVisibility, TicketPriority, TicketStatus } from '@agendya/types';
+import type {
+  MessageVisibility,
+  TicketPriority,
+  TicketStatus,
+} from '@agendya/types';
 import { TICKET_PRIORITIES, TICKET_STATUSES } from '@agendya/types';
 import { useTicket } from './hooks/useTicket';
 import {
@@ -17,13 +21,15 @@ import { Badge } from '../../../shared/components/Badge';
 import { Select } from '../../../shared/components/Select';
 import { Textarea } from '../../../shared/components/Textarea';
 import { BackLink } from '../../../shared/components/BackLink';
+import { InlineError } from '../../../shared/components/InlineError';
+import { LoadError } from '../../../shared/components/LoadError';
 import { TICKET_STATUS_LABELS, TICKET_PRIORITY_LABELS } from '../shared/badges';
 import { TICKET_CATEGORY_LABELS } from '../shared/categoryLabels';
 import { authorLabel } from '../shared/messageAuthor';
 
 export function TicketDetailPage() {
   const { id = '' } = useParams();
-  const { data: ticket, isLoading, error } = useTicket(id);
+  const { data: ticket, isLoading, error, refetch } = useTicket(id);
   const user = useBackofficeAuthStore((state) => state.user);
   const canMutate = roleHasPermission(user?.role, 'MUTATE_TICKETS');
   const canAssignAny = roleHasPermission(user?.role, 'ASSIGN_ANY_TICKET');
@@ -34,22 +40,37 @@ export function TicketDetailPage() {
   const assign = useAssignTicket(id);
 
   const [body, setBody] = useState('');
-  const [visibility, setVisibility] = useState<MessageVisibility>('INTERNAL_NOTE');
+  const [visibility, setVisibility] =
+    useState<MessageVisibility>('INTERNAL_NOTE');
 
-  if (isLoading) return <div className="p-6 text-sm text-text-muted">Cargando…</div>;
+  if (isLoading)
+    return <div className="p-6 text-sm text-text-muted">Cargando…</div>;
   if (error || !ticket) {
     return (
       <div className="p-6">
         <BackLink to="/backoffice/tickets">Volver a tickets</BackLink>
-        <p className="text-sm text-danger">No se pudo cargar este ticket.</p>
+        <LoadError
+          what="este ticket"
+          onRetry={() => void refetch()}
+          className=""
+        />
       </div>
     );
   }
 
+  const isCustomerVisible = visibility === 'CUSTOMER_VISIBLE';
+
   const onSend = async () => {
     if (!body.trim()) return;
-    await addMessage.mutateAsync({ body: body.trim(), visibility });
+    try {
+      await addMessage.mutateAsync({ body: body.trim(), visibility });
+    } catch {
+      return; // keep the draft; the error is shown under the composer
+    }
     setBody('');
+    // Back to the safe default after every send, so a customer-visible reply
+    // never carries over to the next (likely internal) message by accident.
+    setVisibility('INTERNAL_NOTE');
   };
 
   return (
@@ -57,7 +78,10 @@ export function TicketDetailPage() {
       <BackLink to="/backoffice/tickets">Volver a tickets</BackLink>
 
       <p className="text-xs text-text-muted">
-        <Link to={`/backoffice/professionals/${ticket.professional.id}`} className="hover:underline">
+        <Link
+          to={`/backoffice/professionals/${ticket.professional.id}`}
+          className="hover:underline"
+        >
           {ticket.professional.businessName}
         </Link>
         {' · '}
@@ -65,13 +89,18 @@ export function TicketDetailPage() {
         {ticket.relatedBookingId && (
           <>
             {' · '}
-            <Link to={`/backoffice/appointments/${ticket.relatedBookingId}`} className="hover:underline">
+            <Link
+              to={`/backoffice/appointments/${ticket.relatedBookingId}`}
+              className="hover:underline"
+            >
               Ver cita relacionada
             </Link>
           </>
         )}
       </p>
-      <h1 className="mt-1 text-xl font-bold text-text-primary">{ticket.subject}</h1>
+      <h1 className="mt-1 text-xl font-bold text-text-primary">
+        {ticket.subject}
+      </h1>
 
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="w-44">
@@ -79,7 +108,11 @@ export function TicketDetailPage() {
             label="Estado"
             value={ticket.status}
             disabled={!canMutate || updateStatus.isPending}
-            onChange={(event) => updateStatus.mutate({ status: event.target.value as TicketStatus })}
+            onChange={(event) =>
+              updateStatus.mutate({
+                status: event.target.value as TicketStatus,
+              })
+            }
           >
             {TICKET_STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -94,7 +127,11 @@ export function TicketDetailPage() {
             label="Prioridad"
             value={ticket.priority}
             disabled={!canMutate || updatePriority.isPending}
-            onChange={(event) => updatePriority.mutate({ priority: event.target.value as TicketPriority })}
+            onChange={(event) =>
+              updatePriority.mutate({
+                priority: event.target.value as TicketPriority,
+              })
+            }
           >
             {TICKET_PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -104,42 +141,64 @@ export function TicketDetailPage() {
           </Select>
         </div>
 
-        {(canAssignAny || ticket.assignedTo === null || ticket.assignedTo.id === user?.id) && canMutate && (
-          <Button
-            size="sm"
-            variant="outline"
-            disabled={assign.isPending}
-            onClick={() => {
-              const alreadyMine = ticket.assignedTo?.id === user?.id;
-              assign.mutate({ assignedToId: alreadyMine ? null : user!.id });
-            }}
-          >
-            {ticket.assignedTo?.id === user?.id ? 'Quitarme la asignación' : 'Asignarme'}
-          </Button>
-        )}
+        {(canAssignAny ||
+          ticket.assignedTo === null ||
+          ticket.assignedTo.id === user?.id) &&
+          canMutate && (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={assign.isPending}
+              onClick={() => {
+                const alreadyMine = ticket.assignedTo?.id === user?.id;
+                assign.mutate({ assignedToId: alreadyMine ? null : user!.id });
+              }}
+            >
+              {ticket.assignedTo?.id === user?.id
+                ? 'Quitarme la asignación'
+                : 'Asignarme'}
+            </Button>
+          )}
 
         <Badge variant="secondary" dot={false}>
-          {ticket.assignedTo ? `Asignado a ${ticket.assignedTo.name}` : 'Sin asignar'}
+          {ticket.assignedTo
+            ? `Asignado a ${ticket.assignedTo.name}`
+            : 'Sin asignar'}
         </Badge>
       </div>
+      <InlineError
+        error={updateStatus.error ?? updatePriority.error ?? assign.error}
+      />
 
-      <h2 className="mt-6 mb-2 text-sm font-semibold text-text-secondary">Conversación</h2>
+      <h2 className="mt-6 mb-2 text-sm font-semibold text-text-secondary">
+        Conversación
+      </h2>
       <div className="flex flex-col gap-2">
         {ticket.messages.map((message) => (
           <Card
             key={message.id}
             padding="sm"
-            className={message.visibility === 'INTERNAL_NOTE' ? 'border-warning-border bg-warning-surface' : ''}
+            className={
+              message.visibility === 'INTERNAL_NOTE'
+                ? 'border-warning-border bg-warning-surface'
+                : ''
+            }
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-xs font-semibold text-text-secondary">{authorLabel(message.author)}</span>
+              <span className="text-xs font-semibold text-text-secondary">
+                {authorLabel(message.author)}
+              </span>
               <span className="text-xs text-text-muted">
-                {message.visibility === 'INTERNAL_NOTE' ? 'Nota interna' : 'Visible al profesional'}
+                {message.visibility === 'INTERNAL_NOTE'
+                  ? 'Nota interna'
+                  : 'Visible al profesional'}
                 {' · '}
                 {new Date(message.createdAt).toLocaleString('es-CO')}
               </span>
             </div>
-            <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">{message.body}</p>
+            <p className="mt-1 text-sm whitespace-pre-wrap text-text-primary">
+              {message.body}
+            </p>
           </Card>
         ))}
       </div>
@@ -148,21 +207,44 @@ export function TicketDetailPage() {
         <div className="mt-4">
           <Textarea
             rows={3}
-            placeholder="Escribe una respuesta o nota interna…"
+            aria-label={
+              isCustomerVisible ? 'Respuesta al profesional' : 'Nota interna'
+            }
+            placeholder={
+              isCustomerVisible
+                ? 'Escribe una respuesta para el profesional…'
+                : 'Escribe una nota interna…'
+            }
             value={body}
             onChange={(event) => setBody(event.target.value)}
           />
-          <div className="mt-2 flex items-center justify-between">
-            <label className="flex items-center gap-2 text-sm text-text-secondary">
+          <InlineError error={addMessage.error} />
+          <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+            <label className="flex min-h-11 items-center gap-2 text-sm text-text-secondary">
               <input
                 type="checkbox"
                 checked={visibility === 'CUSTOMER_VISIBLE'}
-                onChange={(event) => setVisibility(event.target.checked ? 'CUSTOMER_VISIBLE' : 'INTERNAL_NOTE')}
+                onChange={(event) =>
+                  setVisibility(
+                    event.target.checked ? 'CUSTOMER_VISIBLE' : 'INTERNAL_NOTE',
+                  )
+                }
               />
               Visible para el profesional
             </label>
-            <Button size="sm" disabled={!body.trim() || addMessage.isPending} onClick={onSend}>
-              {addMessage.isPending ? 'Enviando…' : 'Enviar'}
+            {/* The label states who will see it — sending a customer-visible
+                reply is the one irreversible, outward-facing action here. */}
+            <Button
+              size="sm"
+              variant={isCustomerVisible ? 'primary' : 'outline'}
+              disabled={!body.trim() || addMessage.isPending}
+              onClick={onSend}
+            >
+              {addMessage.isPending
+                ? 'Enviando…'
+                : isCustomerVisible
+                  ? 'Enviar al profesional'
+                  : 'Guardar nota interna'}
             </Button>
           </div>
         </div>
