@@ -51,14 +51,14 @@ export function BookingConfirmedView({
         <div className="flex flex-col items-center text-center">
           <span
             className="flex h-16 w-16 items-center justify-center rounded-full"
-            style={{ backgroundColor: '#DCFCE7' }}
+            style={{ backgroundColor: 'var(--color-success-surface)' }}
           >
             <svg
               width="30"
               height="30"
               viewBox="0 0 24 24"
               fill="none"
-              stroke="#16A34A"
+              stroke="var(--color-success)"
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -133,7 +133,7 @@ export function BookingConfirmedView({
             className="w-full rounded-xl px-6 py-3.5 font-semibold"
             style={{
               backgroundColor: 'var(--color-brand-primary)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               fontSize: '15px',
               cursor: 'pointer',

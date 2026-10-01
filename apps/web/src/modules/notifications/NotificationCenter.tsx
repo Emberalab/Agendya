@@ -192,7 +192,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
       <div
         className="fixed inset-0 z-[190]"
         style={{
-          backgroundColor: 'var(--overlay-scrim, rgba(15,23,42,0.3))',
+          backgroundColor: 'var(--overlay-scrim)',
           animation: 'agendya-fade-in 0.15s ease-out',
         }}
         onClick={onClose}
@@ -207,7 +207,7 @@ export function NotificationCenter({ onClose }: { onClose: () => void }) {
         className="fixed inset-0 z-[200] flex flex-col sm:inset-y-0 sm:left-auto sm:right-0 sm:w-[400px]"
         style={{
           backgroundColor: 'var(--color-surface)',
-          boxShadow: '-8px 0 40px rgba(15,23,42,0.14)',
+          boxShadow: 'var(--shadow-drawer)',
           animation: 'agendya-slide-in-right 0.2s ease-out',
         }}
       >

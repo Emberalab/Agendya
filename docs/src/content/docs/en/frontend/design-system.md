@@ -24,7 +24,7 @@ Moon's CSS together (Tailwind only compiles `@theme` where it also sees its own
 @theme inline {
   --font-display: 'Outfit', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
-  --font-mono: 'Inter', monospace;
+  --font-mono: 'Inter', ui-sans-serif, system-ui, sans-serif; /* Inter is proportional; the name is historical */
 }
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
@@ -56,6 +56,34 @@ Effective theme = `manualTheme ?? OS preference`. Only the manual override is
 persisted (`partialize`), so a later OS change is picked up on the next visit
 if the user never toggled.
 
+## Semantic tokens
+
+Every colour, overlay and elevation comes from a CSS custom property defined in
+`src/main.scss` (`:root` for light, `html[data-theme='dark']` for dark). The
+Backoffice (`apps/backoffice-web/src/styles/tailwind.css`) duplicates the same
+names and values in a Tailwind `@theme` block — keep both files in sync.
+
+| Family | Tokens | Notes |
+| --- | --- | --- |
+| Surfaces | `--color-surface`, `--color-surface-soft` | `surface-soft` is the page background, `surface` cards/panels/dialogs |
+| Text | `--color-text-primary`, `-secondary`, `-muted`, `--color-text-brand`, `--color-text-on-brand` | All AA (≥4.5:1) on both surfaces in both themes. Use `text-brand` (not `brand-primary`) for small brand-coloured text |
+| Brand | `--color-brand-primary`, `-hover`, `--color-brand-tint`, `--color-brand-surface`, `--color-brand-border` | Brand surfaces double as the "info" family |
+| Borders | `--color-border` (decorative), `--color-border-strong` (form controls) | `border-strong` clears WCAG 1.4.11's 3:1 for control boundaries |
+| Danger | `--color-danger`, `-surface`, `-border`, `-fill` | `-fill` = solid button background behind white text |
+| Success | `--color-success`, `-surface`, `-border` | |
+| Warning | `--color-warning`, `-surface`, `-border`, `-fill` | |
+| Booking status | `--status-{pending,confirmed,cancelled,completed,noshow,expired}-{color,bg,border}` | See `bookings/statusConfig.ts` |
+| Elevation | `--shadow-menu`, `--shadow-dialog`, `--shadow-drawer`, `--shadow-focus-brand`, `--overlay-scrim` | Dark theme swaps slate shadows for black ones |
+| Radius | `--radius-control` (8px) | Cards use 16–24px (`rounded-2xl`/`rounded-3xl`) |
+
+Hardcoded hex values are reserved for: the per-professional `brandColor`
+default (`#4F46E5`), third-party marks (Google logo), decorative rating stars,
+and the auth hero image placeholder.
+
+Moon's own `--font-default` is pointed at the body font in `main.scss`, so Moon
+components and its `text-*` utilities (including responsive variants such as
+`lg:text-sm`) never fall back to the unloaded "DM Sans".
+
 ## Shared atoms — `src/shared/components/`
 
 | Component | Purpose |
@@ -64,6 +92,10 @@ if the user never toggled.
 | `Input` | Label + input + error slot |
 | `Card` | Surface container |
 | `Badge` | Small status/label pill (status badges use `bookings/statusBadge.tsx` + `statusConfig.ts`) |
+| `ConfirmDialog` / `useConfirmDialog` | The app's confirmation dialog (focus trap, Escape, destructive variant). `await confirm({...})` replaces `window.confirm()` |
+
+`Button`, `Input`, `Card` and `Badge` use the same tokens and variant names as
+the Backoffice's components of the same name.
 
 Feature-local components live under `modules/<feature>/components/`
 (e.g. `services/components/Toggle.tsx`, `PlanLimitDialog.tsx`,
@@ -76,7 +108,15 @@ Feature-local components live under `modules/<feature>/components/`
   (`RescheduleModal`, `AppointmentDrawer`, `BlockFormDrawer`).
 - `DashboardLayout` renders a skip link (`#main-content`), and `<main>` has
   `tabIndex={-1}` so the skip link can focus it.
-- Mobile nav is a labelled `<nav aria-label="Principal">`.
+- Mobile nav is a labelled `<nav aria-label="Principal">`. Below `lg` the
+  top-bar avatar opens an account menu (`dashboard/MobileAccountMenu.tsx`) —
+  the only logout path on phones and tablets.
+- Hand-rolled text fields get a global 2px brand `:focus-visible` ring from
+  `main.scss` (it overrides their inline `outline: none`); Moon controls draw
+  their own ring.
+- A global `prefers-reduced-motion` rule shortens every transition/animation.
+- The admin panel's sections use the WAI-ARIA tabs pattern (arrow keys,
+  Home/End).
 - The Playwright suite runs `@axe-core/playwright` audits
   (`tests/e2e/a11y/audit.spec.ts`).
 

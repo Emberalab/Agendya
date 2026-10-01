@@ -8,6 +8,8 @@ function makeActor(overrides: Partial<InternalUser>): InternalUser {
     email: 'actor@agendya.test',
     name: 'Actor',
     passwordHash: 'x',
+    googleId: null,
+    passwordChangedAt: null,
     role: 'SUPPORT',
     isActive: true,
     createdAt: new Date(),

@@ -123,7 +123,9 @@ export function MobileStickyCta({
             backgroundColor: disabled
               ? 'var(--color-surface-soft)'
               : 'var(--color-brand-primary)',
-            color: disabled ? 'var(--color-text-muted)' : '#fff',
+            color: disabled
+              ? 'var(--color-text-muted)'
+              : 'var(--color-text-on-brand)',
             border: disabled ? '1px solid var(--color-border)' : 'none',
             fontSize: '15px',
             cursor: disabled ? 'not-allowed' : 'pointer',

@@ -10,6 +10,7 @@ import { useCancelBookingByToken } from './hooks/useCancelBookingByToken';
 import { useRescheduleBookingByToken } from './hooks/useRescheduleBookingByToken';
 import { useAvailability } from './hooks/useAvailability';
 import { SlotGrid } from './components/SlotGrid';
+import { useConfirmDialog } from '../../shared/components/useConfirmDialog';
 
 const STATUS_LABELS: Record<BookingStatus, string> = {
   PENDING: 'Pendiente',
@@ -28,6 +29,7 @@ export function BookingCancelPage() {
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [newDate, setNewDate] = useState('');
   const [newSlot, setNewSlot] = useState<string | null>(null);
+  const { confirm, confirmDialog } = useConfirmDialog();
 
   // Obtener disponibilidad para la nueva fecha
   const availability = useAvailability(
@@ -37,38 +39,68 @@ export function BookingCancelPage() {
   );
 
   if (isLoading) {
-    return <p className="p-6 text-center">Cargando…</p>;
-  }
-
-  if (isError || !booking) {
     return (
-      <p role="alert" className="p-6 text-center text-red-600 dark:text-red-400">
-        No encontramos esta reserva.
+      <p
+        role="status"
+        className="p-6 text-center text-sm"
+        style={{ color: 'var(--color-text-muted)', fontFamily: 'var(--font-body)' }}
+      >
+        Cargando…
       </p>
     );
   }
 
-  const formattedDate = new Date(booking.startAt).toLocaleString(undefined, {
+  if (isError || !booking) {
+    return (
+      <main
+        className="mx-auto max-w-md px-4 py-10 text-center"
+        style={{ fontFamily: 'var(--font-body)' }}
+      >
+        <p role="alert" className="text-sm" style={{ color: 'var(--color-danger)' }}>
+          No encontramos esta reserva.
+        </p>
+        <p className="mt-1 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Revisa que el enlace esté completo o contacta directamente al negocio.
+        </p>
+      </main>
+    );
+  }
+
+  // Spanish like the rest of the page (was the browser's locale, so an
+  // English-language phone got "Monday, August 3…" mid-Spanish copy).
+  const formattedDate = new Date(booking.startAt).toLocaleString('es-CO', {
     dateStyle: 'full',
     timeStyle: 'short',
   });
 
   return (
-    <main className="mx-auto max-w-md px-4 py-10">
-      <h1 className="mb-4 text-2xl font-semibold">Tu reserva</h1>
-      <div className="mb-6 rounded border border-gray-200 dark:border-gray-700 p-4">
-        <p className="font-medium">{booking.serviceName}</p>
-        <p className="text-sm text-gray-600 dark:text-gray-400">con {booking.businessName}</p>
-        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{formattedDate}</p>
-        <p className="mt-2 text-sm">
-          Estado:{' '}
-          <span className="font-medium">{STATUS_LABELS[booking.status]}</span>
+    <main
+      className="mx-auto max-w-md px-4 py-10"
+      style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-primary)' }}
+    >
+      <h1
+        className="mb-4 text-2xl"
+        style={{ fontFamily: 'var(--font-display)', fontWeight: 700 }}
+      >
+        Tu reserva
+      </h1>
+      <Card className="mb-6" padding="sm">
+        <p className="font-semibold">{booking.serviceName}</p>
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          con {booking.businessName}
         </p>
-      </div>
+        <p className="mt-2 text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          {formattedDate}
+        </p>
+        <p className="mt-3 text-sm">
+          Estado:{' '}
+          <span className="font-semibold">{STATUS_LABELS[booking.status]}</span>
+        </p>
+      </Card>
 
       {booking.status === 'CONFIRMED' && booking.canCancel && !isRescheduling && (
         <div>
-          <div className="flex gap-3">
+          <div className="flex flex-col gap-3 sm:flex-row">
             {booking.canReschedule && (
               <Button
                 type="button"
@@ -84,9 +116,21 @@ export function BookingCancelPage() {
                 Modificar fecha/hora
               </Button>
             )}
+            {/* Cancelling is irreversible and this page is reached from a
+                single link in an email/WhatsApp — a stray tap used to cancel
+                immediately. */}
             <Button
               type="button"
-              onClick={() => cancelBooking.mutate()}
+              onClick={async () => {
+                const confirmed = await confirm({
+                  title: '¿Cancelar tu reserva?',
+                  description: `${booking.serviceName} con ${booking.businessName}, ${formattedDate}. Esta acción no se puede deshacer.`,
+                  confirmLabel: 'Sí, cancelar',
+                  cancelLabel: 'Volver',
+                  destructive: true,
+                });
+                if (confirmed) cancelBooking.mutate();
+              }}
               disabled={cancelBooking.isPending}
               variant="danger"
             >
@@ -94,16 +138,21 @@ export function BookingCancelPage() {
             </Button>
           </div>
           {!booking.serviceId && (
-            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-              💡 Para modificar la fecha/hora de esta reserva (servicios combinados), contacta directamente a {booking.businessName}
+            <p className="mt-2 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              Para modificar la fecha/hora de esta reserva (servicios combinados), contacta directamente a {booking.businessName}
             </p>
           )}
         </div>
       )}
 
       {booking.status === 'CONFIRMED' && booking.canReschedule && isRescheduling && (
-        <div className="rounded border border-gray-200 dark:border-gray-700 p-4">
-          <h2 className="mb-3 text-lg font-medium">Modificar fecha y hora</h2>
+        <Card padding="sm">
+          <h2
+            className="mb-3 text-lg"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 600 }}
+          >
+            Modificar fecha y hora
+          </h2>
 
           <Input
             type="date"
@@ -117,9 +166,9 @@ export function BookingCancelPage() {
           />
 
           {newDate && (
-            <Card className="mt-4">
-              <CardContent className="py-4">
-                <p className="mb-3 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Card className="mt-4" padding="sm">
+              <CardContent>
+                <p className="mb-3 text-sm font-semibold" style={{ color: 'var(--color-text-secondary)' }}>
                   Horarios disponibles
                 </p>
                 <SlotGrid
@@ -132,7 +181,7 @@ export function BookingCancelPage() {
             </Card>
           )}
 
-          <div className="mt-4 flex gap-3">
+          <div className="mt-4 flex flex-col gap-3 sm:flex-row">
             <Button
               type="button"
               onClick={() => {
@@ -164,15 +213,15 @@ export function BookingCancelPage() {
             </Button>
           </div>
           {rescheduleBooking.isError && (
-            <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+            <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-danger)' }}>
               {getApiErrorMessage(rescheduleBooking.error)}
             </p>
           )}
-        </div>
+        </Card>
       )}
 
       {booking.status === 'CONFIRMED' && !booking.canCancel && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Ya no puedes cancelar o modificar esta reserva en línea: se requieren al menos{' '}
           {booking.cancellationPolicyHours} horas de anticipación. Contacta
           directamente a {booking.businessName}.
@@ -180,21 +229,24 @@ export function BookingCancelPage() {
       )}
 
       {booking.status === 'EXPIRED' && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">
+        <p className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
           Esta reserva ya venció: su horario ya pasó. Contacta directamente a{' '}
           {booking.businessName} si necesitas agendar una nueva cita.
         </p>
       )}
 
       {booking.status === 'CANCELLED' && (
-        <p className="text-sm text-gray-500 dark:text-gray-400">Esta reserva ya fue cancelada.</p>
+        <p role="status" className="text-sm" style={{ color: 'var(--color-text-secondary)' }}>
+          Esta reserva ya fue cancelada.
+        </p>
       )}
 
       {cancelBooking.isError && !isRescheduling && (
-        <p role="alert" className="mt-2 text-sm text-red-600 dark:text-red-400">
+        <p role="alert" className="mt-2 text-sm" style={{ color: 'var(--color-danger)' }}>
           {getApiErrorMessage(cancelBooking.error)}
         </p>
       )}
+      {confirmDialog}
     </main>
   );
 }

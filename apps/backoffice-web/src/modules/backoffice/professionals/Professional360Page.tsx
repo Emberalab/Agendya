@@ -4,15 +4,22 @@ import { useProfessional360 } from './hooks/useProfessional360';
 import { Card } from '../../../shared/components/Card';
 import { Badge } from '../../../shared/components/Badge';
 import { BackLink } from '../../../shared/components/BackLink';
+import { PLAN_LABELS } from '@agendya/types';
 import { TicketPriorityBadge, TicketStatusBadge } from '../shared/badges';
+import { WEEKDAY_LABELS } from '../activity/activityLabels';
+import { LoadError } from '../../../shared/components/LoadError';
 
 function SectionTitle({ children }: { children: ReactNode }) {
-  return <h2 className="mb-2 text-sm font-semibold text-text-secondary">{children}</h2>;
+  return (
+    <h2 className="mb-2 text-sm font-semibold text-text-secondary">
+      {children}
+    </h2>
+  );
 }
 
 export function Professional360Page() {
   const { id = '' } = useParams();
-  const { data, isLoading, error } = useProfessional360(id);
+  const { data, isLoading, error, refetch } = useProfessional360(id);
 
   if (isLoading) {
     return <div className="p-6 text-sm text-text-muted">Cargando…</div>;
@@ -20,8 +27,14 @@ export function Professional360Page() {
   if (error || !data) {
     return (
       <div className="p-6">
-        <BackLink to="/backoffice/professionals">Volver a profesionales</BackLink>
-        <p className="text-sm text-danger">No se pudo cargar este profesional.</p>
+        <BackLink to="/backoffice/professionals">
+          Volver a profesionales
+        </BackLink>
+        <LoadError
+          what="este profesional"
+          onRetry={() => void refetch()}
+          className=""
+        />
       </div>
     );
   }
@@ -32,7 +45,9 @@ export function Professional360Page() {
 
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold text-text-primary">{data.business.businessName}</h1>
+          <h1 className="text-xl font-bold text-text-primary">
+            {data.business.businessName}
+          </h1>
           <p className="text-sm text-text-muted">
             {data.account.email} · /{data.business.slug}
           </p>
@@ -48,7 +63,7 @@ export function Professional360Page() {
             {data.account.isActive ? 'Activo' : 'Inactivo'}
           </Badge>
           <Badge variant="secondary" dot={false}>
-            {data.account.plan}
+            {PLAN_LABELS[data.account.plan] ?? data.account.plan}
           </Badge>
         </div>
       </div>
@@ -59,16 +74,30 @@ export function Professional360Page() {
           <dl className="space-y-1 text-sm">
             <Row label="Rol" value={data.account.role} />
             <Row label="Zona horaria" value={data.account.timezone} />
-            <Row label="Miembro desde" value={new Date(data.account.createdAt).toLocaleDateString('es-CO')} />
-            <Row label="Política de cancelación" value={`${data.business.cancellationPolicyHours} h`} />
+            <Row
+              label="Miembro desde"
+              value={new Date(data.account.createdAt).toLocaleDateString(
+                'es-CO',
+              )}
+            />
+            <Row
+              label="Política de cancelación"
+              value={`${data.business.cancellationPolicyHours} h`}
+            />
           </dl>
         </Card>
 
         <Card>
           <SectionTitle>Citas</SectionTitle>
           <dl className="space-y-1 text-sm">
-            <Row label="Completadas" value={data.appointments.counts.completed} />
-            <Row label="Canceladas" value={data.appointments.counts.cancelled} />
+            <Row
+              label="Completadas"
+              value={data.appointments.counts.completed}
+            />
+            <Row
+              label="Canceladas"
+              value={data.appointments.counts.cancelled}
+            />
             <Row label="No asistió" value={data.appointments.counts.noShow} />
             <Row label="Vencidas" value={data.appointments.counts.expired} />
           </dl>
@@ -78,14 +107,20 @@ export function Professional360Page() {
       <div className="mt-4">
         <SectionTitle>Próximas citas</SectionTitle>
         <Card padding="none">
-          <BookingList items={data.appointments.upcoming} empty="Sin citas próximas." />
+          <BookingList
+            items={data.appointments.upcoming}
+            empty="Sin citas próximas."
+          />
         </Card>
       </div>
 
       <div className="mt-4">
         <SectionTitle>Citas recientes</SectionTitle>
         <Card padding="none">
-          <BookingList items={data.appointments.recent} empty="Sin citas recientes." />
+          <BookingList
+            items={data.appointments.recent}
+            empty="Sin citas recientes."
+          />
         </Card>
       </div>
 
@@ -94,12 +129,16 @@ export function Professional360Page() {
           <SectionTitle>Horario semanal</SectionTitle>
           <Card padding="sm">
             {data.schedule.workingHours.length === 0 ? (
-              <p className="text-sm text-text-muted">Sin horario configurado.</p>
+              <p className="text-sm text-text-muted">
+                Sin horario configurado.
+              </p>
             ) : (
               <ul className="space-y-1 text-sm text-text-secondary">
                 {data.schedule.workingHours.map((block) => (
                   <li key={block.id}>
-                    {block.dayOfWeek} · {minutesToHm(block.startMinute)}–{minutesToHm(block.endMinute)}
+                    {WEEKDAY_LABELS[block.dayOfWeek]} ·{' '}
+                    {minutesToHm(block.startMinute)}–
+                    {minutesToHm(block.endMinute)}
                   </li>
                 ))}
               </ul>
@@ -134,9 +173,12 @@ export function Professional360Page() {
             <ul className="divide-y divide-border">
               {data.notifications.recent.map((notification) => (
                 <li key={notification.id} className="p-3">
-                  <p className="text-sm text-text-primary">{notification.title}</p>
+                  <p className="text-sm text-text-primary">
+                    {notification.title}
+                  </p>
                   <p className="text-xs text-text-muted">
-                    {notification.body} · {new Date(notification.createdAt).toLocaleString('es-CO')}
+                    {notification.body} ·{' '}
+                    {new Date(notification.createdAt).toLocaleString('es-CO')}
                     {notification.readAt ? '' : ' · sin leer'}
                   </p>
                 </li>
@@ -153,20 +195,24 @@ export function Professional360Page() {
             <p className="p-4 text-sm text-text-muted">Sin tickets.</p>
           ) : (
             <ul className="divide-y divide-border">
-              {[...data.support.open, ...data.support.resolved].map((ticket) => (
-                <li key={ticket.id}>
-                  <Link
-                    to={`/backoffice/tickets/${ticket.id}`}
-                    className="flex items-center justify-between gap-3 p-3 hover:bg-surface-soft"
-                  >
-                    <span className="truncate text-sm text-text-primary">{ticket.subject}</span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <TicketPriorityBadge priority={ticket.priority} />
-                      <TicketStatusBadge status={ticket.status} />
-                    </span>
-                  </Link>
-                </li>
-              ))}
+              {[...data.support.open, ...data.support.resolved].map(
+                (ticket) => (
+                  <li key={ticket.id}>
+                    <Link
+                      to={`/backoffice/tickets/${ticket.id}`}
+                      className="flex items-center justify-between gap-3 p-3 hover:bg-surface-soft"
+                    >
+                      <span className="truncate text-sm text-text-primary">
+                        {ticket.subject}
+                      </span>
+                      <span className="flex shrink-0 items-center gap-2">
+                        <TicketPriorityBadge priority={ticket.priority} />
+                        <TicketStatusBadge status={ticket.status} />
+                      </span>
+                    </Link>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </Card>

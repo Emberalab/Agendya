@@ -230,7 +230,7 @@ export function ManualBookingModal({
             <p
               role="status"
               className="px-3 py-2 rounded-xl"
-              style={{ fontSize: '13px', color: 'var(--color-text-primary)', backgroundColor: 'rgba(245,158,11,0.12)', border: '1px solid #F59E0B' }}
+              style={{ fontSize: '13px', color: 'var(--color-text-primary)', backgroundColor: 'var(--color-warning-surface)', border: '1px solid var(--color-warning-border)' }}
             >
               {scheduleWarning}
             </p>
@@ -385,7 +385,7 @@ export function ManualBookingModal({
           aria-modal="true"
           aria-label="Nueva cita manual"
           className="w-full max-w-[480px] rounded-3xl flex flex-col overflow-hidden"
-          style={{ maxHeight: '88vh', backgroundColor: 'var(--color-surface-soft)', boxShadow: '0 24px 64px rgba(15,23,42,0.22)' }}
+          style={{ maxHeight: '88vh', backgroundColor: 'var(--color-surface-soft)', boxShadow: 'var(--shadow-dialog)' }}
           onClick={(e) => e.stopPropagation()}
         >
           {panelContent}
@@ -398,7 +398,7 @@ export function ManualBookingModal({
   // covers the footer with the submit button.
   return (
     <>
-      <div className="fixed inset-0 z-[90]" style={{ backgroundColor: 'rgba(15,23,42,0.3)' }} onClick={onClose} />
+      <div className="fixed inset-0 z-[90]" style={{ backgroundColor: 'var(--overlay-scrim)' }} onClick={onClose} />
 
       <div
         ref={dialogRef}
@@ -410,7 +410,7 @@ export function ManualBookingModal({
         style={{
           maxWidth: '440px',
           backgroundColor: 'var(--color-surface-soft)',
-          boxShadow: '-8px 0 40px rgba(15,23,42,0.14)',
+          boxShadow: 'var(--shadow-drawer)',
         }}
       >
         {panelContent}

@@ -44,8 +44,12 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
       role="alert"
       className="w-full px-4 py-3"
       style={{
-        backgroundColor: isGrace ? '#FEE2E2' : '#FEF3C7',
-        borderBottom: `1px solid ${isGrace ? '#FCA5A5' : '#FCD34D'}`,
+        // Token-based (was light-only hex): a translucent wash in dark mode
+        // instead of a bright pastel bar across the top of every page.
+        backgroundColor: isGrace
+          ? 'var(--color-danger-surface)'
+          : 'var(--color-warning-surface)',
+        borderBottom: `1px solid ${isGrace ? 'var(--color-danger-border)' : 'var(--color-warning-border)'}`,
       }}
     >
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-4 flex-wrap">
@@ -56,7 +60,8 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
               height="20"
               viewBox="0 0 24 24"
               fill="none"
-              style={{ color: '#DC2626', flexShrink: 0 }}
+              aria-hidden="true"
+              style={{ color: 'var(--color-danger)', flexShrink: 0 }}
             >
               <path
                 d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
@@ -72,7 +77,8 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
               height="20"
               viewBox="0 0 24 24"
               fill="none"
-              style={{ color: '#D97706', flexShrink: 0 }}
+              aria-hidden="true"
+              style={{ color: 'var(--color-warning)', flexShrink: 0 }}
             >
               <path
                 d="M12 9v4m0 4h.01M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0z"
@@ -88,7 +94,7 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
               style={{
                 fontSize: '14px',
                 fontWeight: 600,
-                color: isGrace ? '#991B1B' : '#92400E',
+                color: isGrace ? 'var(--color-danger)' : 'var(--color-warning)',
               }}
             >
               {isGrace && (
@@ -115,8 +121,12 @@ export function PlanStatusBanner({ profile }: PlanStatusBannerProps) {
           to="/dashboard/profile"
           className="shrink-0 rounded-lg px-4 py-2 text-sm font-semibold"
           style={{
-            backgroundColor: isGrace ? '#DC2626' : '#D97706',
-            color: '#fff',
+            // --color-warning-fill keeps white text at 5.0:1; the old amber-600
+            // fill was 3.2:1.
+            backgroundColor: isGrace
+              ? 'var(--color-danger-fill)'
+              : 'var(--color-warning-fill)',
+            color: 'var(--color-text-on-brand)',
             textDecoration: 'none',
           }}
         >

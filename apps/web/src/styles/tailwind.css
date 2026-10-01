@@ -11,7 +11,11 @@
 @theme inline {
   --font-display: 'Outfit', sans-serif;
   --font-body: 'Plus Jakarta Sans', sans-serif;
-  --font-mono: 'Inter', monospace;
+  /* "mono" is a historical name: the family is Inter (a proportional sans,
+     used for labels, timestamps and emails). The fallback used to be
+     `monospace`, so whenever Google Fonts didn't load (offline PWA, blocked
+     CDN) those labels dropped to Courier. */
+  --font-mono: 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
 /* Drive Tailwind's `dark:` variant off our own theme toggle (data-theme on

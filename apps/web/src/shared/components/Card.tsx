@@ -13,7 +13,7 @@ export function Card({
   className = '',
   padding = 'md',
   hover = false,
-  onClick
+  onClick,
 }: CardProps) {
   const paddingClasses = {
     none: '',
@@ -22,11 +22,14 @@ export function Card({
     lg: 'p-8',
   };
 
-  const hoverClass = hover ? 'hover:shadow-lg transition-shadow' : '';
+  // Border-first like every other Agendya container; elevation only on hover.
+  const hoverClass = hover
+    ? 'hover:shadow-[var(--shadow-menu)] transition-shadow'
+    : '';
 
   return (
     <div
-      className={`bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm ${paddingClasses[padding]} ${hoverClass} ${className}`}
+      className={`rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] ${paddingClasses[padding]} ${hoverClass} ${className}`}
       onClick={onClick}
     >
       {children}
@@ -34,18 +37,54 @@ export function Card({
   );
 }
 
-export function CardHeader({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function CardHeader({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return <div className={`mb-4 ${className}`}>{children}</div>;
 }
 
-export function CardTitle({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <h2 className={`text-xl font-semibold text-gray-900 dark:text-gray-100 ${className}`}>{children}</h2>;
+export function CardTitle({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <h2
+      className={`text-xl font-semibold text-[var(--color-text-primary)] ${className}`}
+    >
+      {children}
+    </h2>
+  );
 }
 
-export function CardDescription({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <p className={`mt-1 text-sm text-gray-600 dark:text-gray-400 ${className}`}>{children}</p>;
+export function CardDescription({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <p
+      className={`mt-1 text-sm text-[var(--color-text-secondary)] ${className}`}
+    >
+      {children}
+    </p>
+  );
 }
 
-export function CardContent({ children, className = '' }: { children: ReactNode; className?: string }) {
+export function CardContent({
+  children,
+  className = '',
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return <div className={className}>{children}</div>;
 }

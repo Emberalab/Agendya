@@ -35,7 +35,7 @@ export function ConfirmDeleteReadDialog({
         className="rounded-3xl p-7 flex flex-col items-center gap-3 w-full max-w-sm"
         style={{
           backgroundColor: 'var(--color-surface)',
-          boxShadow: '0 24px 64px rgba(15,23,42,0.18)',
+          boxShadow: 'var(--shadow-dialog)',
         }}
       >
         <div
@@ -104,7 +104,7 @@ export function ConfirmDeleteReadDialog({
             style={{
               fontFamily: 'var(--font-body)',
               fontSize: '14px',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               backgroundColor: 'var(--color-danger-fill)',
               border: 'none',
               cursor: pending ? 'default' : 'pointer',

@@ -29,7 +29,10 @@ export function LegalPage({ title, sections, lastUpdated }: LegalPageProps) {
     <div
       style={{
         minHeight: '100vh',
-        background: 'var(--color-bg-primary)',
+        // These referenced --color-bg-*/--radius-*/--shadow-md/--font-heading
+        // tokens that never existed in this app, so the card rendered with
+        // no background, radius or shadow and headings lost their font.
+        background: 'var(--color-surface-soft)',
         padding: '2rem 1rem',
       }}
     >
@@ -37,10 +40,10 @@ export function LegalPage({ title, sections, lastUpdated }: LegalPageProps) {
         style={{
           maxWidth: '50rem',
           margin: '0 auto',
-          background: 'var(--color-bg-secondary)',
-          borderRadius: 'var(--radius-lg)',
-          padding: '2rem',
-          boxShadow: 'var(--shadow-md)',
+          background: 'var(--color-surface)',
+          border: '1px solid var(--color-border)',
+          borderRadius: '24px',
+          padding: 'clamp(1.25rem, 4vw, 2.5rem)',
         }}
       >
         {/* Header */}
@@ -51,7 +54,7 @@ export function LegalPage({ title, sections, lastUpdated }: LegalPageProps) {
               fontWeight: 700,
               color: 'var(--color-text-primary)',
               marginBottom: '0.5rem',
-              fontFamily: 'var(--font-heading)',
+              fontFamily: 'var(--font-display)',
             }}
           >
             {title}
@@ -89,7 +92,7 @@ export function LegalPage({ title, sections, lastUpdated }: LegalPageProps) {
                   fontWeight: 600,
                   color: 'var(--color-text-primary)',
                   marginBottom: '1rem',
-                  fontFamily: 'var(--font-heading)',
+                  fontFamily: 'var(--font-display)',
                 }}
               >
                 {section.title}
@@ -192,12 +195,17 @@ export function LegalPage({ title, sections, lastUpdated }: LegalPageProps) {
         >
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            // Opened straight from a link (new tab, email footer) there is no
+            // in-app history to go back to; -1 would leave the site or do
+            // nothing, so fall back to the app's entry point.
+            onClick={() =>
+              window.history.length > 1 ? navigate(-1) : navigate('/')
+            }
             style={{
               padding: '0.75rem 1.5rem',
-              background: 'var(--color-bg-primary)',
+              background: 'var(--color-surface)',
               border: '1px solid var(--color-border)',
-              borderRadius: 'var(--radius-md)',
+              borderRadius: 'var(--radius-control)',
               color: 'var(--color-text-primary)',
               fontSize: '0.875rem',
               fontWeight: 500,
@@ -206,10 +214,10 @@ export function LegalPage({ title, sections, lastUpdated }: LegalPageProps) {
               fontFamily: 'var(--font-body)',
             }}
             onMouseOver={(e) => {
-              e.currentTarget.style.background = 'var(--color-bg-tertiary)';
+              e.currentTarget.style.background = 'var(--color-surface-soft)';
             }}
             onMouseOut={(e) => {
-              e.currentTarget.style.background = 'var(--color-bg-primary)';
+              e.currentTarget.style.background = 'var(--color-surface)';
             }}
           >
             Volver

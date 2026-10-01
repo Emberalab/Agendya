@@ -182,7 +182,7 @@ export function SupportTicketDetailPage() {
             <p
               role="alert"
               className="mt-2 text-sm"
-              style={{ fontFamily: 'var(--font-body)', color: '#DC2626' }}
+              style={{ fontFamily: 'var(--font-body)', color: 'var(--color-danger)' }}
             >
               {getApiErrorMessage(addMessage.error)}
             </p>
@@ -195,7 +195,7 @@ export function SupportTicketDetailPage() {
               style={{
                 fontFamily: 'var(--font-body)',
                 backgroundColor: 'var(--color-brand-primary)',
-                color: '#fff',
+                color: 'var(--color-text-on-brand)',
                 border: 'none',
                 cursor:
                   !body.trim() || addMessage.isPending ? 'not-allowed' : 'pointer',

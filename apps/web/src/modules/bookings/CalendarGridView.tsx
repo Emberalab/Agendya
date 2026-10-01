@@ -157,7 +157,7 @@ function DaySidebar({
 
   return (
     <>
-      <div className="fixed inset-0 z-[80]" style={{ backgroundColor: 'rgba(15,23,42,0.35)' }} onClick={onClose} />
+      <div className="fixed inset-0 z-[80]" style={{ backgroundColor: 'var(--overlay-scrim)' }} onClick={onClose} />
       <div
         ref={dialogRef}
         tabIndex={-1}
@@ -323,7 +323,7 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                     fontSize: '13px',
                     lineHeight: '18px',
                     marginBottom: hasBookings ? 6 : 0,
-                    color: isSelected ? '#fff' : cell.isCurrentMonth ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                    color: isSelected ? 'var(--color-text-on-brand)' : cell.isCurrentMonth ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                   }}
                 >
                   {cell.day}
@@ -339,7 +339,7 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                             fontWeight: 600,
                             fontSize: '10px',
                             lineHeight: '14px',
-                            color: isSelected ? '#fff' : 'var(--color-text-primary)',
+                            color: isSelected ? 'var(--color-text-on-brand)' : 'var(--color-text-primary)',
                             whiteSpace: 'nowrap',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -366,7 +366,7 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                         position: 'absolute',
                         bottom: 9,
                         right: 9,
-                        backgroundColor: isSelected ? '#fff' : '#EDF2FF',
+                        backgroundColor: isSelected ? '#fff' : 'var(--color-brand-surface)',
                         borderRadius: 6,
                         padding: '2px 6px',
                       }}
@@ -376,7 +376,12 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                           fontFamily: 'var(--font-body)',
                           fontWeight: 600,
                           fontSize: '11px',
-                          color: 'var(--color-text-brand)',
+                          // On a selected (brand-filled) cell the chip is
+                          // white, so use the fill-strength brand color: the
+                          // dark theme's lighter text-brand is 2.7:1 on white.
+                          color: isSelected
+                            ? 'var(--color-brand-primary)'
+                            : 'var(--color-text-brand)',
                           lineHeight: '14px',
                           whiteSpace: 'nowrap',
                         }}
@@ -446,7 +451,7 @@ export function CalendarGridView({ bookings, initialMonth, onBookingClick }: Cal
                     fontFamily: 'var(--font-body)',
                     fontWeight: 600,
                     fontSize: '13px',
-                    color: isSelected ? '#fff' : cell.isCurrentMonth ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
+                    color: isSelected ? 'var(--color-text-on-brand)' : cell.isCurrentMonth ? 'var(--color-text-primary)' : 'var(--color-text-muted)',
                   }}
                 >
                   {cell.day}

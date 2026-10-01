@@ -34,6 +34,7 @@ import { UpgradeSuccessDialog } from './UpgradeSuccessDialog';
 import { hexToHue, hueToHex } from './color';
 import { downscaleImage } from './image';
 import { formatTrialDate, trialRemainingLabel } from './trial';
+import { useConfirmDialog } from '../../shared/components/useConfirmDialog';
 
 const profileFormSchema = z.object({
   businessName: z
@@ -83,6 +84,7 @@ function cancellationLabel(hours: number): string {
 
 export function ProfilePage() {
   const { data: profile, isLoading } = useProfile();
+  const { confirm, confirmDialog } = useConfirmDialog();
   const updateProfile = useUpdateProfile();
   const [subscriptionError, setSubscriptionError] = useState<string | null>(
     null,
@@ -225,8 +227,11 @@ export function ProfilePage() {
           style={{
             fontSize: '12px',
             fontWeight: 600,
-            backgroundColor: isComplete ? '#DCFCE7' : '#FEF3C7',
-            color: isComplete ? '#15803D' : '#B45309',
+            backgroundColor: isComplete
+              ? 'var(--color-success-surface)'
+              : 'var(--color-warning-surface)',
+            color: isComplete ? 'var(--color-success)' : 'var(--color-warning)',
+            border: `1px solid ${isComplete ? 'var(--color-success-border)' : 'var(--color-warning-border)'}`,
           }}
         >
           {isComplete ? 'Completo' : 'Incompleto'}
@@ -314,7 +319,7 @@ export function ProfilePage() {
             <div className="flex flex-col gap-2 sm:flex-row">
               <div
                 className="flex items-center flex-1 rounded-lg overflow-hidden"
-                style={{ border: '1px solid var(--color-border)' }}
+                style={{ border: '1px solid var(--color-border-strong)' }}
               >
                 <span
                   className="pl-3 pr-1 shrink-0"
@@ -397,7 +402,7 @@ export function ProfilePage() {
                 className="mt-1.5"
                 style={{
                   fontSize: '13px',
-                  color: checkSlug.data.available ? '#15803D' : 'var(--color-danger)',
+                  color: checkSlug.data.available ? 'var(--color-success)' : 'var(--color-danger)',
                 }}
               >
                 {checkSlug.data.available
@@ -538,8 +543,8 @@ export function ProfilePage() {
                       <span
                         className="px-2 py-0.5 rounded text-xs font-semibold"
                         style={{
-                          backgroundColor: '#FEF3C7',
-                          color: '#B45309',
+                          backgroundColor: 'var(--color-warning-surface)',
+                          color: 'var(--color-warning)',
                         }}
                       >
                         Cancelado
@@ -551,8 +556,8 @@ export function ProfilePage() {
                       <span
                         className="px-2 py-0.5 rounded text-xs font-semibold"
                         style={{
-                          backgroundColor: '#FEE2E2',
-                          color: '#DC2626',
+                          backgroundColor: 'var(--color-danger-surface)',
+                          color: 'var(--color-danger)',
                         }}
                       >
                         Período de gracia
@@ -667,7 +672,7 @@ export function ProfilePage() {
                       height="20"
                       viewBox="0 0 24 24"
                       fill="none"
-                      style={{ color: '#94A3B8', flexShrink: 0 }}
+                      style={{ color: 'var(--color-text-muted)', flexShrink: 0 }}
                     >
                       <rect
                         x="3"
@@ -725,14 +730,16 @@ export function ProfilePage() {
                   profile.planExpiresAt && (
                     <button
                       type="button"
-                      onClick={() => {
-                        if (
-                          confirm(
-                            '¿Estás seguro de que quieres cancelar tu suscripción? Podrás seguir usando tu plan hasta la fecha de vencimiento.',
-                          )
-                        ) {
-                          cancelSub.mutate();
-                        }
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: '¿Cancelar tu suscripción?',
+                          description:
+                            'Podrás seguir usando tu plan hasta la fecha de vencimiento.',
+                          confirmLabel: 'Cancelar suscripción',
+                          cancelLabel: 'Mantener plan',
+                          destructive: true,
+                        });
+                        if (confirmed) cancelSub.mutate();
                       }}
                       disabled={cancelSub.isPending}
                       className="rounded-xl px-5 py-3 text-sm font-semibold"
@@ -760,7 +767,7 @@ export function ProfilePage() {
                       className="rounded-xl px-5 py-3 text-sm font-semibold"
                       style={{
                         backgroundColor: 'var(--color-brand-primary)',
-                        color: '#fff',
+                        color: 'var(--color-text-on-brand)',
                         border: 'none',
                         cursor: reactivateSub.isPending
                           ? 'not-allowed'
@@ -781,7 +788,7 @@ export function ProfilePage() {
                     style={{
                       background:
                         'linear-gradient(135deg, #6366F1 0%, var(--color-brand-primary) 100%)',
-                      color: '#fff',
+                      color: 'var(--color-text-on-brand)',
                       border: 'none',
                       cursor: 'pointer',
                       fontSize: '15px',
@@ -884,8 +891,15 @@ export function ProfilePage() {
         </Section>
 
         {updateProfile.isError && (
-          <div role="alert" className="rounded-lg border border-red-200 bg-red-50 dark:border-red-900/50 dark:bg-red-950/40 p-3">
-            <p className="text-sm text-red-600 dark:text-red-400">
+          <div
+            role="alert"
+            className="rounded-lg p-3"
+            style={{
+              backgroundColor: 'var(--color-danger-surface)',
+              border: '1px solid var(--color-danger-border)',
+            }}
+          >
+            <p className="text-sm" style={{ color: 'var(--color-danger)' }}>
               {getApiErrorMessage(updateProfile.error)}
             </p>
           </div>
@@ -893,7 +907,16 @@ export function ProfilePage() {
 
         {/* Footer */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p style={{ fontSize: '13px', color: 'var(--color-text-muted)' }}>
+          <p
+            role="status"
+            style={{
+              fontSize: '13px',
+              color:
+                updateProfile.isSuccess && !isDirty
+                  ? 'var(--color-success)'
+                  : 'var(--color-text-muted)',
+            }}
+          >
             {updateProfile.isSuccess && !isDirty
               ? 'Cambios guardados.'
               : 'El botón se activará cuando realices cambios.'}
@@ -910,7 +933,7 @@ export function ProfilePage() {
               color:
                 !isDirty || updateProfile.isPending
                   ? 'var(--color-text-muted)'
-                  : '#fff',
+                  : 'var(--color-text-on-brand)',
               border: 'none',
               cursor:
                 !isDirty || updateProfile.isPending ? 'not-allowed' : 'pointer',
@@ -919,10 +942,20 @@ export function ProfilePage() {
             {updateProfile.isPending ? 'Guardando…' : 'Guardar cambios'}
           </button>
         </div>
-        <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
-          Modificado por última vez hoy
-        </p>
+        {/* Was a hardcoded "Modificado por última vez hoy" — shown even for a
+            profile untouched for months. */}
+        {profile?.updatedAt && (
+          <p style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+            Última modificación:{' '}
+            {new Date(profile.updatedAt).toLocaleDateString('es-CO', {
+              day: 'numeric',
+              month: 'long',
+              year: 'numeric',
+            })}
+          </p>
+        )}
       </form>
+      {confirmDialog}
     </div>
   );
 }
@@ -933,7 +966,7 @@ const inputStyle = {
   width: '100%',
   height: '46px',
   borderRadius: '8px',
-  border: '1px solid var(--color-border)',
+  border: '1px solid var(--color-border-strong)',
   padding: '0 14px',
   backgroundColor: 'var(--color-surface)',
   fontFamily: 'var(--font-body)',
@@ -1093,7 +1126,7 @@ function ImageDropzone({
           className="absolute top-2 right-2 flex items-center justify-center w-7 h-7 rounded-full"
           style={{
             backgroundColor: 'rgba(15,23,42,0.6)',
-            color: '#fff',
+            color: 'var(--color-text-on-brand)',
             border: 'none',
             cursor: 'pointer',
           }}

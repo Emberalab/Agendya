@@ -40,7 +40,7 @@ export function UpgradeSuccessDialog({
         className="w-full max-w-[440px] rounded-3xl p-8"
         style={{
           backgroundColor: 'var(--color-surface)',
-          boxShadow: '0 24px 64px rgba(15,23,42,0.22)',
+          boxShadow: 'var(--shadow-dialog)',
           animation: 'scaleIn 0.2s ease-out',
         }}
         onClick={(e) => e.stopPropagation()}
@@ -112,7 +112,7 @@ export function UpgradeSuccessDialog({
           className="w-full mt-8 py-4 rounded-2xl text-sm font-semibold"
           style={{
             backgroundColor: 'var(--color-brand-primary)',
-            color: '#fff',
+            color: 'var(--color-text-on-brand)',
             border: 'none',
             cursor: 'pointer',
           }}

@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useDashboardSummary } from './hooks/useDashboard';
 import { Card } from '../../../shared/components/Card';
+import { LoadError } from '../../../shared/components/LoadError';
 import { TicketPriorityBadge, TicketStatusBadge } from '../shared/badges';
 
 function StatTile({ label, value }: { label: string; value: number }) {
@@ -13,13 +14,14 @@ function StatTile({ label, value }: { label: string; value: number }) {
 }
 
 export function BackofficeDashboardPage() {
-  const { data, isLoading } = useDashboardSummary();
+  const { data, isLoading, isError, refetch } = useDashboardSummary();
 
   return (
     <div className="mx-auto max-w-5xl p-6">
       <h1 className="text-xl font-bold text-text-primary">Panel</h1>
 
       {isLoading && <p className="mt-4 text-sm text-text-muted">Cargando…</p>}
+      {isError && <LoadError what="el panel" onRetry={() => void refetch()} className="mt-4" />}
 
       {data && (
         <>

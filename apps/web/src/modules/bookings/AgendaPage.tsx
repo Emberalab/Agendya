@@ -125,7 +125,7 @@ function MobileStatPill({
           fontFamily: 'var(--font-body)',
           fontSize: '13px',
           fontWeight: 500,
-          color: filled ? '#fff' : 'var(--color-text-secondary)',
+          color: filled ? 'var(--color-text-on-brand)' : 'var(--color-text-secondary)',
           whiteSpace: 'nowrap',
         }}
       >
@@ -136,7 +136,7 @@ function MobileStatPill({
           fontFamily: 'var(--font-display)',
           fontWeight: 700,
           fontSize: '13px',
-          color: filled ? '#fff' : 'var(--color-text-primary)',
+          color: filled ? 'var(--color-text-on-brand)' : 'var(--color-text-primary)',
         }}
       >
         {value}
@@ -386,12 +386,12 @@ export function AgendaPage() {
   const bookingUsageFill = bookingLimitReached
     ? 'var(--color-danger)'
     : bookingLimitNear
-      ? '#F59E0B'
+      ? 'var(--color-warning)'
       : 'var(--color-brand-primary)';
   const bookingUsageLabelColor = bookingLimitReached
     ? 'var(--color-danger)'
     : bookingLimitNear
-      ? '#F59E0B'
+      ? 'var(--color-warning)'
       : 'var(--color-text-secondary)';
 
   // Widen — never shrink — the range so the target day is fetched. Pad ±1 day
@@ -578,13 +578,15 @@ export function AgendaPage() {
           </p>
         </div>
         <button
+          type="button"
           onClick={openManualBooking}
+          aria-label="Nueva cita"
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl shrink-0"
           style={{
             fontFamily: 'var(--font-body)',
             fontSize: '14px',
             fontWeight: 600,
-            color: '#fff',
+            color: 'var(--color-text-on-brand)',
             backgroundColor: 'var(--color-brand-primary)',
             border: 'none',
             cursor: 'pointer',
@@ -593,10 +595,10 @@ export function AgendaPage() {
           onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
           onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
           </svg>
-          <span className="hidden sm:inline">Nueva cita</span>
+          <span className="hidden sm:inline" aria-hidden="true">Nueva cita</span>
         </button>
       </div>
 
@@ -713,7 +715,7 @@ export function AgendaPage() {
                 color: bookingLimitReached
                   ? 'var(--color-danger)'
                   : bookingLimitNear
-                    ? '#F59E0B'
+                    ? 'var(--color-warning)'
                     : 'var(--color-text-brand)',
               }}
             >
@@ -753,7 +755,7 @@ export function AgendaPage() {
                   fontFamily: 'var(--font-body)',
                   fontSize: '12px',
                   fontWeight: 600,
-                  color: '#fff',
+                  color: 'var(--color-text-on-brand)',
                   backgroundColor: 'var(--color-brand-primary)',
                   border: 'none',
                   borderRadius: 8,
@@ -770,7 +772,7 @@ export function AgendaPage() {
                 style={{
                   fontFamily: 'var(--font-body)',
                   fontSize: '12px',
-                  color: '#F59E0B',
+                  color: 'var(--color-warning)',
                   margin: 0,
                 }}
               >
@@ -814,6 +816,8 @@ export function AgendaPage() {
           {(['list', 'calendar'] as const).map((id) => (
             <button
               key={id}
+              type="button"
+              aria-pressed={viewMode === id}
               onClick={() => setViewMode(id)}
               style={{
                 padding: '8px 16px',
@@ -822,7 +826,7 @@ export function AgendaPage() {
                 fontSize: '14px',
                 fontWeight: 600,
                 backgroundColor: viewMode === id ? 'var(--color-brand-primary)' : 'transparent',
-                color: viewMode === id ? '#fff' : 'var(--color-text-secondary)',
+                color: viewMode === id ? 'var(--color-text-on-brand)' : 'var(--color-text-secondary)',
                 border: 'none',
                 cursor: 'pointer',
                 transition: 'all 0.15s',
@@ -1025,8 +1029,8 @@ export function AgendaPage() {
               style={{ backgroundColor: 'var(--color-surface-soft)', border: '1px solid var(--color-border)' }}
             >
               <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                <rect x="2" y="4" width="18" height="16" rx="2" stroke="#94A3B8" strokeWidth="1.5" />
-                <path d="M7 2v4M15 2v4M2 10h18" stroke="#94A3B8" strokeWidth="1.5" strokeLinecap="round" />
+                <rect x="2" y="4" width="18" height="16" rx="2" stroke="var(--color-text-muted)" strokeWidth="1.5" />
+                <path d="M7 2v4M15 2v4M2 10h18" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" />
               </svg>
             </div>
             <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: '14px', color: 'var(--color-text-primary)', marginBottom: '4px' }}>

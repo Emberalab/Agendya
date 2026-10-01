@@ -37,11 +37,40 @@ export function isBackofficeApiError(
   return error instanceof BackofficeApiError;
 }
 
+/**
+ * Human-readable (Spanish) message for a failed Backoffice request. Prefers
+ * the API's own NestJS `message` (string or validation-error array), then a
+ * status-based fallback, so mutation errors are never shown as a raw
+ * "Request failed with status 500".
+ */
+export function getBackofficeErrorMessage(
+  error: unknown,
+  fallback = 'No se pudo completar la acción. Inténtalo de nuevo.',
+): string {
+  if (isBackofficeApiError(error)) {
+    const data = error.data as { message?: unknown } | null | undefined;
+    const message = data?.message;
+    if (typeof message === 'string' && message.trim()) return message;
+    if (Array.isArray(message) && typeof message[0] === 'string')
+      return message[0];
+    if (error.status === 403)
+      return 'Tu rol no tiene permiso para esta acción.';
+    if (error.status === 404) return 'El recurso ya no existe.';
+    if (error.status >= 500)
+      return 'El servidor no respondió correctamente. Inténtalo de nuevo.';
+  }
+  if (error instanceof TypeError)
+    return 'Sin conexión con el servidor. Revisa tu red e inténtalo de nuevo.';
+  return fallback;
+}
+
 type QueryValue = string | number | boolean | undefined | null;
 
 interface RequestOptions {
   params?: Record<string, QueryValue>;
   signal?: AbortSignal;
+  /** Use this token instead of the stored session (Google callback). */
+  accessToken?: string;
 }
 
 function buildUrl(path: string, params?: RequestOptions['params']): string {
@@ -64,7 +93,8 @@ async function request<T>(
 ): Promise<{ data: T }> {
   const headers = new Headers();
 
-  const { accessToken } = useBackofficeAuthStore.getState();
+  const accessToken =
+    options.accessToken ?? useBackofficeAuthStore.getState().accessToken;
   if (accessToken) {
     headers.set('Authorization', `Bearer ${accessToken}`);
   }
@@ -91,7 +121,14 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    if (response.status === 401) {
+    // A rejected *stored* session means it expired or was revoked (e.g. a
+    // password reset elsewhere). Not for an explicit token or for the
+    // public auth endpoints, where a 401 just means "wrong credentials".
+    if (
+      response.status === 401 &&
+      !options.accessToken &&
+      !path.startsWith('/backoffice/auth/')
+    ) {
       useBackofficeAuthStore.getState().logout();
     }
     throw new BackofficeApiError(response.status, data);

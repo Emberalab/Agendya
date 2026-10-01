@@ -8,6 +8,8 @@ import { BACKOFFICE_JWT_AUDIENCE } from './backoffice-jwt.constants';
 export interface InternalJwtPayload {
   sub: string;
   email: string;
+  /** Issued-at, seconds since epoch (set by jsonwebtoken). */
+  iat?: number;
 }
 
 /**
@@ -40,6 +42,17 @@ export class InternalJwtStrategy extends PassportStrategy(
     });
 
     if (!internalUser || !internalUser.isActive) {
+      throw new UnauthorizedException();
+    }
+
+    // A password reset revokes every token issued before it. Compared at
+    // whole-second precision (JWT `iat` granularity), so a token issued in
+    // the same second as the reset still works.
+    if (
+      internalUser.passwordChangedAt &&
+      (payload.iat ?? 0) <
+        Math.floor(internalUser.passwordChangedAt.getTime() / 1000)
+    ) {
       throw new UnauthorizedException();
     }
 

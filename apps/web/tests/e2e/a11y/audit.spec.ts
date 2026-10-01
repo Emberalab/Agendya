@@ -134,18 +134,23 @@ for (const theme of ['light', 'dark'] as const) {
       await expectNoViolations(page);
     });
 
+    test('support tickets page — every status pill', async ({ page }) => {
+      await page.goto('/dashboard/support');
+      await expect(page.getByText('Ticket de prueba 5')).toBeVisible();
+      await expectNoViolations(page);
+    });
+
     test('agenda page', async ({ page }) => {
       await page.goto('/dashboard/agenda');
-      await expect(page.getByRole('heading', { name: 'Tu agenda' })).toBeVisible();
+      await expect(
+        page.getByRole('heading', { name: 'Tu agenda' }),
+      ).toBeVisible();
       await expectNoViolations(page);
     });
 
     test('agenda page — appointment detail drawer open', async ({ page }) => {
       await page.goto('/dashboard/agenda');
-      await page
-        .getByRole('button', { name: 'Ver detalle' })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Ver detalle' }).first().click();
       await expect(
         page.getByRole('dialog', { name: 'Detalle de la cita' }),
       ).toBeVisible();
@@ -163,10 +168,7 @@ for (const theme of ['light', 'dark'] as const) {
         }),
       ]);
       await page.goto('/dashboard/agenda');
-      await page
-        .getByRole('button', { name: 'Ver detalle' })
-        .first()
-        .click();
+      await page.getByRole('button', { name: 'Ver detalle' }).first().click();
       await expect(
         page.getByRole('dialog', { name: 'Detalle de la cita' }),
       ).toBeVisible();

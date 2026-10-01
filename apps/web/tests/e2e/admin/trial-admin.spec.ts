@@ -1,3 +1,4 @@
+import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '../../fixtures/test';
 import { SUPER_ADMIN_USER, TEST_ACCESS_TOKEN } from '../../fixtures/data';
 
@@ -17,13 +18,22 @@ test.beforeEach(async ({ page, api }) => {
     },
     { token: TEST_ACCESS_TOKEN, user: SUPER_ADMIN_USER },
   );
-  // Grant/extend/end ask for confirmation with window.confirm.
-  page.on('dialog', (dialog) => void dialog.accept());
 });
+
+/** Grant/extend/end ask for confirmation in the app's own alertdialog. */
+async function confirmAction(
+  page: import('@playwright/test').Page,
+  confirmLabel: string,
+) {
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  await dialog.getByRole('button', { name: confirmLabel }).click();
+  await expect(dialog).toBeHidden();
+}
 
 async function openPlanTab(page: import('@playwright/test').Page) {
   await page.goto('/dashboard/admin');
-  await page.getByRole('button', { name: 'Plan y prueba' }).click();
+  await page.getByRole('tab', { name: 'Plan y prueba' }).click();
   return page.getByRole('combobox', {
     name: 'Buscar profesional por correo o negocio',
   });
@@ -80,6 +90,7 @@ test('grants, extends and ends a trial, recording each step', async ({
 
   await page.getByLabel('Nota para el historial (opcional)').fill('Piloto');
   await page.getByRole('button', { name: 'Activar prueba de 30 días' }).click();
+  await confirmAction(page, 'Activar prueba');
 
   await expect(page.getByText('Prueba de 30 días activada.')).toBeVisible();
   await expect(
@@ -98,16 +109,18 @@ test('grants, extends and ends a trial, recording each step', async ({
 
   await page.getByLabel('Días a extender').fill('7');
   await page.getByRole('button', { name: 'Extender' }).click();
+  await confirmAction(page, 'Extender');
   await expect(page.getByText('Prueba extendida 7 días.')).toBeVisible();
   await expect(page.getByText(/Prueba extendida ·/)).toBeVisible();
 
   await page.getByRole('button', { name: 'Terminar prueba' }).click();
+  await confirmAction(page, 'Terminar prueba');
   await expect(page.getByText('Prueba terminada.')).toBeVisible();
   await expect(page.getByText('Terminada', { exact: true })).toBeVisible();
   await expect(page.getByText(/Prueba terminada ·/)).toBeVisible();
 
   // Registros reflects the change.
-  await page.getByRole('button', { name: 'Registros' }).click();
+  await page.getByRole('tab', { name: 'Registros' }).click();
   await expect(
     page.getByRole('row').filter({ hasText: 'gaitan9103@gmail.com' }),
   ).toContainText('Terminó el');
@@ -128,6 +141,7 @@ test('a used trial needs an explicit exception to be granted again', async ({
     .getByRole('checkbox', { name: /Permitir una nueva \(excepción\)/ })
     .check();
   await grant.click();
+  await confirmAction(page, 'Activar prueba');
 
   await expect(page.getByText('Prueba de 30 días activada.')).toBeVisible();
   const call = api.calls.find(
@@ -135,3 +149,60 @@ test('a used trial needs an explicit exception to be granted again', async ({
   );
   expect(call?.body).toEqual({ allowRepeat: true });
 });
+
+test('the section tabs follow the ARIA tabs pattern', async ({ page }) => {
+  await page.goto('/dashboard/admin');
+  const tablist = page.getByRole('tablist', { name: 'Secciones del panel' });
+  const registros = tablist.getByRole('tab', { name: 'Registros' });
+  await expect(registros).toHaveAttribute('aria-selected', 'true');
+
+  await registros.focus();
+  await page.keyboard.press('ArrowRight');
+  const lista = tablist.getByRole('tab', { name: 'Lista de Acceso' });
+  await expect(lista).toBeFocused();
+  await expect(lista).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tabpanel')).toBeVisible();
+
+  await page.keyboard.press('End');
+  await expect(tablist.getByRole('tab', { name: 'Precios' })).toBeFocused();
+});
+
+test('the tab bar scrolls inside itself on a phone instead of the page', async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 360, height: 780 });
+  await page.goto('/dashboard/admin');
+  await expect(page.getByRole('tablist')).toBeVisible();
+  const overflow = await page.evaluate(
+    () =>
+      document.documentElement.scrollWidth -
+      document.documentElement.clientWidth,
+  );
+  expect(overflow).toBeLessThanOrEqual(0);
+});
+
+for (const theme of ['light', 'dark'] as const) {
+  test(`admin panel passes axe in the ${theme} theme`, async ({ page }) => {
+    await page.addInitScript((t) => {
+      window.localStorage.setItem(
+        'agendya-theme',
+        JSON.stringify({ state: { manualTheme: t }, version: 0 }),
+      );
+    }, theme);
+    await page.goto('/dashboard/admin');
+    await expect(
+      page.getByRole('columnheader', { name: 'Prueba' }),
+    ).toBeVisible();
+
+    const results = await new AxeBuilder({ page })
+      .withTags(['wcag2a', 'wcag2aa', 'wcag21aa', 'wcag22aa'])
+      .disableRules(['meta-viewport'])
+      .analyze();
+    const summary = results.violations
+      .map(
+        (v) => `${v.id}: ${v.nodes.map((n) => n.target.join(' ')).join(', ')}`,
+      )
+      .join('\n');
+    expect(results.violations, summary).toEqual([]);
+  });
+}

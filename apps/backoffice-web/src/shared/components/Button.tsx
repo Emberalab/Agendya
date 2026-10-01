@@ -25,7 +25,9 @@ export function Button({
 
   const variantClasses = {
     primary: 'bg-brand-primary text-on-brand hover:bg-brand-primary-hover',
-    secondary: 'bg-brand-secondary text-on-brand hover:opacity-90',
+    // Neutral solid: inverts with the theme. The old `bg-brand-secondary`
+    // (#0f172a in both themes) all but disappeared on the dark surface.
+    secondary: 'bg-text-primary text-surface hover:opacity-90',
     outline:
       'bg-transparent text-text-primary shadow-[inset_0_0_0_1px_var(--color-border)] hover:bg-surface-soft hover:shadow-[inset_0_0_0_1px_var(--color-brand-primary)]',
     danger: 'bg-danger-fill text-on-brand hover:opacity-90',

@@ -11,6 +11,8 @@ import {
 import { apiClient } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
 import { trialRemainingLabel } from '../professionals/trial';
+import { type ConfirmOptions } from '../../shared/components/ConfirmDialog';
+import { useConfirmDialog } from '../../shared/components/useConfirmDialog';
 
 interface TrialManagerProps {
   professional: ProfessionalForPlanChange;
@@ -42,6 +44,7 @@ function formatDateTime(iso: string): string {
  * action; this only collects intent (no dates are ever sent).
  */
 export function TrialManager({ professional, onUpdated }: TrialManagerProps) {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -57,10 +60,10 @@ export function TrialManager({ professional, onUpdated }: TrialManagerProps) {
   const run = async (
     path: string,
     body: Record<string, unknown>,
-    confirmText: string,
+    confirmOptions: ConfirmOptions,
     successText: string,
   ) => {
-    if (!confirm(confirmText)) return;
+    if (!(await confirm(confirmOptions))) return;
     try {
       setLoading(true);
       setError(null);
@@ -234,7 +237,11 @@ export function TrialManager({ professional, onUpdated }: TrialManagerProps) {
               void run(
                 `${base}/extend`,
                 { days: extendDays },
-                `¿Extender la prueba de ${professional.email} ${extendDays} días?`,
+                {
+                  title: `¿Extender la prueba ${extendDays} días?`,
+                  description: professional.email,
+                  confirmLabel: 'Extender',
+                },
                 `Prueba extendida ${extendDays} días.`,
               )
             }
@@ -250,7 +257,12 @@ export function TrialManager({ professional, onUpdated }: TrialManagerProps) {
               void run(
                 `${base}/end`,
                 {},
-                `¿Terminar ya la prueba de ${professional.email}? Volverá a los límites del plan ${PLAN_LABELS[professional.plan]}. No se borra ningún dato.`,
+                {
+                  title: '¿Terminar la prueba ahora?',
+                  description: `${professional.email} volverá a los límites del plan ${PLAN_LABELS[professional.plan]}. No se borra ningún dato.`,
+                  confirmLabel: 'Terminar prueba',
+                  destructive: true,
+                },
                 'Prueba terminada.',
               )
             }
@@ -287,7 +299,11 @@ export function TrialManager({ professional, onUpdated }: TrialManagerProps) {
               void run(
                 base,
                 usedBefore ? { allowRepeat: true } : {},
-                `¿Activar una prueba de ${TRIAL_DURATION_DAYS} días con acceso completo para ${professional.email}?`,
+                {
+                  title: `¿Activar una prueba de ${TRIAL_DURATION_DAYS} días?`,
+                  description: `${professional.email} tendrá acceso completo durante la prueba.`,
+                  confirmLabel: 'Activar prueba',
+                },
                 `Prueba de ${TRIAL_DURATION_DAYS} días activada.`,
               )
             }
@@ -330,6 +346,7 @@ export function TrialManager({ professional, onUpdated }: TrialManagerProps) {
           </ul>
         </div>
       )}
+      {confirmDialog}
     </section>
   );
 }

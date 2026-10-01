@@ -104,7 +104,7 @@ export function UpgradePlanDialog({
         className="w-full max-w-[560px] rounded-3xl p-8 max-h-[90vh] overflow-y-auto"
         style={{
           backgroundColor: 'var(--color-surface)',
-          boxShadow: '0 24px 64px rgba(15,23,42,0.22)',
+          boxShadow: 'var(--shadow-dialog)',
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -271,7 +271,7 @@ export function UpgradePlanDialog({
             className="flex-1 py-4 rounded-2xl text-sm font-semibold"
             style={{
               backgroundColor: 'var(--color-brand-primary)',
-              color: '#fff',
+              color: 'var(--color-text-on-brand)',
               border: 'none',
               cursor: busy || !selected ? 'not-allowed' : 'pointer',
               opacity: busy || !selected ? 0.6 : 1,

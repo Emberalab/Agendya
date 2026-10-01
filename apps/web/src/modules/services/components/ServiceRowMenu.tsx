@@ -88,7 +88,7 @@ export function ServiceRowMenu({
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.backgroundColor = danger
-          ? '#FFF5F5'
+          ? 'var(--color-danger-surface)'
           : 'var(--color-surface-soft)';
       }}
       onMouseLeave={(e) => {

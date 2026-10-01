@@ -99,8 +99,8 @@ export function RegisterPage() {
             style={{ backgroundColor: 'var(--color-surface-soft)', border: '1px solid var(--color-border)' }}
           >
             <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-              <circle cx="9" cy="8" r="4" stroke="#64748B" strokeWidth="1.5" />
-              <path d="M1 19c0-4 3.6-7 8-7s8 3 8 7" stroke="#64748B" strokeWidth="1.5" strokeLinecap="round" />
+              <circle cx="9" cy="8" r="4" stroke="var(--color-text-muted)" strokeWidth="1.5" />
+              <path d="M1 19c0-4 3.6-7 8-7s8 3 8 7" stroke="var(--color-text-muted)" strokeWidth="1.5" strokeLinecap="round" />
               <path d="M17 7v6M20 10h-6" stroke="var(--color-brand-primary)" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </div>

@@ -546,7 +546,7 @@ function Stepper({
                   backgroundColor: filled
                     ? 'var(--color-brand-primary)'
                     : 'var(--color-surface)',
-                  color: filled ? '#fff' : 'var(--color-text-muted)',
+                  color: filled ? 'var(--color-text-on-brand)' : 'var(--color-text-muted)',
                   border: filled ? 'none' : '1px solid var(--color-border)',
                 }}
               >
@@ -815,8 +815,8 @@ function ServiceStep({
                       style={{
                         fontSize: '12px',
                         fontWeight: 600,
-                        backgroundColor: '#DCFCE7',
-                        color: '#15803D',
+                        backgroundColor: 'var(--color-success-surface)',
+                        color: 'var(--color-success)',
                       }}
                     >
                       A domicilio disponible
@@ -1170,9 +1170,9 @@ function DateTimeStep({
           style={{
             fontSize: '14px',
             fontWeight: 500,
-            color: '#B45309',
-            backgroundColor: '#FFFBEB',
-            border: '1px solid #FDE68A',
+            color: 'var(--color-warning)',
+            backgroundColor: 'var(--color-warning-surface)',
+            border: '1px solid var(--color-warning-border)',
           }}
         >
           {notice}
@@ -1733,9 +1733,9 @@ function ConfirmStep({
           style={{
             fontSize: '14px',
             fontWeight: 500,
-            color: '#B91C1C',
-            backgroundColor: '#FEF2F2',
-            border: '1px solid #FECACA',
+            color: 'var(--color-danger)',
+            backgroundColor: 'var(--color-danger-surface)',
+            border: '1px solid var(--color-danger-border)',
           }}
         >
           {getApiErrorMessage(error)}
@@ -1832,7 +1832,7 @@ function Summary({
           backgroundColor: ctaDisabled
             ? 'var(--color-surface-soft)'
             : 'var(--color-brand-primary)',
-          color: ctaDisabled ? 'var(--color-text-muted)' : '#fff',
+          color: ctaDisabled ? 'var(--color-text-muted)' : 'var(--color-text-on-brand)',
           border: ctaDisabled ? '1px solid var(--color-border)' : 'none',
           fontSize: '15px',
           cursor: ctaDisabled ? 'not-allowed' : 'pointer',

@@ -254,8 +254,8 @@ test.describe('Backoffice · professional activity', () => {
 
     await page.goto('/backoffice/login');
     await page.getByLabel('Correo').fill('readonly@agendya.test');
-    await page.getByLabel('Contraseña').fill('supersecret123');
-    await page.getByRole('button', { name: 'Ingresar' }).click();
+    await page.getByLabel(/^Contraseña/).fill('supersecret123');
+    await page.getByRole('button', { name: 'Iniciar sesión' }).click();
     await expect(page).toHaveURL(/\/backoffice$/);
 
     // Backoffice → Pruebas → professional

@@ -7,6 +7,7 @@ import {
 } from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { useConfirmDialog } from '../../shared/components/useConfirmDialog';
 
 function formatAdminDate(iso: string | null): string {
   if (!iso) {
@@ -77,6 +78,7 @@ function TrialCell({ trial }: { trial: TrialInfo | null }) {
 }
 
 export function RegistrationsManager() {
+  const { confirm, confirmDialog } = useConfirmDialog();
   const [entries, setEntries] = useState<RegistrationEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,11 +107,16 @@ export function RegistrationsManager() {
     status: 'APPROVED' | 'DECLINED',
   ) => {
     const verb = status === 'APPROVED' ? 'aceptar' : 'declinar';
-    if (
-      !confirm(`¿${verb.charAt(0).toUpperCase() + verb.slice(1)} a ${email}?`)
-    ) {
-      return;
-    }
+    const confirmed = await confirm({
+      title:
+        status === 'APPROVED'
+          ? '¿Aceptar este registro?'
+          : '¿Declinar este registro?',
+      description: email,
+      confirmLabel: status === 'APPROVED' ? 'Aceptar' : 'Declinar',
+      destructive: status === 'DECLINED',
+    });
+    if (!confirmed) return;
 
     try {
       await apiClient.patch(
@@ -269,6 +276,7 @@ export function RegistrationsManager() {
           </table>
         </div>
       )}
+      {confirmDialog}
     </div>
   );
 }

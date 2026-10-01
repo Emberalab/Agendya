@@ -9,15 +9,32 @@ const BackofficeLoginPage = lazy(() =>
     default: m.BackofficeLoginPage,
   })),
 );
+const ForgotPasswordPage = lazy(() =>
+  import('../modules/backoffice/auth/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('../modules/backoffice/auth/ResetPasswordPage').then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
+);
+const GoogleCallbackPage = lazy(() =>
+  import('../modules/backoffice/auth/GoogleCallbackPage').then((m) => ({
+    default: m.GoogleCallbackPage,
+  })),
+);
 const BackofficeLayout = lazy(() =>
   import('../modules/backoffice/dashboard/BackofficeLayout').then((m) => ({
     default: m.BackofficeLayout,
   })),
 );
 const BackofficeDashboardPage = lazy(() =>
-  import('../modules/backoffice/dashboard/BackofficeDashboardPage').then((m) => ({
-    default: m.BackofficeDashboardPage,
-  })),
+  import('../modules/backoffice/dashboard/BackofficeDashboardPage').then(
+    (m) => ({
+      default: m.BackofficeDashboardPage,
+    }),
+  ),
 );
 const TicketsListPage = lazy(() =>
   import('../modules/backoffice/tickets/TicketsListPage').then((m) => ({
@@ -35,9 +52,11 @@ const ProfessionalSearchPage = lazy(() =>
   ),
 );
 const Professional360Page = lazy(() =>
-  import('../modules/backoffice/professionals/Professional360Page').then((m) => ({
-    default: m.Professional360Page,
-  })),
+  import('../modules/backoffice/professionals/Professional360Page').then(
+    (m) => ({
+      default: m.Professional360Page,
+    }),
+  ),
 );
 const AppointmentInvestigationPage = lazy(() =>
   import('../modules/backoffice/appointments/AppointmentInvestigationPage').then(
@@ -45,9 +64,11 @@ const AppointmentInvestigationPage = lazy(() =>
   ),
 );
 const ProfessionalActivityPage = lazy(() =>
-  import('../modules/backoffice/activity/ProfessionalActivityPage').then((m) => ({
-    default: m.ProfessionalActivityPage,
-  })),
+  import('../modules/backoffice/activity/ProfessionalActivityPage').then(
+    (m) => ({
+      default: m.ProfessionalActivityPage,
+    }),
+  ),
 );
 const TrialsPage = lazy(() =>
   import('../modules/backoffice/activity/TrialsPage').then((m) => ({
@@ -82,11 +103,30 @@ export function AppRouter() {
             <Route path="/backoffice/login" element={<BackofficeLoginPage />} />
           </Route>
 
+          {/* Reachable signed in or out: a reset link opened in a browser
+              that still holds a (now revoked) session must not bounce to
+              the dashboard. */}
+          <Route
+            path="/backoffice/forgot-password"
+            element={<ForgotPasswordPage />}
+          />
+          <Route
+            path="/backoffice/reset-password"
+            element={<ResetPasswordPage />}
+          />
+          <Route
+            path="/backoffice/auth/callback"
+            element={<GoogleCallbackPage />}
+          />
+
           <Route element={<PrivateRoute />}>
             <Route element={<BackofficeLayout />}>
               <Route path="/backoffice" element={<BackofficeDashboardPage />} />
               <Route path="/backoffice/tickets" element={<TicketsListPage />} />
-              <Route path="/backoffice/tickets/:id" element={<TicketDetailPage />} />
+              <Route
+                path="/backoffice/tickets/:id"
+                element={<TicketDetailPage />}
+              />
               <Route
                 path="/backoffice/professionals"
                 element={<ProfessionalSearchPage />}
