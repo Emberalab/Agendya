@@ -1,6 +1,12 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
+
+const activityService = {
+  record: jest.fn().mockResolvedValue(undefined),
+  recordDailyVisit: jest.fn().mockResolvedValue(undefined),
+};
 import { UsageAlertsService } from '../notifications/usage-alerts.service';
 import { ServicesService } from './services.service';
 
@@ -61,6 +67,7 @@ describe('ServicesService', () => {
       providers: [
         ServicesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ActivityService, useValue: activityService },
         { provide: UsageAlertsService, useValue: usageAlerts },
       ],
     }).compile();
@@ -267,6 +274,50 @@ describe('ServicesService', () => {
           homePriceCents: null,
         },
       });
+    });
+
+    it('records only the fields that changed, hiding free-text values', async () => {
+      activityService.record.mockClear();
+      prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
+      prisma.service.update.mockResolvedValue({
+        ...BASE_SERVICE,
+        priceCents: BASE_SERVICE.priceCents + 1000,
+        description: 'Nueva descripción',
+      });
+
+      await service.update('prof-1', 'service-1', {
+        priceCents: BASE_SERVICE.priceCents + 1000,
+        description: 'Nueva descripción',
+      });
+
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'SERVICE_UPDATED',
+        {
+          entityType: 'Service',
+          entityId: BASE_SERVICE.id,
+          subject: BASE_SERVICE.name,
+          metadata: {
+            changes: {
+              priceCents: {
+                from: BASE_SERVICE.priceCents,
+                to: BASE_SERVICE.priceCents + 1000,
+              },
+              description: { changed: true },
+            },
+          },
+        },
+      );
+    });
+
+    it('records nothing when the update changes no value', async () => {
+      activityService.record.mockClear();
+      prisma.service.findFirst.mockResolvedValue(BASE_SERVICE);
+      prisma.service.update.mockResolvedValue(BASE_SERVICE);
+
+      await service.update('prof-1', 'service-1', { name: BASE_SERVICE.name });
+
+      expect(activityService.record).not.toHaveBeenCalled();
     });
   });
 

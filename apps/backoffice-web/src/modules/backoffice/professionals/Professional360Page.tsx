@@ -38,6 +38,12 @@ export function Professional360Page() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            to={`/backoffice/professionals/${data.account.id}/activity`}
+            className="text-sm font-semibold text-text-brand hover:underline"
+          >
+            Ver actividad
+          </Link>
           <Badge variant={data.account.isActive ? 'success' : 'danger'}>
             {data.account.isActive ? 'Activo' : 'Inactivo'}
           </Badge>

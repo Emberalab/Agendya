@@ -18,3 +18,4 @@ export * from './schemas/backoffice-auth.schema';
 export * from './schemas/audit-log.schema';
 export * from './schemas/ticket.schema';
 export * from './schemas/backoffice-investigation.schema';
+export * from './schemas/professional-activity.schema';

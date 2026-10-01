@@ -6,6 +6,7 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './database/database.module';
+import { ActivityModule } from './modules/activity/activity.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { BillingModule } from './modules/billing/billing.module';
@@ -26,6 +27,7 @@ import configuration from './config/configuration';
     ThrottlerModule.forRoot([{ name: 'default', ttl: 60_000, limit: 100 }]),
     DatabaseModule,
     RealtimeModule,
+    ActivityModule,
     NotificationsModule,
     AdminModule,
     AuthModule,

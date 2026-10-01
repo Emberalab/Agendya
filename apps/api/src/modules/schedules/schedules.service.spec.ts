@@ -2,6 +2,12 @@ import { ConflictException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
+
+const activityService = {
+  record: jest.fn().mockResolvedValue(undefined),
+  recordDailyVisit: jest.fn().mockResolvedValue(undefined),
+};
 import { SchedulesService } from './schedules.service';
 
 describe('SchedulesService', () => {
@@ -49,6 +55,7 @@ describe('SchedulesService', () => {
       providers: [
         SchedulesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ActivityService, useValue: activityService },
       ],
     }).compile();
 
@@ -123,6 +130,63 @@ describe('SchedulesService', () => {
           },
         ],
       });
+    });
+
+    it('records the week before and after when the schedule changes', async () => {
+      activityService.record.mockClear();
+      prisma.workingHour.findMany
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([
+          {
+            id: 'wh-2',
+            dayOfWeek: 'MONDAY',
+            startMinute: 900,
+            endMinute: 1080,
+          },
+          { id: 'wh-1', dayOfWeek: 'MONDAY', startMinute: 480, endMinute: 720 },
+        ]);
+
+      await service.setWorkingHours('prof-1', {
+        days: [
+          { dayOfWeek: 'MONDAY', startMinute: 480, endMinute: 720 },
+          { dayOfWeek: 'MONDAY', startMinute: 900, endMinute: 1080 },
+        ],
+      });
+
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'WORKING_HOURS_UPDATED',
+        {
+          entityType: 'WorkingHours',
+          entityId: 'prof-1',
+          metadata: {
+            before: [],
+            after: [
+              {
+                dayOfWeek: 'MONDAY',
+                blocks: [
+                  [480, 720],
+                  [900, 1080],
+                ],
+              },
+            ],
+          },
+        },
+      );
+    });
+
+    it('records nothing when a save leaves the week unchanged', async () => {
+      activityService.record.mockClear();
+      const week = [
+        { id: 'wh-1', dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 1080 },
+      ];
+      prisma.workingHour.findMany.mockResolvedValue(week);
+
+      await service.setWorkingHours('prof-1', {
+        days: [{ dayOfWeek: 'MONDAY', startMinute: 540, endMinute: 1080 }],
+      });
+
+      expect(activityService.record).not.toHaveBeenCalled();
     });
   });
 
@@ -201,14 +265,28 @@ describe('SchedulesService', () => {
       expect(prisma.scheduleException.delete).not.toHaveBeenCalled();
     });
 
-    it('deletes an owned exception', async () => {
-      prisma.scheduleException.findFirst.mockResolvedValue({ id: 'exc-1' });
+    it('deletes an owned exception and records it', async () => {
+      activityService.record.mockClear();
+      prisma.scheduleException.findFirst.mockResolvedValue({
+        id: 'exc-1',
+        date: new Date('2026-08-15T00:00:00.000Z'),
+      });
 
       await service.deleteException('prof-1', 'exc-1');
 
       expect(prisma.scheduleException.delete).toHaveBeenCalledWith({
         where: { id: 'exc-1' },
       });
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'SCHEDULE_EXCEPTION_DELETED',
+        {
+          entityType: 'ScheduleException',
+          entityId: 'exc-1',
+          subject: '2026-08-15',
+          metadata: { date: '2026-08-15' },
+        },
+      );
     });
   });
 });

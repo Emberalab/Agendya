@@ -7,6 +7,7 @@ import { internalUserSummarySchema } from './internal-user.schema';
  */
 export const AUDIT_ACTIONS = [
   'SUPPORT_VIEWED_PROFESSIONAL',
+  'SUPPORT_VIEWED_PROFESSIONAL_ACTIVITY',
   'TICKET_CREATED',
   'TICKET_ASSIGNED',
   'TICKET_STATUS_CHANGED',

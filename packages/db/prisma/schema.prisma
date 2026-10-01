@@ -134,24 +134,27 @@ model Professional {
   isActive                Boolean          @default(true)
   termsAcceptedAt         DateTime?
   termsVersion            String?
-  createdAt               DateTime         @default(now())
-  updatedAt               DateTime         @updatedAt
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
 
-  services            Service[]
-  workingHours        WorkingHour[]
-  scheduleExceptions  ScheduleException[]
-  bookings            Booking[]
-  notifications       Notification[]
-  pushSubscriptions   PushSubscription[]
-  passwordResetTokens PasswordResetToken[]
-  usageLimitAlerts    UsageLimitAlert[]
-  billingNotices      BillingNotice[]
-  trialEvents         TrialEvent[]
+  services              Service[]
+  workingHours          WorkingHour[]
+  scheduleExceptions    ScheduleException[]
+  bookings              Booking[]
+  notifications         Notification[]
+  pushSubscriptions     PushSubscription[]
+  passwordResetTokens   PasswordResetToken[]
+  usageLimitAlerts      UsageLimitAlert[]
+  billingNotices        BillingNotice[]
   // Backoffice: this professional's support tickets. See SupportTicket.
-  supportTickets      SupportTicket[]
+  supportTickets        SupportTicket[]
   // Backoffice: messages this professional authored on their own tickets.
   // See SupportMessage.authorProfessionalId.
   authoredSupportMessages SupportMessage[]
+  // Super Admin trial grants/extensions/ends. See TrialEvent.
+  trialEvents           TrialEvent[]
+  // Product activity timeline (Backoffice). See ProfessionalActivityEvent.
+  activityEvents        ProfessionalActivityEvent[]
 
   // `slug` and `googleId` are already `@unique`; the unique constraint's btree
   // index fully serves equality lookups and sorts on those columns, so no
@@ -319,6 +322,52 @@ model PushSubscription {
   @@index([professionalId])
 }
 
+// Password reset tokens for the "forgot password" flow. Tokens are single-use
+// and expire in 1 hour. Only the SHA-256 hash is stored; the plain token is
+// sent in the email and never persisted.
+model PasswordResetToken {
+  id             String       @id @default(uuid())
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  // SHA-256 hash of the token (never store the plain token)
+  tokenHash      String       @unique
+  expiresAt      DateTime
+  usedAt         DateTime?
+  createdAt      DateTime     @default(now())
+
+  @@index([professionalId])
+}
+
+// Usage limit alerts track when a professional has been notified about
+// approaching or reaching plan limits (bookings or services). Each alert is
+// sent at most once per period (month for bookings, plan for services).
+model UsageLimitAlert {
+  id             String         @id @default(uuid())
+  professionalId String
+  professional   Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  kind           UsageAlertKind
+  // Period key: "YYYY-MM" for booking alerts (UTC month), plan name for service alerts
+  periodKey      String
+  createdAt      DateTime       @default(now())
+
+  @@unique([professionalId, kind, periodKey])
+  @@index([professionalId])
+}
+
+// Billing notices ensure payment rejection emails are sent exactly once per
+// transaction. The unique constraint on transactionId prevents duplicate emails
+// for the same failed payment, even if the webhook fires multiple times.
+model BillingNotice {
+  id             String       @id @default(uuid())
+  transactionId  String       @unique
+  kind           String // "payment_rejected"
+  professionalId String
+  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([professionalId])
+}
+
 // =============================================================================
 // Backoffice — internal operations & support (Fase 1 MVP)
 //
@@ -373,6 +422,7 @@ enum MessageVisibility {
 
 enum AuditAction {
   SUPPORT_VIEWED_PROFESSIONAL
+  SUPPORT_VIEWED_PROFESSIONAL_ACTIVITY
   TICKET_CREATED
   TICKET_ASSIGNED
   TICKET_STATUS_CHANGED
@@ -472,52 +522,6 @@ model AuditLog {
   @@index([actorInternalUserId, createdAt])
 }
 
-// Password reset tokens for the "forgot password" flow. Tokens are single-use
-// and expire in 1 hour. Only the SHA-256 hash is stored; the plain token is
-// sent in the email and never persisted.
-model PasswordResetToken {
-  id             String       @id @default(uuid())
-  professionalId String
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  // SHA-256 hash of the token (never store the plain token)
-  tokenHash      String       @unique
-  expiresAt      DateTime
-  usedAt         DateTime?
-  createdAt      DateTime     @default(now())
-
-  @@index([professionalId])
-}
-
-// Usage limit alerts track when a professional has been notified about
-// approaching or reaching plan limits (bookings or services). Each alert is
-// sent at most once per period (month for bookings, plan for services).
-model UsageLimitAlert {
-  id             String         @id @default(uuid())
-  professionalId String
-  professional   Professional   @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  kind           UsageAlertKind
-  // Period key: "YYYY-MM" for booking alerts (UTC month), plan name for service alerts
-  periodKey      String
-  createdAt      DateTime       @default(now())
-
-  @@unique([professionalId, kind, periodKey])
-  @@index([professionalId])
-}
-
-// Billing notices ensure payment rejection emails are sent exactly once per
-// transaction. The unique constraint on transactionId prevents duplicate emails
-// for the same failed payment, even if the webhook fires multiple times.
-model BillingNotice {
-  id             String       @id @default(uuid())
-  transactionId  String       @unique
-  kind           String // "payment_rejected"
-  professionalId String
-  professional   Professional @relation(fields: [professionalId], references: [id], onDelete: Cascade)
-  createdAt      DateTime     @default(now())
-
-  @@index([professionalId])
-}
-
 // One row per Super Admin trial action (grant, extend, end). Append-only.
 // `actorId` is deliberately not a foreign key: the audit row must survive the
 // actor's account being deleted, so the email is snapshotted too.
@@ -535,4 +539,87 @@ model TrialEvent {
   createdAt      DateTime         @default(now())
 
   @@index([professionalId, createdAt(sort: Desc)])
+}
+
+// =============================================================================
+// Product activity — "how is this professional using Agendya?"
+//
+// Not an audit log: AuditLog records what Backoffice *staff* did (actor is
+// always an InternalUser). This records meaningful, persisted actions on a
+// professional's account, performed by the professional, one of their
+// customers, or the system. Written only by apps/api after the underlying
+// change is committed (best-effort); read only by apps/backoffice-api.
+// Business metrics (booking counts, services, schedule) are derived from the
+// business tables, never from these rows — except reschedules, which leave
+// no other trace. Append-only: no update/delete path exists.
+// See @agendya/types `professional-activity.schema.ts` for the catalogue.
+// =============================================================================
+
+enum ActivityCategory {
+  ACCOUNT
+  CONFIGURATION
+  SERVICE
+  SCHEDULE
+  APPOINTMENT
+  NOTIFICATION
+}
+
+enum ActivityEventType {
+  ACCOUNT_CREATED
+  LOGGED_IN
+  PASSWORD_RESET
+  // At most one per professional per local day (see dedupeKey).
+  DASHBOARD_VISITED
+  PROFILE_UPDATED
+  SERVICE_CREATED
+  SERVICE_UPDATED
+  SERVICE_DELETED
+  WORKING_HOURS_UPDATED
+  SCHEDULE_EXCEPTION_CREATED
+  SCHEDULE_EXCEPTION_DELETED
+  BOOKING_CREATED
+  BOOKING_UPDATED
+  BOOKING_RESCHEDULED
+  BOOKING_CANCELLED
+  BOOKING_COMPLETED
+  PUSH_ENABLED
+  PUSH_DISABLED
+}
+
+enum ActivityActor {
+  PROFESSIONAL
+  CUSTOMER
+  SYSTEM
+}
+
+model ProfessionalActivityEvent {
+  id             String            @id @default(uuid())
+  professionalId String
+  professional   Professional      @relation(fields: [professionalId], references: [id], onDelete: Cascade)
+  type           ActivityEventType
+  // Always ACTIVITY_EVENT_CATEGORY[type]; stored so category filters use an index.
+  category       ActivityCategory
+  actor          ActivityActor
+  // Polymorphic reference ('Booking', 'Service', 'ScheduleException', …) —
+  // not a FK, so the event survives a hard delete of its entity.
+  entityType     String?
+  entityId       String?
+  // Human label of the entity at the time (service name, blocked date…),
+  // point-in-time like Booking.serviceNameSnapshot. Used by the timeline search.
+  subject        String?
+  // Safe, non-secret context only: never customer contact data, passwords,
+  // tokens, or OAuth data. Enforced in ActivityService callers.
+  metadata       Json?
+  // Reconstructed by the introducing migration from existing timestamps.
+  backfilled     Boolean           @default(false)
+  // Idempotency key for once-per-period events (DASHBOARD_VISITED).
+  dedupeKey      String?           @unique
+  occurredAt     DateTime          @default(now())
+
+  // Timeline: one professional, newest first, optional date range.
+  @@index([professionalId, occurredAt(sort: Desc)])
+  // Timeline filtered by category.
+  @@index([professionalId, category, occurredAt(sort: Desc)])
+  // "Everything that happened to this booking/service".
+  @@index([entityType, entityId])
 }

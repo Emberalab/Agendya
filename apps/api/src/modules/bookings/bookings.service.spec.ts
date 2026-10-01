@@ -7,6 +7,12 @@ import {
 import { Prisma } from '@prisma/client';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
+
+const activityService = {
+  record: jest.fn().mockResolvedValue(undefined),
+  recordDailyVisit: jest.fn().mockResolvedValue(undefined),
+};
 import { MailService } from '../../infra/mail/mail.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { UsageAlertsService } from '../notifications/usage-alerts.service';
@@ -134,6 +140,7 @@ describe('BookingsService', () => {
       providers: [
         BookingsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ActivityService, useValue: activityService },
         { provide: MailService, useValue: mailService },
         { provide: NotificationsService, useValue: notificationsService },
 
@@ -892,6 +899,51 @@ describe('BookingsService', () => {
       expect(updateArgs.data).toMatchObject({ cancelledBy: 'professional' });
     });
 
+    it('records a BOOKING_CANCELLED activity by the professional, without customer data', async () => {
+      activityService.record.mockClear();
+      const bookingRow = {
+        id: 'booking-1',
+        professionalId: 'prof-1',
+        status: 'CONFIRMED',
+        customerEmail: 'ana@example.com',
+        customerName: 'Ana',
+        customerPhone: '+57 300 1234567',
+        serviceNameSnapshot: 'Corte de cabello',
+        durationMinutesSnapshot: 30,
+        startAt: new Date('2026-08-10T14:00:00.000Z'),
+        endAt: new Date('2026-08-10T14:30:00.000Z'),
+        createdAt: new Date('2026-07-30T10:00:00.000Z'),
+        cancelledAt: null,
+        cancelledBy: null,
+      };
+      prisma.booking.findFirst.mockResolvedValue(bookingRow);
+      prisma.booking.update.mockResolvedValue({
+        ...bookingRow,
+        status: 'CANCELLED',
+      });
+
+      await service.cancelByProfessional('prof-1', 'booking-1');
+
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'BOOKING_CANCELLED',
+        {
+          actor: 'PROFESSIONAL',
+          entityType: 'Booking',
+          entityId: 'booking-1',
+          subject: 'Corte de cabello',
+          metadata: {
+            serviceName: 'Corte de cabello',
+            startAt: '2026-08-10T14:00:00.000Z',
+          },
+        },
+      );
+      const recorded = JSON.stringify(activityService.record.mock.calls);
+      expect(recorded).not.toContain('Ana');
+      expect(recorded).not.toContain('ana@example.com');
+      expect(recorded).not.toContain('300 1234567');
+    });
+
     it('rejects cancelling a booking whose start time has already passed (previous day)', async () => {
       prisma.booking.findFirst.mockResolvedValue({
         id: 'booking-1',
@@ -1353,6 +1405,51 @@ describe('BookingsService', () => {
       expect(
         mailService.sendBookingRescheduledToProfessional,
       ).not.toHaveBeenCalled();
+    });
+
+    it('records an explicit BOOKING_RESCHEDULED event with the old and new slot', async () => {
+      activityService.record.mockClear();
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      const newStartAt = new Date('2026-08-11T15:00:00.000Z');
+      txBooking.update.mockResolvedValue({
+        ...BOOKING_ROW,
+        startAt: newStartAt,
+        endAt: new Date('2026-08-11T15:30:00.000Z'),
+      });
+
+      await service.rescheduleBooking('prof-1', 'booking-1', {
+        newStartAt: newStartAt.toISOString(),
+      });
+
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'BOOKING_RESCHEDULED',
+        expect.objectContaining({
+          actor: 'PROFESSIONAL',
+          entityType: 'Booking',
+          entityId: 'booking-1',
+        }) as unknown,
+      );
+      const [[, , input]] = activityService.record.mock.calls as [
+        [string, string, { metadata: Record<string, unknown> }],
+      ];
+      expect(input.metadata).toMatchObject({
+        from: '2026-08-10T14:00:00.000Z',
+        to: '2026-08-11T15:00:00.000Z',
+      });
+    });
+
+    it('records nothing when the reschedule is rejected', async () => {
+      activityService.record.mockClear();
+      prisma.booking.findFirst.mockResolvedValue(BOOKING_ROW);
+      txBooking.findFirst.mockResolvedValue({ id: 'other-booking' });
+
+      await expect(
+        service.rescheduleBooking('prof-1', 'booking-1', {
+          newStartAt: '2026-08-11T15:00:00.000Z',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(activityService.record).not.toHaveBeenCalled();
     });
   });
 

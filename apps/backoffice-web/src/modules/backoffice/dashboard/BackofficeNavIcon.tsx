@@ -5,6 +5,7 @@ export type BackofficeNavIconId =
   | 'panel'
   | 'tickets'
   | 'profesionales'
+  | 'pruebas'
   | 'auditoria'
   | 'usuarios';
 
@@ -36,6 +37,19 @@ export function BackofficeNavIcon({ id }: { id: BackofficeNavIconId }) {
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <circle cx="9" cy="6" r="3.5" stroke="currentColor" strokeWidth="1.5" />
         <path d="M2 16c0-3.3 3.1-6 7-6s7 2.7 7 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      </svg>
+    );
+  // pruebas — an hourglass: accounts on a time-boxed trial.
+  if (id === 'pruebas')
+    return (
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <path d="M4.5 2h9M4.5 16h9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path
+          d="M5.5 2v2.5c0 1.7 1.2 3 3.5 4.5-2.3 1.5-3.5 2.8-3.5 4.5V16M12.5 2v2.5c0 1.7-1.2 3-3.5 4.5 2.3 1.5 3.5 2.8 3.5 4.5V16"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
       </svg>
     );
   if (id === 'auditoria')

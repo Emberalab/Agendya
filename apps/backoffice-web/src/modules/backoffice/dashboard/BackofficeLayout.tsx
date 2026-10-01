@@ -16,6 +16,7 @@ const TOP_ITEMS: NavItem[] = [
   { id: 'panel', to: '/backoffice', label: 'Panel', end: true },
   { id: 'tickets', to: '/backoffice/tickets', label: 'Tickets' },
   { id: 'profesionales', to: '/backoffice/professionals', label: 'Profesionales' },
+  { id: 'pruebas', to: '/backoffice/trials', label: 'Pruebas' },
 ];
 
 const ADMIN_ITEMS: NavItem[] = [{ id: 'auditoria', to: '/backoffice/audit-log', label: 'Auditoría' }];

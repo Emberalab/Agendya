@@ -185,3 +185,29 @@ El vencimiento natural no escribe fila: se deriva de `Professional.trialEndsAt`.
 | `createdAt` | `DateTime @default(now())` | Cuándo |
 
 Índice: `@@index([professionalId, createdAt(sort: Desc)])` para el historial de una cuenta.
+
+## ProfessionalActivityEvent
+
+Actividad de producto de un profesional («¿cómo usa Agendya?»), solo inserción.
+No es auditoría: `AuditLog` registra lo que hace el **equipo del Backoffice**;
+esta tabla registra acciones del profesional, de sus clientes o del sistema.
+La escribe `apps/api` después de confirmar cada cambio (best-effort: si falla, se
+registra en el log y la acción del usuario no se ve afectada) y solo la lee
+`apps/backoffice-api`. Ver [Actividad de profesionales](/features/professional-activity/).
+
+| Campo | Tipo | Notas |
+| --- | --- | --- |
+| `professionalId` | `String` | FK → `Professional`, `onDelete: Cascade` |
+| `type` | `ActivityEventType` | Cuenta, inicio de sesión, visita diaria, perfil, servicios, horario, fechas bloqueadas, ciclo de la cita (incluida la reprogramación) y push |
+| `category` | `ActivityCategory` | Siempre `ACTIVITY_EVENT_CATEGORY[type]` (`@agendya/types`); se guarda para filtrar por índice |
+| `actor` | `ActivityActor` | `PROFESSIONAL` \| `CUSTOMER` \| `SYSTEM` |
+| `entityType` / `entityId` | `String?` | Referencia polimórfica (`Booking`, `Service`, …), **sin FK** para sobrevivir a borrados |
+| `subject` | `String?` | Nombre de la entidad en ese momento (servicio, fecha); lo usa la búsqueda |
+| `metadata` | `Json?` | Contexto seguro: nunca datos de contacto del cliente, contraseñas, tokens ni datos OAuth |
+| `backfilled` | `Boolean` | `true` si la migración lo reconstruyó a partir de timestamps existentes |
+| `dedupeKey` | `String? @unique` | Idempotencia de `DASHBOARD_VISITED` (una por profesional y día local) |
+| `occurredAt` | `DateTime @default(now())` | Cuándo |
+
+Índices: `(professionalId, occurredAt DESC)` para la línea de tiempo,
+`(professionalId, category, occurredAt DESC)` para el filtro por categoría y
+`(entityType, entityId)` para el historial de una cita o servicio.

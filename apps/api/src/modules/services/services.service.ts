@@ -13,12 +13,26 @@ import {
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { UsageAlertsService } from '../notifications/usage-alerts.service';
+import { ActivityService, diffFields } from '../activity/activity.service';
+
+/** Service fields whose before/after values are safe to show in the timeline. */
+const TRACKED_SERVICE_FIELDS = [
+  'name',
+  'description',
+  'durationMinutes',
+  'priceCents',
+  'isActive',
+  'homeServiceEnabled',
+  'homeDurationMinutes',
+  'homePriceCents',
+] as const;
 
 @Injectable()
 export class ServicesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly usageAlerts: UsageAlertsService,
+    private readonly activity: ActivityService,
   ) {}
 
   toDto(service: ServiceModel): Service {
@@ -79,6 +93,8 @@ export class ServicesService {
       },
     });
 
+    await this.recordCreated(service);
+
     await this.usageAlerts.checkServiceLimits(
       professionalId,
       sortOrder + 1,
@@ -93,7 +109,7 @@ export class ServicesService {
     serviceId: string,
     input: UpdateServiceInput,
   ): Promise<Service> {
-    await this.findOwnedOrThrow(professionalId, serviceId);
+    const before = await this.findOwnedOrThrow(professionalId, serviceId);
 
     const homeServiceOff = input.homeServiceEnabled === false;
 
@@ -131,6 +147,20 @@ export class ServicesService {
       },
     });
 
+    // Diff against the stored row, so implied changes (home fields cleared
+    // when home service is turned off) are captured too.
+    const changes = diffFields(before, service, TRACKED_SERVICE_FIELDS, [
+      'description',
+    ]);
+    if (Object.keys(changes).length > 0) {
+      await this.activity.record(professionalId, 'SERVICE_UPDATED', {
+        entityType: 'Service',
+        entityId: service.id,
+        subject: service.name,
+        metadata: { changes },
+      });
+    }
+
     return this.toDto(service);
   }
 
@@ -143,6 +173,13 @@ export class ServicesService {
     const service = await this.prisma.service.update({
       where: { id: serviceId },
       data: { deletedAt: new Date(), isActive: false },
+    });
+
+    await this.activity.record(professionalId, 'SERVICE_DELETED', {
+      entityType: 'Service',
+      entityId: service.id,
+      subject: service.name,
+      metadata: { name: service.name },
     });
 
     return this.toDto(service);
@@ -172,6 +209,8 @@ export class ServicesService {
       },
     });
 
+    await this.recordCreated(service, source.id);
+
     await this.usageAlerts.checkServiceLimits(
       professionalId,
       sortOrder + 1,
@@ -179,6 +218,24 @@ export class ServicesService {
     );
 
     return this.toDto(service);
+  }
+
+  private recordCreated(
+    service: ServiceModel,
+    duplicatedFromId?: string,
+  ): Promise<void> {
+    return this.activity.record(service.professionalId, 'SERVICE_CREATED', {
+      entityType: 'Service',
+      entityId: service.id,
+      subject: service.name,
+      metadata: {
+        name: service.name,
+        priceCents: service.priceCents,
+        durationMinutes: service.durationMinutes,
+        homeServiceEnabled: service.homeServiceEnabled,
+        ...(duplicatedFromId ? { duplicatedFromId } : {}),
+      },
+    });
   }
 
   /**

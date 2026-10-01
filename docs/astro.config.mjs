@@ -263,6 +263,11 @@ export default defineConfig({
               translations: { en: 'Notifications' },
               slug: 'features/notifications',
             },
+            {
+              label: 'Actividad de profesionales',
+              translations: { en: 'Professional activity' },
+              slug: 'features/professional-activity',
+            },
           ],
         },
         {

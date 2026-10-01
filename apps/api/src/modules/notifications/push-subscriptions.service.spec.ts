@@ -3,6 +3,12 @@ import { ConfigService } from '@nestjs/config';
 import webpush from 'web-push';
 import type { PushMessage } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
+
+const activityService = {
+  record: jest.fn().mockResolvedValue(undefined),
+  recordDailyVisit: jest.fn().mockResolvedValue(undefined),
+};
 import { PushSubscriptionsService } from './push-subscriptions.service';
 
 jest.mock('web-push', () => ({
@@ -46,6 +52,7 @@ function subRow(overrides: Record<string, unknown> = {}) {
 describe('PushSubscriptionsService', () => {
   let prisma: {
     pushSubscription: {
+      findUnique: jest.Mock;
       upsert: jest.Mock;
       deleteMany: jest.Mock;
       findMany: jest.Mock;
@@ -57,7 +64,8 @@ describe('PushSubscriptionsService', () => {
   async function build(config: Record<string, string | undefined>) {
     prisma = {
       pushSubscription: {
-        upsert: jest.fn().mockResolvedValue(undefined),
+        findUnique: jest.fn().mockResolvedValue(null),
+        upsert: jest.fn().mockResolvedValue(subRow()),
         deleteMany: jest.fn().mockResolvedValue({ count: 0 }),
         findMany: jest.fn().mockResolvedValue([]),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
@@ -68,6 +76,7 @@ describe('PushSubscriptionsService', () => {
       providers: [
         PushSubscriptionsService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ActivityService, useValue: activityService },
         {
           provide: ConfigService,
           useValue: { get: (key: string) => config[key] },
@@ -121,6 +130,44 @@ describe('PushSubscriptionsService', () => {
         userAgent: 'Chrome on Android',
       });
       expect(arg.update).toMatchObject({ professionalId: 'prof-1' });
+    });
+
+    it('records PUSH_ENABLED for a newly registered device only', async () => {
+      const service = await build({ ...VAPID });
+      const input = {
+        endpoint: 'https://push.example/abc',
+        keys: { p256dh: 'p', auth: 'a' },
+      };
+      activityService.record.mockClear();
+
+      await service.subscribe('prof-1', input);
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'PUSH_ENABLED',
+        { entityType: 'PushSubscription', entityId: 'sub-1' },
+      );
+
+      // Same device refreshing its keys: not a new event.
+      prisma.pushSubscription.findUnique.mockResolvedValue({
+        professionalId: 'prof-1',
+      });
+      await service.subscribe('prof-1', input);
+      expect(activityService.record).toHaveBeenCalledTimes(1);
+    });
+
+    it('records PUSH_DISABLED only when a device was actually removed', async () => {
+      const service = await build({ ...VAPID });
+      activityService.record.mockClear();
+
+      await service.unsubscribe('prof-1', 'https://push.example/none');
+      expect(activityService.record).not.toHaveBeenCalled();
+
+      prisma.pushSubscription.deleteMany.mockResolvedValue({ count: 1 });
+      await service.unsubscribe('prof-1', 'https://push.example/abc');
+      expect(activityService.record).toHaveBeenCalledWith(
+        'prof-1',
+        'PUSH_DISABLED',
+      );
     });
 
     it('sends to every registered device', async () => {

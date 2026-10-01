@@ -4,6 +4,7 @@ import { Badge } from '../../../shared/components/Badge';
 
 const ACTION_LABELS: Record<string, string> = {
   SUPPORT_VIEWED_PROFESSIONAL: 'Vio un profesional',
+  SUPPORT_VIEWED_PROFESSIONAL_ACTIVITY: 'Vio la actividad de un profesional',
   TICKET_CREATED: 'Creó un ticket',
   TICKET_ASSIGNED: 'Reasignó un ticket',
   TICKET_STATUS_CHANGED: 'Cambió el estado de un ticket',

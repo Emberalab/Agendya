@@ -8,6 +8,12 @@ import { JwtService } from '@nestjs/jwt';
 import { Test } from '@nestjs/testing';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../database/prisma.service';
+import { ActivityService } from '../activity/activity.service';
+
+const activityService = {
+  record: jest.fn().mockResolvedValue(undefined),
+  recordDailyVisit: jest.fn().mockResolvedValue(undefined),
+};
 import { MailService } from '../../infra/mail/mail.service';
 import { AuthService } from './auth.service';
 
@@ -81,6 +87,7 @@ describe('AuthService', () => {
       providers: [
         AuthService,
         { provide: PrismaService, useValue: prisma },
+        { provide: ActivityService, useValue: activityService },
         { provide: JwtService, useValue: jwtService },
         { provide: MailService, useValue: mailService },
       ],
