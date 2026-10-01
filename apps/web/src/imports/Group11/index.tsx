@@ -4,7 +4,7 @@ export default function Group() {
   return (
     <div className="relative size-full">
       <svg className="absolute block inset-0 size-full" fill="none" height="385" preserveAspectRatio="none" viewBox="0 0 417 385" width="417">
-        <g id="Group 11">
+        <g id="Group-11">
           <path clipRule="evenodd" d={svgPaths.pf200740} fill="url(#paint0_linear_0_4)" fillRule="evenodd" id="Vector" />
           <path clipRule="evenodd" d={svgPaths.p9589800} fill="url(#paint1_linear_0_4)" fillRule="evenodd" id="Vector_2" />
           <path clipRule="evenodd" d={svgPaths.p15f79b00} fill="url(#paint2_linear_0_4)" fillRule="evenodd" id="Vector_3" />

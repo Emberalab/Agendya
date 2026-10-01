@@ -77,7 +77,7 @@ flow with more context.
 ## Optional — seed demo services
 
 ```bash
-node apps/api/prisma/seed-services.mjs
+node apps/api/scripts/seed-services.mjs
 ```
 
 Populates a set of example services for an existing professional. Inspect the
