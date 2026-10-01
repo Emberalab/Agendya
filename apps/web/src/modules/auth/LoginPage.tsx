@@ -298,6 +298,41 @@ export function LoginPage() {
               Continuar con Google
             </button>
           </div>
+
+          <p
+            className="text-xs text-center mt-3"
+            style={{
+              color: 'var(--color-text-secondary)',
+              fontFamily: 'var(--font-body)',
+              lineHeight: '1.5',
+            }}
+          >
+            Al continuar con Google, aceptas nuestros{' '}
+            <a
+              href="/terminos"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-text-brand)',
+                textDecoration: 'underline',
+              }}
+            >
+              Términos de uso
+            </a>{' '}
+            y{' '}
+            <a
+              href="/privacidad"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-text-brand)',
+                textDecoration: 'underline',
+              }}
+            >
+              Política de privacidad
+            </a>
+            .
+          </p>
           </>
           )}
 
@@ -320,7 +355,35 @@ export function LoginPage() {
           </p>
         </div>
 
-        <p className="agendia-label text-center">© 2026 agendya - Todos los derechos reservados.</p>
+        <p className="agendia-label text-center">
+          © 2026 agendya - Todos los derechos reservados.
+          <br />
+          <a
+            href="/terminos"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'var(--color-text-secondary)',
+              textDecoration: 'none',
+              fontSize: '12px',
+            }}
+          >
+            Términos
+          </a>
+          {' · '}
+          <a
+            href="/privacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'var(--color-text-secondary)',
+              textDecoration: 'none',
+              fontSize: '12px',
+            }}
+          >
+            Privacidad
+          </a>
+        </p>
       </div>
 
       {/* Right panel — photo + testimonial */}

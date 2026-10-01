@@ -1,16 +1,22 @@
 import type { Page, Route } from '@playwright/test';
 import type {
   AgendaBooking,
+  AuthUser,
   Notification,
+  ProfessionalForPlanChange,
   ProfessionalProfile,
   PublicBooking,
+  RegistrationEntry,
   Service,
+  TrialEvent,
   WorkingHour,
 } from '@agendya/types';
 import {
   PUBLIC_SLUG,
+  SUPER_ADMIN_USER,
   TEST_ACCESS_TOKEN,
   TEST_USER,
+  makeAdminAccounts,
   makeAgendaBookings,
   makeAvailabilitySlots,
   makeProfile,
@@ -71,6 +77,8 @@ export class ApiMock {
   private workingHours = makeWorkingHours();
   private exceptions = makeScheduleExceptions();
   private readonly publicProfessional = makePublicProfessional();
+  private authUser: AuthUser = TEST_USER;
+  private adminAccounts: ProfessionalForPlanChange[] = makeAdminAccounts();
 
   /**
    * Body served for the real-time SSE stream (`GET /realtime/stream`). A
@@ -92,6 +100,22 @@ export class ApiMock {
   setPlan(plan: ProfessionalProfile['plan']): void {
     this.profile.plan = plan;
     this.profile.monthlyBookingLimit = plan === 'FREE' ? 100 : null;
+  }
+
+  /**
+   * Mirror what the API resolves server-side: an active trial makes the
+   * effective plan BUSINESS (no monthly cap); otherwise the billed plan.
+   */
+  setTrial(trial: ProfessionalProfile['trial']): void {
+    this.profile.trial = trial;
+    this.profile.effectivePlan = trial?.active ? 'BUSINESS' : this.profile.plan;
+    this.profile.monthlyBookingLimit =
+      this.profile.effectivePlan === 'FREE' ? 100 : null;
+  }
+
+  /** Serve `/auth/me` as the platform admin (pair with a seeded admin session). */
+  asSuperAdmin(): void {
+    this.authUser = SUPER_ADMIN_USER;
   }
 
   setServices(services: Service[]): void {
@@ -184,10 +208,18 @@ export class ApiMock {
 
     // --- Auth -----------------------------------------------------------------
     if (path === '/auth/login' || path === '/auth/register') {
-      return json(route, { accessToken: TEST_ACCESS_TOKEN, user: TEST_USER });
+      return json(route, {
+        accessToken: TEST_ACCESS_TOKEN,
+        user: this.authUser,
+      });
     }
     if (path === '/auth/me') {
-      return json(route, TEST_USER);
+      return json(route, this.authUser);
+    }
+
+    // --- Admin (Super Admin backoffice) --------------------------------------
+    if (path.startsWith('/admin/')) {
+      return this.dispatchAdmin(route, path, method, url, body);
     }
 
     // --- Professional profile ----------------------------------------------
@@ -437,6 +469,136 @@ export class ApiMock {
     return json(route, { message: `E2E: unmocked ${method} ${path}` }, 501);
   }
 
+  /**
+   * Minimal Super Admin backend: registrations, type-ahead search, account
+   * detail and the trial grant/extend/end actions. Server rules that matter to
+   * the UI (3-char minimum, one trial per account, active-only extend/end) are
+   * mirrored so the specs exercise real round-trips.
+   */
+  private dispatchAdmin(
+    route: Route,
+    path: string,
+    method: string,
+    url: URL,
+    body: unknown,
+  ): Promise<void> {
+    if (this.authUser.role !== 'SUPER_ADMIN') {
+      return json(route, { message: 'Forbidden' }, 403);
+    }
+    const DAY_MS = 24 * 60 * 60 * 1000;
+
+    if (path === '/admin/registrations' && method === 'GET') {
+      const rows: RegistrationEntry[] = this.adminAccounts.map((a) => ({
+        id: a.id,
+        email: a.email,
+        businessName: a.businessName,
+        slug: a.slug,
+        accessStatus: 'APPROVED',
+        role: 'INDEPENDENT',
+        plan: a.plan,
+        trial: a.trial,
+        createdAt: '2026-09-14T15:00:00.000Z',
+      }));
+      return json(route, rows);
+    }
+
+    if (path === '/admin/professionals' && method === 'GET') {
+      const q = (url.searchParams.get('q') ?? '').trim().toLowerCase();
+      if (q.length < 3) return json(route, { message: 'q too short' }, 400);
+      const matches = this.adminAccounts
+        .filter(
+          (a) =>
+            a.email.toLowerCase().includes(q) ||
+            a.businessName.toLowerCase().includes(q),
+        )
+        .map((a) => ({
+          id: a.id,
+          email: a.email,
+          businessName: a.businessName,
+          plan: a.plan,
+          trialActive: a.trial?.active ?? false,
+        }));
+      return json(route, matches);
+    }
+
+    const match = path.match(
+      /^\/admin\/professionals\/([^/]+)(?:\/trial(?:\/(extend|end))?)?$/,
+    );
+    const account = match
+      ? this.adminAccounts.find((a) => a.email === decodeURIComponent(match[1]))
+      : undefined;
+    if (!match || !account) {
+      return json(route, { message: 'No encontrado' }, 404);
+    }
+    const isTrial = path.includes('/trial');
+    const action = match[2];
+    const input = (body ?? {}) as {
+      allowRepeat?: boolean;
+      days?: number;
+      note?: string;
+    };
+    const now = new Date();
+    const record = (
+      eventAction: TrialEvent['action'],
+      previousEndsAt: string | null,
+      endsAt: string,
+    ) => {
+      account.trialHistory = [
+        {
+          id: `00000000-0000-4000-8000-${String(account.trialHistory.length + 1).padStart(12, '0')}`,
+          action: eventAction,
+          actorEmail: this.authUser.email,
+          previousEndsAt,
+          endsAt,
+          note: input.note ?? null,
+          createdAt: now.toISOString(),
+        },
+        ...account.trialHistory,
+      ];
+    };
+
+    if (!isTrial && method === 'GET') {
+      return json(route, account);
+    }
+
+    if (isTrial && !action && method === 'POST') {
+      if (account.trial?.active) {
+        return json(route, { message: 'Ya tiene una prueba activa.' }, 409);
+      }
+      if (account.trial && !input.allowRepeat) {
+        return json(
+          route,
+          { message: 'Esta cuenta ya usó su período de prueba.' },
+          409,
+        );
+      }
+      const endsAt = new Date(now.getTime() + 30 * DAY_MS).toISOString();
+      record('GRANTED', account.trial?.endsAt ?? null, endsAt);
+      account.trial = { startedAt: now.toISOString(), endsAt, active: true };
+      account.effectivePlan = 'BUSINESS';
+      return json(route, account, 201);
+    }
+
+    if ((action === 'extend' || action === 'end') && method === 'POST') {
+      const trial = account.trial;
+      if (!trial?.active) {
+        return json(route, { message: 'Sin prueba activa.' }, 409);
+      }
+      const endsAt =
+        action === 'extend'
+          ? new Date(
+              new Date(trial.endsAt).getTime() + (input.days ?? 0) * DAY_MS,
+            ).toISOString()
+          : now.toISOString();
+      record(action === 'extend' ? 'EXTENDED' : 'ENDED', trial.endsAt, endsAt);
+      account.trial = { ...trial, endsAt, active: action === 'extend' };
+      account.effectivePlan = action === 'extend' ? 'BUSINESS' : account.plan;
+      return json(route, account);
+    }
+
+    return json(route, { message: `E2E: unmocked ${method} ${path}` }, 501);
+  }
+
   private buildPublicBooking(body: unknown): PublicBooking {
     const input = (body ?? {}) as Record<string, unknown>;
     const service = this.publicProfessional.services[0];
@@ -456,6 +618,7 @@ export class ApiMock {
       startAt: (input.startAt as string) ?? '2026-08-03T14:00:00.000Z',
       endAt: '2026-08-03T14:30:00.000Z',
       status: 'CONFIRMED',
+      source: 'ONLINE',
       cancellationToken: 'e2e-cancellation-token',
       cancellationPolicyHours: 24,
       canCancel: true,

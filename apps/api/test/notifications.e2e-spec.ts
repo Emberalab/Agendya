@@ -100,7 +100,12 @@ describe('Notifications (e2e)', () => {
 
     const regA = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName: `E2E Notif ${runId}` });
+      .send({
+        email,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Notif ${runId}`,
+      });
     tokenA = (regA.body as { accessToken: string }).accessToken;
     slugA = (regA.body as { user: { slug: string } }).user.slug;
 
@@ -109,6 +114,7 @@ describe('Notifications (e2e)', () => {
       .send({
         email: otherEmail,
         password,
+        acceptTerms: true,
         businessName: `E2E Notif Otro ${runId}`,
       });
     tokenB = (regB.body as { accessToken: string }).accessToken;

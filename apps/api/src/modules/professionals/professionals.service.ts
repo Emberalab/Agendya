@@ -6,12 +6,15 @@ import {
 import type { Professional } from '@prisma/client';
 import {
   PLAN_MONTHLY_BOOKING_LIMITS,
+  effectivePlan,
+  toTrialInfo,
   type ProfessionalProfile,
   type PublicProfessional,
   type UpdateProfileInput,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
 import { publicProfessionalAccessFilter } from '../auth/professional-allowlist';
+import { countBookingsThisMonth } from '../bookings/booking-usage';
 
 @Injectable()
 export class ProfessionalsService {
@@ -21,7 +24,11 @@ export class ProfessionalsService {
     professional: Professional,
     bookingsThisMonth = 0,
     serviceCount = 0,
+    now: Date = new Date(),
   ): ProfessionalProfile {
+    // Entitlement is resolved here, server-side, and sent to the client —
+    // the dashboard never derives it from its own clock.
+    const plan = effectivePlan(professional, now);
     return {
       id: professional.id,
       email: professional.email,
@@ -38,27 +45,19 @@ export class ProfessionalsService {
       plan: professional.plan,
       billingInterval: professional.billingInterval,
       planExpiresAt: professional.planExpiresAt?.toISOString() ?? null,
+      planCancelledAt: professional.planCancelledAt?.toISOString() ?? null,
+      effectivePlan: plan,
+      trial: toTrialInfo(professional, now),
       bookingsThisMonth,
       serviceCount,
-      monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[professional.plan],
+      monthlyBookingLimit: PLAN_MONTHLY_BOOKING_LIMITS[plan],
       createdAt: professional.createdAt.toISOString(),
       updatedAt: professional.updatedAt.toISOString(),
     };
   }
 
-  /** Non-cancelled bookings created since the first day of the current month. */
-  async countBookingsThisMonth(professionalId: string): Promise<number> {
-    const now = new Date();
-    const monthStart = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
-    );
-    return this.prisma.booking.count({
-      where: {
-        professionalId,
-        status: { not: 'CANCELLED' },
-        createdAt: { gte: monthStart },
-      },
-    });
+  countBookingsThisMonth(professionalId: string): Promise<number> {
+    return countBookingsThisMonth(this.prisma, professionalId);
   }
 
   async countServices(professionalId: string): Promise<number> {
@@ -143,7 +142,7 @@ export class ProfessionalsService {
       where: { slug, isActive: true, ...publicProfessionalAccessFilter() },
       include: {
         services: {
-          where: { isActive: true, deletedAt: null },
+          where: { isActive: true, planLocked: false, deletedAt: null },
           orderBy: { sortOrder: 'asc' },
         },
       },

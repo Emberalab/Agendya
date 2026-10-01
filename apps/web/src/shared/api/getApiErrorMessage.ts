@@ -1,4 +1,4 @@
-import { ACCOUNT_NOT_FOUND_CODE } from '@agendya/types';
+import { ACCOUNT_NOT_FOUND_CODE, RESET_TOKEN_INVALID_CODE } from '@agendya/types';
 import { isApiError } from './apiClient';
 
 /** The shape `ZodValidationPipe` throws: `{ message: 'Validation failed', errors: z.ZodError['flatten']() }'. */
@@ -52,6 +52,13 @@ export function isAccountNotFoundError(error: unknown): boolean {
     return false;
   }
   return payloadHasCode(error.data, ACCOUNT_NOT_FOUND_CODE);
+}
+
+export function isResetTokenInvalidError(error: unknown): boolean {
+  if (!isApiError(error) || error.status !== 400) {
+    return false;
+  }
+  return payloadHasCode(error.data, RESET_TOKEN_INVALID_CODE);
 }
 
 function payloadHasWaitlistCode(data: unknown): boolean {

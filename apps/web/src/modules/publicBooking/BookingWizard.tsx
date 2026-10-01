@@ -460,6 +460,7 @@ export function BookingWizard({
                 errors={errors}
                 remember={remember}
                 onRememberChange={setRemember}
+                professionalName={professional.businessName}
               />
             )}
 
@@ -1322,11 +1323,13 @@ function DetailsStep({
   errors,
   remember,
   onRememberChange,
+  professionalName,
 }: {
   register: ReturnType<typeof useForm<CustomerInfoInput>>['register'];
   errors: ReturnType<typeof useForm<CustomerInfoInput>>['formState']['errors'];
   remember: boolean;
   onRememberChange: (value: boolean) => void;
+  professionalName: string;
 }) {
   return (
     <div>
@@ -1413,6 +1416,30 @@ function DetailsStep({
           )}
         </div>
       </div>
+
+      {/* Privacy Notice */}
+      <p
+        className="mt-4 text-xs"
+        style={{
+          color: 'var(--color-text-secondary)',
+          lineHeight: '1.5',
+        }}
+      >
+        Al reservar, tus datos serán compartidos con {professionalName} y procesados
+        conforme a su política de privacidad. Consulta nuestra{' '}
+        <a
+          href="/privacidad"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            color: 'var(--color-text-brand)',
+            textDecoration: 'underline',
+          }}
+        >
+          Política de privacidad
+        </a>
+        .
+      </p>
 
       <div
         className="mt-5 rounded-2xl p-4"

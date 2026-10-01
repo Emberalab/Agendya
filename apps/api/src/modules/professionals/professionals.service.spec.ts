@@ -21,10 +21,16 @@ const BASE_PROFESSIONAL = {
   billingInterval: null,
   planStartedAt: null,
   planExpiresAt: null,
+  planCancelledAt: null,
   lastWompiTransactionId: null,
+  trialStartedAt: null as Date | null,
+  trialEndsAt: null as Date | null,
   googleId: null,
   role: 'INDEPENDENT' as const,
+  accessStatus: 'APPROVED' as const,
   isActive: true,
+  termsAcceptedAt: null,
+  termsVersion: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-02T00:00:00.000Z'),
 };
@@ -82,6 +88,9 @@ describe('ProfessionalsService', () => {
         plan: 'FREE',
         billingInterval: null,
         planExpiresAt: null,
+        planCancelledAt: null,
+        effectivePlan: 'FREE',
+        trial: null,
         bookingsThisMonth: 12,
         serviceCount: 0,
         monthlyBookingLimit: 100,
@@ -97,6 +106,43 @@ describe('ProfessionalsService', () => {
         999,
       );
       expect(profile.monthlyBookingLimit).toBeNull();
+    });
+
+    describe('with a full-access trial', () => {
+      const now = new Date('2026-09-15T12:00:00.000Z');
+      const trialStartedAt = new Date('2026-09-01T17:00:00.000Z');
+      const trialEndsAt = new Date('2026-10-01T17:00:00.000Z');
+
+      it('resolves the effective plan and limits server-side while active', () => {
+        const profile = service.toProfile(
+          { ...BASE_PROFESSIONAL, trialStartedAt, trialEndsAt },
+          150,
+          20,
+          now,
+        );
+        expect(profile.plan).toBe('FREE');
+        expect(profile.effectivePlan).toBe('BUSINESS');
+        expect(profile.monthlyBookingLimit).toBeNull();
+        expect(profile.trial).toEqual({
+          startedAt: trialStartedAt.toISOString(),
+          endsAt: trialEndsAt.toISOString(),
+          active: true,
+        });
+      });
+
+      it('falls back to FREE limits once the trial has ended', () => {
+        const profile = service.toProfile(
+          { ...BASE_PROFESSIONAL, trialStartedAt, trialEndsAt },
+          150,
+          20,
+          new Date('2026-10-10T12:00:00.000Z'),
+        );
+        expect(profile.effectivePlan).toBe('FREE');
+        expect(profile.monthlyBookingLimit).toBe(100);
+        expect(profile.trial?.active).toBe(false);
+        // Usage is reported as-is: nothing was deleted at expiry.
+        expect(profile.serviceCount).toBe(20);
+      });
     });
   });
 
@@ -214,7 +260,7 @@ describe('ProfessionalsService', () => {
         },
         include: {
           services: {
-            where: { isActive: true, deletedAt: null },
+            where: { isActive: true, planLocked: false, deletedAt: null },
             orderBy: { sortOrder: 'asc' },
           },
         },

@@ -21,6 +21,24 @@ export const WOMPI_IVA_BPS = 1900;
 export const BILLING_GRACE_DAYS = 3;
 
 /**
+ * Subscription lifecycle states for a professional's plan.
+ *
+ * - `FREE`: No paid subscription (default for new accounts)
+ * - `ACTIVE`: Paid plan with future expiry, not cancelled
+ * - `CANCELLED`: User cancelled but plan benefits remain until planExpiresAt
+ * - `GRACE`: Past planExpiresAt but within BILLING_GRACE_DAYS window
+ * - `COMPED`: Admin-assigned paid plan without expiry (permanent complimentary)
+ */
+export const PLAN_STATUSES = [
+  'FREE',
+  'ACTIVE',
+  'CANCELLED',
+  'GRACE',
+  'COMPED',
+] as const;
+export type PlanStatus = (typeof PLAN_STATUSES)[number];
+
+/**
  * Methods we enable on the Wompi widget / payment source.
  * PSE and Daviplata can be added if the merchant account has them.
  */
@@ -188,4 +206,63 @@ function addUtcMonths(from: Date, months: number): Date {
       from.getUTCMilliseconds(),
     ),
   );
+}
+
+/**
+ * Derive the subscription lifecycle state for a professional.
+ *
+ * @param plan - Current plan from Professional.plan
+ * @param planExpiresAt - Professional.planExpiresAt (nullable)
+ * @param planCancelledAt - Professional.planCancelledAt (nullable)
+ * @param now - Current timestamp for calculating grace period (defaults to new Date())
+ * @returns PlanStatus enum value
+ *
+ * Decision logic:
+ * 1. FREE plan → 'FREE'
+ * 2. Paid plan with null expiry → 'COMPED' (admin-assigned, no expiry)
+ * 3. Paid plan cancelled (planCancelledAt set) → 'CANCELLED'
+ * 4. Paid plan expired but within grace window → 'GRACE'
+ * 5. Paid plan with future expiry → 'ACTIVE'
+ */
+export function planStatus(
+  plan: Plan,
+  planExpiresAt: Date | null | undefined,
+  planCancelledAt: Date | null | undefined,
+  now: Date = new Date(),
+): PlanStatus {
+  // FREE plan
+  if (plan === 'FREE') {
+    return 'FREE';
+  }
+
+  // Paid plan with no expiry = complimentary (admin-assigned)
+  if (!planExpiresAt) {
+    return 'COMPED';
+  }
+
+  // User cancelled but plan not yet expired
+  if (planCancelledAt) {
+    return 'CANCELLED';
+  }
+
+  // Check if expired
+  const expiryTime = planExpiresAt.getTime();
+  const nowTime = now.getTime();
+
+  if (expiryTime < nowTime) {
+    // Past expiry - check grace period
+    const gracePeriodMs = BILLING_GRACE_DAYS * 24 * 60 * 60 * 1000;
+    const graceEndTime = expiryTime + gracePeriodMs;
+
+    if (nowTime < graceEndTime) {
+      return 'GRACE';
+    }
+
+    // Past grace period - should be downgraded to FREE by job
+    // but status helper still reflects reality
+    return 'GRACE';
+  }
+
+  // Active paid subscription with future expiry
+  return 'ACTIVE';
 }

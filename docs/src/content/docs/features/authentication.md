@@ -13,16 +13,7 @@ página es el resumen a nivel de funcionalidad y la lista de endpoints.
 | --- | --- | --- | --- |
 | Email + contraseña | `/register`, `/login` | `POST /auth/register`, `POST /auth/login` | bcrypt (`SALT_ROUNDS = 10`); contraseñas de 8–72 caracteres |
 | Google OAuth 2.0 | Botón «Iniciar sesión con Google» | `GET /auth/google` → `GET /auth/google/callback` | Solo disponible cuando las credenciales de Google están configuradas |
-
-Hay una ruta y una página `/forgot-password` en la app web, pero **todavía no
-existe un endpoint de restablecimiento de contraseña en la API** — trata la
-página como un placeholder.
-
-:::caution[TODO — restablecimiento de contraseña]
-`ForgotPasswordPage.tsx` está enrutada y se renderiza, pero no existe un handler
-`/auth/forgot-password` ni `/auth/reset-password` en `apps/api`. Conectar esto es
-trabajo sin terminar, no una funcionalidad documentada.
-:::
+| Recuperación de contraseña | `/forgot-password`, `/reset-password` | `POST /auth/forgot-password`, `POST /auth/reset-password` | Tokens de un solo uso con SHA-256, válidos por 1 hora |
 
 ## Endpoints
 
@@ -30,6 +21,8 @@ trabajo sin terminar, no una funcionalidad documentada.
 | --- | --- | --- | --- | --- |
 | `POST` | `/auth/register` | ninguna · `@Throttle 5/60s` | `{ email, password, businessName }` (`registerSchema`) | `{ accessToken, user }` |
 | `POST` | `/auth/login` | ninguna · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` · `401 ACCOUNT_NOT_FOUND` se queda en `/login` con CTA a registro |
+| `POST` | `/auth/forgot-password` | ninguna · `@Throttle 3/60s` | `{ email }` (`forgotPasswordSchema`) | `{ success: true }` · Siempre responde igual para no revelar si el correo existe |
+| `POST` | `/auth/reset-password` | ninguna · `@Throttle 5/60s` | `{ token, password }` (`resetPasswordSchema`) | `{ success: true }` · `400 RESET_TOKEN_INVALID` si el token no existe, ya se usó o expiró |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role, accessStatus }` |
 | `GET` | `/auth/google` | ninguna | — | 302 a Google (+ pone la cookie `oauth_state`) |
 | `GET` | `/auth/google/callback` | cookie `state` + Google | `?code&state` | 302 a `{WEB_URL}/auth/callback#token=<JWT>` · declinado: `/login?error=declined` · `state` inválido: `/login?error=oauth` |
@@ -86,3 +79,93 @@ flowchart LR
 
 El TTL del token es `JWT_EXPIRES_IN` (por defecto `7d`). No hay flujo de refresh
 token; la expiración implica volver a iniciar sesión.
+
+## Recuperación de contraseña
+
+El flujo de restablecimiento de contraseña consta de dos pasos:
+
+1. **Solicitud de recuperación** (`/forgot-password`): El usuario ingresa su correo electrónico. La API genera un token de un solo uso, lo envía por correo y siempre responde igual para no revelar si el correo existe en el sistema.
+
+2. **Restablecer contraseña** (`/reset-password`): El usuario hace clic en el enlace del correo, ingresa una contraseña nueva y la API valida el token, actualiza la contraseña y marca el token como usado.
+
+### Tabla PasswordResetToken
+
+| Campo | Tipo | Descripción |
+| --- | --- | --- |
+| `id` | UUID | Identificador único |
+| `professionalId` | UUID | FK a `Professional` (cascade delete) |
+| `tokenHash` | String (SHA-256) | Hash del token aleatorio de 32 bytes |
+| `expiresAt` | DateTime | Timestamp de expiración (1 hora desde creación) |
+| `usedAt` | DateTime? | Timestamp cuando se usó el token (null = no usado) |
+| `createdAt` | DateTime | Timestamp de creación |
+
+### Seguridad
+
+- **Tokens de un solo uso**: El token se marca como usado (`usedAt`) después de restablecer la contraseña exitosamente. No se puede reutilizar.
+- **Expiración**: Los tokens expiran después de 1 hora (`TOKEN_EXPIRY_HOURS = 1`).
+- **Hashing**: Los tokens se hashean con SHA-256 antes de guardarlos en la base de datos. El token original (base64url de 32 bytes aleatorios) solo se envía por correo.
+- **Invalidación de tokens previos**: Al solicitar un nuevo token, todos los tokens anteriores no usados del mismo usuario se marcan como usados automáticamente.
+- **Respuesta uniforme**: `POST /auth/forgot-password` siempre responde `{ success: true }`, independientemente de si el correo existe o no, para prevenir enumeración de cuentas.
+- **Rate limiting**: Ambos endpoints tienen rate limiting para prevenir abuso.
+
+### Flujo completo
+
+```mermaid
+sequenceDiagram
+  participant Usuario
+  participant Web as Web (/forgot-password)
+  participant API as API (AuthService)
+  participant DB as PostgreSQL
+  participant Mail as Resend
+
+  Usuario->>Web: Ingresa email
+  Web->>API: POST /auth/forgot-password { email }
+  API->>DB: buscar Professional por email
+  alt Correo no existe o cuenta DECLINED
+    API-->>Web: { success: true }
+    Note over API: No revela que el correo no existe
+  else Correo existe
+    API->>DB: invalidar tokens anteriores (usedAt = now)
+    API->>API: generar token aleatorio 32 bytes
+    API->>API: SHA-256(token) → tokenHash
+    API->>DB: crear PasswordResetToken { tokenHash, expiresAt: +1h }
+    API->>Mail: enviar correo con enlace + token original
+    API-->>Web: { success: true }
+  end
+
+  Mail->>Usuario: Correo con enlace /reset-password?token=...
+  Usuario->>Web: Click en enlace
+  Web->>Web: Mostrar formulario de nueva contraseña
+  Usuario->>Web: Ingresa nueva contraseña
+  Web->>API: POST /auth/reset-password { token, password }
+  API->>API: SHA-256(token) → tokenHash
+  API->>DB: buscar PasswordResetToken por tokenHash
+  alt Token inválido/usado/expirado
+    API-->>Web: 400 RESET_TOKEN_INVALID
+    Web->>Web: Mostrar "enlace expirado"
+  else Token válido
+    API->>DB: BEGIN TRANSACTION
+    API->>DB: actualizar Professional.passwordHash
+    API->>DB: marcar token.usedAt = now
+    API->>DB: COMMIT
+    API->>Mail: enviar correo de confirmación
+    API-->>Web: { success: true }
+    Web->>Web: Mostrar "contraseña cambiada" + botón a /login
+  end
+```
+
+### Correos enviados
+
+El flujo de recuperación envía dos correos:
+
+1. **Correo de recuperación** (`forgot-password.template.ts`): Contiene el enlace con el token para restablecer la contraseña. Se envía después de `POST /auth/forgot-password`.
+
+2. **Confirmación de cambio** (`password-changed.template.ts`): Se envía después de un restablecimiento exitoso para notificar al usuario que su contraseña fue cambiada.
+
+### Pendiente
+
+:::caution[Invalidar sesiones existentes]
+El restablecimiento de contraseña **no invalida automáticamente los JWT ya emitidos**. Si un atacante obtuvo el token JWT de la víctima, ese token seguirá siendo válido hasta que expire (`JWT_EXPIRES_IN`).
+
+Una mejora futura sería agregar un campo `passwordChangedAt` en `Professional` y validarlo en `JwtStrategy` para rechazar tokens emitidos antes de ese timestamp.
+:::

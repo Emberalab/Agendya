@@ -111,10 +111,3 @@ Un duplicado obsoleto de `infra/docker-compose.yml` con nombres de contenedor
 distintos. Tanto la guía del README como CLAUDE.md apuntan a
 `infra/docker-compose.yml` — usa ese.
 :::
-
-## Archivos duplicados `… 2`
-
-Algunos archivos existen por duplicado con el sufijo ` 2` (`apps/api/src/bootstrap 2.ts`,
-`CLAUDE 2.md`, `apps/api/test/security.e2e-spec 2.ts`). Son artefactos de
-editor/sincronización; `.gitignore` incluso lista `node_modules 2`. El archivo
-sin sufijo es el real.

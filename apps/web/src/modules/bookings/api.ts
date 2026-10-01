@@ -1,4 +1,4 @@
-import type { AgendaBooking, RescheduleBookingInput } from '@agendya/types';
+import type { AgendaBooking, CreateManualBookingInput, RescheduleBookingInput } from '@agendya/types';
 import { apiClient } from '../../shared/api/apiClient';
 
 export async function listAgenda(
@@ -33,5 +33,12 @@ export async function rescheduleBooking(
     `/bookings/${id}/reschedule`,
     input,
   );
+  return data;
+}
+
+export async function createManualBooking(
+  input: CreateManualBookingInput,
+): Promise<AgendaBooking> {
+  const { data } = await apiClient.post<AgendaBooking>('/bookings', input);
   return data;
 }

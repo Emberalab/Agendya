@@ -111,10 +111,3 @@ A stale duplicate of `infra/docker-compose.yml` with different container
 naming. The README setup flow and CLAUDE.md both point at
 `infra/docker-compose.yml` — use that one.
 :::
-
-## Duplicated `… 2` files
-
-A few files exist twice with a ` 2` suffix (`apps/api/src/bootstrap 2.ts`,
-`CLAUDE 2.md`, `apps/api/test/security.e2e-spec 2.ts`). These are editor/sync
-artifacts; `.gitignore` even lists `node_modules 2`. The un-suffixed file is
-the real one.

@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { copToCents, PLAN_PRICE_COP } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { MailService } from '../../infra/mail/mail.service';
 import { BillingService } from './billing.service';
 import { createBillingReference } from './billing-reference';
 import { wompiIntegritySignature, sha256Hex } from './wompi-crypto';
@@ -29,7 +30,14 @@ function eventChecksum(
 describe('BillingService', () => {
   let service: BillingService;
   let prisma: {
-    professional: { findUnique: jest.Mock; update: jest.Mock };
+    professional: {
+      findUnique: jest.Mock;
+      findUniqueOrThrow: jest.Mock;
+      update: jest.Mock;
+      updateMany: jest.Mock;
+    };
+    service: { findMany: jest.Mock; updateMany: jest.Mock };
+    $transaction: jest.Mock;
   };
   let wompi: {
     requireCheckoutKeys: jest.Mock;
@@ -41,8 +49,20 @@ describe('BillingService', () => {
     prisma = {
       professional: {
         findUnique: jest.fn(),
+        // Row as re-read after the payment is applied (trial-aware limit).
+        findUniqueOrThrow: jest.fn().mockResolvedValue({
+          plan: 'BASIC',
+          trialStartedAt: null,
+          trialEndsAt: null,
+        }),
         update: jest.fn(),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
+      service: {
+        findMany: jest.fn().mockResolvedValue([]),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      $transaction: jest.fn((fn: (tx: typeof prisma) => unknown) => fn(prisma)),
     };
     wompi = {
       requireCheckoutKeys: jest.fn().mockReturnValue({
@@ -54,6 +74,13 @@ describe('BillingService', () => {
       getTransaction: jest.fn(),
     };
 
+    const mailService = {
+      sendPlanUpdated: jest.fn().mockResolvedValue(undefined),
+      sendPaymentApproved: jest.fn().mockResolvedValue(undefined),
+      sendPaymentRejected: jest.fn().mockResolvedValue(undefined),
+      sendSubscriptionCancelled: jest.fn().mockResolvedValue(undefined),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         BillingService,
@@ -63,10 +90,53 @@ describe('BillingService', () => {
           useValue: { get: () => 'http://localhost:5173' },
         },
         { provide: WompiClient, useValue: wompi },
+
+        { provide: MailService, useValue: mailService },
       ],
     }).compile();
 
     service = moduleRef.get(BillingService);
+  });
+
+  describe('applyApprovedTransaction during a full-access trial', () => {
+    it('stores the paid plan without locking services the trial still covers', async () => {
+      const now = Date.now();
+      prisma.professional.findUnique.mockResolvedValue({
+        id: PROFESSIONAL_ID,
+        plan: 'FREE',
+        billingInterval: null,
+        planExpiresAt: null,
+        lastWompiTransactionId: null,
+      });
+      prisma.professional.findUniqueOrThrow.mockResolvedValue({
+        plan: 'BASIC',
+        trialStartedAt: new Date(now - 86_400_000),
+        trialEndsAt: new Date(now + 10 * 86_400_000),
+      });
+      // 12 services > BASIC's 10: without the trial, 2 would be locked.
+      prisma.service.findMany.mockResolvedValue(
+        Array.from({ length: 12 }, (_, i) => ({
+          id: `svc-${i}`,
+          planLocked: false,
+          planEnabledAt: new Date(),
+        })),
+      );
+
+      const result = await service.applyApprovedTransaction({
+        id: 'tx-trial-upgrade',
+        status: 'APPROVED',
+        amount_in_cents: copToCents(PLAN_PRICE_COP.BASIC.monthly),
+        currency: 'COP',
+        reference: createBillingReference(PROFESSIONAL_ID, 'BASIC', 'monthly'),
+      });
+
+      expect(result).toBe('applied');
+      const [[update]] = prisma.professional.updateMany.mock.calls as [
+        { data: { plan: string } },
+      ][];
+      expect(update.data.plan).toBe('BASIC');
+      expect(prisma.service.updateMany).not.toHaveBeenCalled();
+    });
   });
 
   describe('createCheckout', () => {
@@ -206,21 +276,29 @@ describe('BillingService', () => {
         timestamp,
       });
 
-      expect(prisma.professional.update).toHaveBeenCalled();
-      const calls = prisma.professional.update.mock.calls as [
+      expect(prisma.professional.updateMany).toHaveBeenCalled();
+      const calls = prisma.professional.updateMany.mock.calls as [
         {
-          where: { id: string };
+          where: {
+            id: string;
+            OR: { lastWompiTransactionId: null | { not: string } }[];
+          };
           data: {
             plan: string;
             billingInterval: string;
             lastWompiTransactionId: string;
             planStartedAt: Date;
             planExpiresAt: Date;
+            planCancelledAt: null;
           };
         },
       ][];
       const updateArg = calls[0][0];
-      expect(updateArg.where).toEqual({ id: PROFESSIONAL_ID });
+      expect(updateArg.where.id).toBe(PROFESSIONAL_ID);
+      expect(updateArg.where.OR).toEqual([
+        { lastWompiTransactionId: null },
+        { lastWompiTransactionId: { not: 'tx-approved' } },
+      ]);
       expect(updateArg.data.plan).toBe('BASIC');
       expect(updateArg.data.billingInterval).toBe('monthly');
       expect(updateArg.data.lastWompiTransactionId).toBe('tx-approved');

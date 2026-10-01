@@ -6,15 +6,20 @@ import {
 import type { Service as ServiceModel } from '@prisma/client';
 import {
   PLAN_SERVICE_LIMITS,
+  effectivePlan,
   type CreateServiceInput,
   type Service,
   type UpdateServiceInput,
 } from '@agendya/types';
 import { PrismaService } from '../../database/prisma.service';
+import { UsageAlertsService } from '../notifications/usage-alerts.service';
 
 @Injectable()
 export class ServicesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly usageAlerts: UsageAlertsService,
+  ) {}
 
   toDto(service: ServiceModel): Service {
     return {
@@ -28,6 +33,8 @@ export class ServicesService {
       homeDurationMinutes: service.homeDurationMinutes,
       homePriceCents: service.homePriceCents,
       sortOrder: service.sortOrder,
+      planLocked: service.planLocked,
+      planEnabledAt: service.planEnabledAt?.toISOString() ?? null,
       createdAt: service.createdAt.toISOString(),
       updatedAt: service.updatedAt.toISOString(),
     };
@@ -46,7 +53,7 @@ export class ServicesService {
     professionalId: string,
     input: CreateServiceInput,
   ): Promise<Service> {
-    await this.assertWithinPlanLimit(professionalId);
+    const plan = await this.assertWithinPlanLimit(professionalId);
 
     const sortOrder = await this.prisma.service.count({
       where: { professionalId, deletedAt: null },
@@ -68,8 +75,15 @@ export class ServicesService {
           ? (input.homePriceCents ?? null)
           : null,
         sortOrder,
+        planEnabledAt: new Date(),
       },
     });
+
+    await this.usageAlerts.checkServiceLimits(
+      professionalId,
+      sortOrder + 1,
+      plan,
+    );
 
     return this.toDto(service);
   }
@@ -136,7 +150,7 @@ export class ServicesService {
 
   async duplicate(professionalId: string, serviceId: string): Promise<Service> {
     const source = await this.findOwnedOrThrow(professionalId, serviceId);
-    await this.assertWithinPlanLimit(professionalId);
+    const plan = await this.assertWithinPlanLimit(professionalId);
 
     const sortOrder = await this.prisma.service.count({
       where: { professionalId, deletedAt: null },
@@ -154,20 +168,92 @@ export class ServicesService {
         homeDurationMinutes: source.homeDurationMinutes,
         homePriceCents: source.homePriceCents,
         sortOrder,
+        planEnabledAt: new Date(),
       },
     });
+
+    await this.usageAlerts.checkServiceLimits(
+      professionalId,
+      sortOrder + 1,
+      plan,
+    );
 
     return this.toDto(service);
   }
 
-  private async assertWithinPlanLimit(professionalId: string): Promise<void> {
-    const professional = await this.prisma.professional.findUniqueOrThrow({
-      where: { id: professionalId },
-      select: { plan: true },
-    });
-    const limit = PLAN_SERVICE_LIMITS[professional.plan];
-    if (limit === null) return;
+  /**
+   * Enables a service locked by the plan. With a free slot it is just
+   * enabled; at the limit, the enabled service with the oldest
+   * `planEnabledAt` is locked in exchange (FIFO). Returns every service whose
+   * state changed.
+   */
+  async enableService(
+    professionalId: string,
+    serviceId: string,
+  ): Promise<Service[]> {
+    return this.prisma.$transaction(async (tx) => {
+      const target = await tx.service.findFirst({
+        where: { id: serviceId, professionalId, deletedAt: null },
+      });
+      if (!target) {
+        throw new NotFoundException('Servicio no encontrado.');
+      }
+      if (!target.planLocked) {
+        return [this.toDto(target)];
+      }
 
+      const account = await tx.professional.findUniqueOrThrow({
+        where: { id: professionalId },
+        select: { plan: true, trialStartedAt: true, trialEndsAt: true },
+      });
+      const limit = PLAN_SERVICE_LIMITS[effectivePlan(account)];
+      const changed: Service[] = [];
+
+      if (limit !== null) {
+        const enabledCount = await tx.service.count({
+          where: { professionalId, deletedAt: null, planLocked: false },
+        });
+        if (enabledCount >= limit) {
+          const oldest = await tx.service.findFirst({
+            where: { professionalId, deletedAt: null, planLocked: false },
+            orderBy: [
+              { planEnabledAt: { sort: 'asc', nulls: 'first' } },
+              { sortOrder: 'asc' },
+            ],
+          });
+          if (oldest) {
+            changed.push(
+              this.toDto(
+                await tx.service.update({
+                  where: { id: oldest.id },
+                  data: { planLocked: true },
+                }),
+              ),
+            );
+          }
+        }
+      }
+
+      const enabled = await tx.service.update({
+        where: { id: serviceId },
+        data: { planLocked: false, planEnabledAt: new Date() },
+      });
+      return [this.toDto(enabled), ...changed];
+    });
+  }
+
+  private async assertWithinPlanLimit(professionalId: string) {
+    const account = await this.prisma.professional.findUniqueOrThrow({
+      where: { id: professionalId },
+      select: { plan: true, trialStartedAt: true, trialEndsAt: true },
+    });
+    const plan = effectivePlan(account);
+    const limit = PLAN_SERVICE_LIMITS[plan];
+    if (limit === null) return plan;
+
+    // Locked services count too: data kept from a bigger plan or an ended
+    // trial is preserved, but no new service fits until the catalog is
+    // back under the limit.
     const count = await this.prisma.service.count({
       where: { professionalId, deletedAt: null },
     });
@@ -176,6 +262,7 @@ export class ServicesService {
         'Alcanzaste el límite de servicios de tu plan.',
       );
     }
+    return plan;
   }
 
   private async findOwnedOrThrow(

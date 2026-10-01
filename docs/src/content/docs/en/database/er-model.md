@@ -16,6 +16,7 @@ erDiagram
   Professional ||--o{ Booking : "receives"
   Professional ||--o{ Notification : "gets alerts"
   Professional ||--o{ PushSubscription : "registers devices"
+  Professional ||--o{ TrialEvent : "trial history"
   Service ||--o{ Booking : "booked as (nullable)"
 
   Professional {
@@ -38,6 +39,8 @@ erDiagram
     datetime planStartedAt "nullable"
     datetime planExpiresAt "nullable"
     string lastWompiTransactionId UK "nullable"
+    datetime trialStartedAt "nullable"
+    datetime trialEndsAt "nullable"
     boolean isActive "default true"
     datetime createdAt
     datetime updatedAt
@@ -113,6 +116,18 @@ erDiagram
     datetime createdAt
   }
 
+  TrialEvent {
+    string id PK
+    string professionalId FK
+    enum action "GRANTED | EXTENDED | ENDED"
+    string actorId
+    string actorEmail
+    datetime previousEndsAt "nullable"
+    datetime endsAt
+    string note "nullable"
+    datetime createdAt
+  }
+
   PushSubscription {
     string id PK
     string professionalId FK
@@ -135,6 +150,7 @@ erDiagram
 | `Booking.professional` | `Professional` | many-to-one | `Cascade` |
 | `Notification.professional` | `Professional` | many-to-one | `Cascade` |
 | `PushSubscription.professional` | `Professional` | many-to-one | `Cascade` |
+| `TrialEvent.professional` | `Professional` | many-to-one | `Cascade` |
 | `Booking.service` | `Service` | many-to-one, **optional** | `SetNull` — deleting a service keeps its bookings; `serviceId` becomes `null`, and `serviceNameSnapshot` / `durationMinutesSnapshot` preserve what was booked |
 
 ## Enums
@@ -144,7 +160,8 @@ erDiagram
 | `Weekday` | `SUNDAY`, `MONDAY`, `TUESDAY`, `WEDNESDAY`, `THURSDAY`, `FRIDAY`, `SATURDAY` |
 | `BookingStatus` | `PENDING`, `CONFIRMED`, `CANCELLED`, `COMPLETED`, `NO_SHOW`, `EXPIRED` |
 | `Plan` | `FREE`, `BASIC`, `ADVANCED`, `BUSINESS` |
-| `NotificationType` | `APPOINTMENT_CREATED` (the only one emitted today; the enum will grow) |
+| `TrialEventAction` | `GRANTED`, `EXTENDED`, `ENDED` |
+| `NotificationType` | `APPOINTMENT_CREATED`, `APPOINTMENT_CANCELLED` (the enum will grow) |
 
 ## Design notes
 

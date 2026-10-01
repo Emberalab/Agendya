@@ -38,6 +38,7 @@ const BOOKING = {
   startAt: '2099-08-03T14:00:00.000Z',
   endAt: '2099-08-03T14:30:00.000Z',
   status: 'CONFIRMED' as const,
+  source: 'ONLINE' as const,
   cancellationPolicyHours: 24,
   canReschedule: true,
   createdAt: '2026-07-30T10:00:00.000Z',

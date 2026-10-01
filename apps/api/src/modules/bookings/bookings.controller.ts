@@ -4,14 +4,17 @@ import {
   Get,
   Param,
   Patch,
+  Post,
   Query,
   UseGuards,
 } from '@nestjs/common';
 import type { Professional } from '@prisma/client';
 import {
   agendaQuerySchema,
+  createManualBookingSchema,
   rescheduleBookingSchema,
   type AgendaQuery,
+  type CreateManualBookingInput,
   type RescheduleBookingInput,
 } from '@agendya/types';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -31,6 +34,15 @@ export class BookingsController {
     @Query(new ZodValidationPipe(agendaQuerySchema)) query: AgendaQuery,
   ) {
     return this.bookingsService.listAgenda(user.id, query.from, query.to);
+  }
+
+  @Post()
+  createManualBooking(
+    @CurrentUser() user: Professional,
+    @Body(new ZodValidationPipe(createManualBookingSchema))
+    dto: CreateManualBookingInput,
+  ) {
+    return this.bookingsService.createManualBooking(user.id, dto);
   }
 
   @Patch(':id/cancel')

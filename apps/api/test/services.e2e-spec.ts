@@ -29,7 +29,12 @@ describe('Services (e2e)', () => {
 
     const register = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ email, password, businessName: `E2E Servicios ${runId}` });
+      .send({
+        email,
+        password,
+        acceptTerms: true,
+        businessName: `E2E Servicios ${runId}`,
+      });
     accessToken = (register.body as { accessToken: string }).accessToken;
 
     const registerOther = await request(app.getHttpServer())
@@ -37,6 +42,7 @@ describe('Services (e2e)', () => {
       .send({
         email: otherEmail,
         password,
+        acceptTerms: true,
         businessName: `E2E Servicios Otro ${runId}`,
       });
     otherAccessToken = (registerOther.body as { accessToken: string })

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { registerSchema, type RegisterInput } from '@agendya/types';
+import { registerFormSchema, type RegisterFormInput } from '@agendya/types';
 import { Controller, useForm } from 'react-hook-form';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button, Checkbox, FormGroup, Input } from '@moondesignsystem/react';
@@ -31,8 +31,8 @@ export function RegisterPage() {
     handleSubmit,
     getValues,
     formState: { errors, isSubmitted },
-  } = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
+  } = useForm<RegisterFormInput>({
+    resolver: zodResolver(registerFormSchema),
     defaultValues: {
       businessName: '',
       email: waitlistEmail,
@@ -52,7 +52,7 @@ export function RegisterPage() {
         return;
       }
       setTermsError(null);
-      registerMutation.mutate(data, {
+      registerMutation.mutate({ ...data, acceptTerms: true }, {
         onSuccess: (session) =>
           navigate(postAuthPath(session.user), { replace: true }),
       });
@@ -268,8 +268,31 @@ export function RegisterPage() {
                   style={{ color: 'var(--color-text-secondary)', fontFamily: 'var(--font-body)' }}
                 >
                   Acepto los{' '}
-                  <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Términos de uso</span> y la{' '}
-                  <span style={{ color: 'var(--color-text-brand)', fontWeight: 600 }}>Política de privacidad</span>
+                  <a
+                    href="/terminos"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--color-text-brand)',
+                      fontWeight: 600,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Términos de uso
+                  </a>{' '}
+                  y la{' '}
+                  <a
+                    href="/privacidad"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      color: 'var(--color-text-brand)',
+                      fontWeight: 600,
+                      textDecoration: 'underline',
+                    }}
+                  >
+                    Política de privacidad
+                  </a>
                 </span>
               </div>
               {termsError && <FieldError id="reg-terms-error">{termsError}</FieldError>}
@@ -351,6 +374,41 @@ export function RegisterPage() {
             </svg>
             Continuar con Google
           </button>
+
+          <p
+            className="text-xs text-center mt-3"
+            style={{
+              color: 'var(--color-text-secondary)',
+              fontFamily: 'var(--font-body)',
+              lineHeight: '1.5',
+            }}
+          >
+            Al continuar con Google, aceptas nuestros{' '}
+            <a
+              href="/terminos"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-text-brand)',
+                textDecoration: 'underline',
+              }}
+            >
+              Términos de uso
+            </a>{' '}
+            y{' '}
+            <a
+              href="/privacidad"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                color: 'var(--color-text-brand)',
+                textDecoration: 'underline',
+              }}
+            >
+              Política de privacidad
+            </a>
+            .
+          </p>
           </>
           )}
 
@@ -369,7 +427,35 @@ export function RegisterPage() {
           </p>
         </div>
 
-        <p className="agendia-label text-center">© 2026 agendya - Todos los derechos reservados.</p>
+        <p className="agendia-label text-center">
+          © 2026 agendya - Todos los derechos reservados.
+          <br />
+          <a
+            href="/terminos"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'var(--color-text-secondary)',
+              textDecoration: 'none',
+              fontSize: '12px',
+            }}
+          >
+            Términos
+          </a>
+          {' · '}
+          <a
+            href="/privacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              color: 'var(--color-text-secondary)',
+              textDecoration: 'none',
+              fontSize: '12px',
+            }}
+          >
+            Privacidad
+          </a>
+        </p>
       </div>
 
       {/* Right panel — photo + testimonial */}

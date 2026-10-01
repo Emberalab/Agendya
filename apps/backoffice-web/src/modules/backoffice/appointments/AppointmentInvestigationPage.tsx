@@ -59,7 +59,7 @@ export function AppointmentInvestigationPage() {
 
       <Card className="mt-4">
         <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-          <Row label="Cliente" value={`${booking.customerName} · ${booking.customerEmail}`} />
+          <Row label="Cliente" value={booking.customerEmail ? `${booking.customerName} · ${booking.customerEmail}` : booking.customerName} />
           <Row label="Teléfono" value={booking.customerPhone} />
           <Row label="Inicio" value={new Date(booking.startAt).toLocaleString('es-CO')} />
           <Row label="Fin" value={new Date(booking.endAt).toLocaleString('es-CO')} />

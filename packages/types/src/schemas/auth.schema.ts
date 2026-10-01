@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+/** Version of legal documents (Términos de uso + Política de privacidad) */
+export const LEGAL_DOCUMENTS_VERSION = '2026-09-27';
+
 export const platformRoleSchema = z.enum([
   'SUPER_ADMIN',
   'BUSINESS_ADMIN',
@@ -29,46 +32,68 @@ function isZodEmail(value: string): boolean {
   return zodEmail.safeParse(value).success;
 }
 
+// Password schema reutilizable
+export const passwordSchema = z
+  .string()
+  .min(8, 'La contraseña debe tener al menos 8 caracteres.')
+  .max(72, 'La contraseña no puede tener más de 72 caracteres.');
+
+const registerFields = {
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'Escribe tu correo electrónico.'),
+  password: passwordSchema,
+  businessName: z
+    .string()
+    .trim()
+    .min(2, 'Escribe el nombre de tu negocio (mínimo 2 caracteres).')
+    .max(100, 'El nombre del negocio no puede tener más de 100 caracteres.'),
+};
+
+function refineSwappedFields(
+  data: { email: string; businessName: string },
+  ctx: z.RefinementCtx,
+) {
+  const businessLooksLikeEmail = isZodEmail(data.businessName);
+  const emailIsValid = isZodEmail(data.email);
+
+  if (businessLooksLikeEmail) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['businessName'],
+      message:
+        'Esto parece un correo. Ponlo en «Correo electrónico» y aquí el nombre de tu negocio.',
+    });
+  }
+
+  if (!emailIsValid) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['email'],
+      message: businessLooksLikeEmail
+        ? 'Aquí va el correo (el de arriba parece uno). Ejemplo: nombre@empresa.com.'
+        : EMAIL_MESSAGE,
+    });
+  }
+}
+
+/** Register form fields; the terms checkbox is handled outside the form. */
+export const registerFormSchema = z
+  .object(registerFields)
+  .superRefine(refineSwappedFields);
+
+export type RegisterFormInput = z.infer<typeof registerFormSchema>;
+
 export const registerSchema = z
   .object({
-    email: z
-      .string()
-      .trim()
-      .toLowerCase()
-      .min(1, 'Escribe tu correo electrónico.'),
-    password: z
-      .string()
-      .min(8, 'La contraseña debe tener al menos 8 caracteres.')
-      .max(72, 'La contraseña no puede tener más de 72 caracteres.'),
-    businessName: z
-      .string()
-      .trim()
-      .min(2, 'Escribe el nombre de tu negocio (mínimo 2 caracteres).')
-      .max(100, 'El nombre del negocio no puede tener más de 100 caracteres.'),
+    ...registerFields,
+    acceptTerms: z.literal(true, {
+      message: 'Debes aceptar los Términos de uso y la Política de privacidad',
+    }),
   })
-  .superRefine((data, ctx) => {
-    const businessLooksLikeEmail = isZodEmail(data.businessName);
-    const emailIsValid = isZodEmail(data.email);
-
-    if (businessLooksLikeEmail) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['businessName'],
-        message:
-          'Esto parece un correo. Ponlo en «Correo electrónico» y aquí el nombre de tu negocio.',
-      });
-    }
-
-    if (!emailIsValid) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['email'],
-        message: businessLooksLikeEmail
-          ? 'Aquí va el correo (el de arriba parece uno). Ejemplo: nombre@empresa.com.'
-          : EMAIL_MESSAGE,
-      });
-    }
-  });
+  .superRefine(refineSwappedFields);
 
 export type RegisterInput = z.infer<typeof registerSchema>;
 
@@ -107,3 +132,24 @@ export const ACCOUNT_NOT_FOUND_CODE = 'ACCOUNT_NOT_FOUND';
 
 /** The account exists but Super Admin declined access. */
 export const ACCESS_DECLINED_CODE = 'ACCESS_DECLINED';
+
+export const forgotPasswordSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .min(1, 'Escribe tu correo electrónico.')
+    .email(EMAIL_MESSAGE),
+});
+
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, 'El token es requerido.'),
+  password: passwordSchema,
+});
+
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+/** Reset token is invalid, expired, or already used. */
+export const RESET_TOKEN_INVALID_CODE = 'RESET_TOKEN_INVALID';

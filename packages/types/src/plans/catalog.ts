@@ -242,6 +242,57 @@ export function isoWeekKey(date = new Date()): string {
  * Usage (near a limit) wins; the rest rotate by professional + week
  * so "Te falta" is not a fixed list.
  */
+/**
+ * Returns the UTC month key for a given date in "YYYY-MM" format.
+ * Used for consistent monthly booking limit calculations.
+ */
+export function getUtcMonthKey(date = new Date()): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+}
+
+/**
+ * Returns the "near" threshold for monthly booking limits (80% of limit).
+ * Returns null if the plan has unlimited bookings.
+ */
+export function getBookingNearThreshold(plan: Plan): number | null {
+  const limit = PLAN_MONTHLY_BOOKING_LIMITS[plan];
+  if (limit === null) {
+    return null;
+  }
+  return Math.ceil(limit * 0.8);
+}
+
+/**
+ * Returns the "reached" threshold for monthly booking limits (100% of limit).
+ * Returns null if the plan has unlimited bookings.
+ */
+export function getBookingReachedThreshold(plan: Plan): number | null {
+  return PLAN_MONTHLY_BOOKING_LIMITS[plan];
+}
+
+/**
+ * Returns the "near" threshold for service limits.
+ * Formula: min(ceil(limit * 0.8), limit - 1)
+ * Returns null if the plan has unlimited services.
+ */
+export function getServiceNearThreshold(plan: Plan): number | null {
+  const limit = PLAN_SERVICE_LIMITS[plan];
+  if (limit === null) {
+    return null;
+  }
+  return Math.min(Math.ceil(limit * 0.8), limit - 1);
+}
+
+/**
+ * Returns the "reached" threshold for service limits (100% of limit).
+ * Returns null if the plan has unlimited services.
+ */
+export function getServiceReachedThreshold(plan: Plan): number | null {
+  return PLAN_SERVICE_LIMITS[plan];
+}
+
 export function pickMissingFeatures(
   plan: Plan,
   ctx: {

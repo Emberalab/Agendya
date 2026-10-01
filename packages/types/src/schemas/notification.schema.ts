@@ -8,8 +8,9 @@ import { z } from 'zod';
 
 export const NOTIFICATION_TYPES = [
   'APPOINTMENT_CREATED',
+  'APPOINTMENT_CANCELLED',
   // Reserved for later delivery paths, not emitted yet:
-  // 'APPOINTMENT_CANCELLED', 'APPOINTMENT_RESCHEDULED', 'APPOINTMENT_REMINDER', 'SYSTEM'
+  // 'APPOINTMENT_RESCHEDULED', 'APPOINTMENT_REMINDER', 'SYSTEM'
 ] as const;
 
 export const notificationTypeSchema = z.enum(NOTIFICATION_TYPES);

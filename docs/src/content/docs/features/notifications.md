@@ -21,6 +21,7 @@ Hay **dos tipos** de notificación en Agendya:
 | `sendBookingRescheduled` | Cualquier reprogramación / edición que cambie la hora | Cliente | `Cita modificada con <negocio>` |
 | `sendBookingRescheduledToProfessional` | Reprogramación / edición iniciada por el cliente | Profesional | `Modificación de reserva - <cliente>` |
 | `sendBookingCancelled` | Cancelación por el cliente o el profesional | Cliente | `Reserva cancelada con <negocio>` |
+| `sendBookingCancelledToProfessional` | Cancelación iniciada por el cliente (enlace público) | Profesional | `Cita cancelada - <cliente>` |
 
 - **Origen:** `Agendya <reservas@agendya.app>` (fijo en el código).
 - **Fechas:** `Intl.DateTimeFormat('es-CO', { dateStyle: 'full', timeStyle:
@@ -70,7 +71,7 @@ flowchart LR
 | --- | --- | --- |
 | `id` | uuid | |
 | `professionalId` | uuid | FK → `Professional`, `onDelete: Cascade` |
-| `type` | `NotificationType` | hoy solo `APPOINTMENT_CREATED`; reservados `APPOINTMENT_CANCELLED` / `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` |
+| `type` | `NotificationType` | `APPOINTMENT_CREATED` (reserva nueva) o `APPOINTMENT_CANCELLED` (el cliente canceló desde su enlace); reservados `APPOINTMENT_RESCHEDULED` / `APPOINTMENT_REMINDER` / `SYSTEM` |
 | `title` / `body` | string | textos listos para mostrar (es-CO); también sirven para un futuro payload de Web Push. A domicilio: `title` = `"Nueva cita a domicilio"` |
 | `data` | `Json` | `{ bookingId, customerName, serviceName, startAt, atHome? }` — `bookingId` es la referencia de navegación; el resto evita un join y es *point-in-time*. `atHome: true` solo se añade para una reserva a domicilio (bandera, nunca la dirección) |
 | `readAt` | `DateTime?` | `null` = sin leer |
@@ -251,7 +252,5 @@ reserva nunca puede reprogramarse solo porque este barrido no se haya ejecutado.
 ## No implementado
 
 - Sin recordatorio al **profesional**.
-- Sin correo de cancelación al profesional (solo se avisa al cliente al
-  cancelar).
 - Sin flujo `NO_SHOW`, por lo tanto sin notificación relacionada.
 - Sin correo de resumen / digest diario.

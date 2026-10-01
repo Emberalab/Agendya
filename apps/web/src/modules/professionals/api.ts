@@ -73,3 +73,11 @@ export async function uploadImage(
   );
   return data.url;
 }
+
+export async function cancelSubscription(): Promise<void> {
+  await apiClient.post('/billing/cancel');
+}
+
+export async function reactivateSubscription(): Promise<void> {
+  await apiClient.post('/billing/reactivate');
+}

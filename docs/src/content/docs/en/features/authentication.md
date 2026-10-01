@@ -13,16 +13,7 @@ is the feature-level summary and endpoint list.
 | --- | --- | --- | --- |
 | Email + password | `/register`, `/login` | `POST /auth/register`, `POST /auth/login` | bcrypt (`SALT_ROUNDS = 10`); passwords 8–72 chars |
 | Google OAuth 2.0 | "Sign in with Google" button | `GET /auth/google` → `GET /auth/google/callback` | Only available when Google credentials are configured |
-
-There is a `/forgot-password` route and page in the web app, but **no
-password-reset endpoint exists in the API yet** — treat the page as a
-placeholder.
-
-:::caution[TODO — password reset]
-`ForgotPasswordPage.tsx` is routed and rendered, but no `/auth/forgot-password`
-or `/auth/reset-password` handler exists in `apps/api`. Wiring this up is
-unfinished work, not a documented feature.
-:::
+| Password recovery | `/forgot-password`, `/reset-password` | `POST /auth/forgot-password`, `POST /auth/reset-password` | One-time tokens with SHA-256, valid for 1 hour |
 
 ## Endpoints
 
@@ -30,6 +21,8 @@ unfinished work, not a documented feature.
 | --- | --- | --- | --- | --- |
 | `POST` | `/auth/register` | none · `@Throttle 5/60s` | `{ email, password, businessName }` (`registerSchema`) | `{ accessToken, user }` |
 | `POST` | `/auth/login` | none · `@Throttle 5/60s` | `{ email, password }` (`loginSchema`) | `{ accessToken, user }` · `401 ACCOUNT_NOT_FOUND` stays on `/login` with a register CTA |
+| `POST` | `/auth/forgot-password` | none · `@Throttle 3/60s` | `{ email }` (`forgotPasswordSchema`) | `{ success: true }` · Always returns same response to avoid revealing if email exists |
+| `POST` | `/auth/reset-password` | none · `@Throttle 5/60s` | `{ token, password }` (`resetPasswordSchema`) | `{ success: true }` · `400 RESET_TOKEN_INVALID` if token doesn't exist, was already used, or expired |
 | `GET` | `/auth/me` | JWT | — | `{ id, email, businessName, slug, role, accessStatus }` |
 | `GET` | `/auth/google` | none | — | 302 to Google (+ sets `oauth_state` cookie) |
 | `GET` | `/auth/google/callback` | `state` cookie + Google | `?code&state` | 302 to `{WEB_URL}/auth/callback#token=<JWT>` · declined: `/login?error=declined` · invalid `state`: `/login?error=oauth` |
@@ -86,3 +79,32 @@ flowchart LR
 
 Token TTL is `JWT_EXPIRES_IN` (default `7d`). There is no refresh-token flow;
 expiry means re-login.
+
+## Password Recovery
+
+The password reset flow consists of two steps:
+
+1. **Request recovery** (`/forgot-password`): User enters their email address. The API generates a one-time token, sends it by email, and always returns the same response to avoid revealing if the email exists in the system.
+
+2. **Reset password** (`/reset-password`): User clicks the link in the email, enters a new password, and the API validates the token, updates the password, and marks the token as used.
+
+### PasswordResetToken Table
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `id` | UUID | Unique identifier |
+| `professionalId` | UUID | FK to `Professional` (cascade delete) |
+| `tokenHash` | String (SHA-256) | Hash of the random 32-byte token |
+| `expiresAt` | DateTime | Expiration timestamp (1 hour from creation) |
+| `usedAt` | DateTime? | Timestamp when token was used (null = unused) |
+| `createdAt` | DateTime | Creation timestamp |
+
+### Security
+
+- **One-time tokens**: Token is marked as used (`usedAt`) after successfully resetting the password. Cannot be reused.
+- **SHA-256 hashing**: Only the hash is stored in the database, not the plain token. The plain token is only sent via email.
+- **1-hour expiration**: Tokens expire after 1 hour for security.
+- **Previous token invalidation**: When requesting a new token, all previous unused tokens for that account are marked as used.
+- **Race condition protection**: Uses interactive transaction with `updateMany` and count check to prevent concurrent use of the same token.
+- **Constant-time responses**: `/auth/forgot-password` always returns `{ success: true }` whether the email exists or not.
+- **DECLINED accounts**: Do not receive password reset emails (silent fail).

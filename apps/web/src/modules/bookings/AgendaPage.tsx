@@ -1,11 +1,14 @@
 import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { AgendaBooking, BookingStatus } from '@agendya/types';
+import type { AgendaBooking, BookingStatus, CreateManualBookingInput } from '@agendya/types';
 import { addDays, endOfMonth, endOfWeek, format, isToday, isTomorrow, startOfMonth, startOfWeek } from 'date-fns';
 import { FormGroup, Input, Select } from '@moondesignsystem/react';
 import { formatEsShort, formatEsWeekdayLong } from './dateEs';
 import { AGENDA_FOCUS_BOOKING_PARAM, AGENDA_FOCUS_DATE_PARAM } from '../notifications/navigation';
 import { getApiErrorMessage } from '../../shared/api/getApiErrorMessage';
+import { isApiError } from '../../shared/api/apiClient';
+import { UpgradePlanDialog } from '../professionals/UpgradePlanDialog';
+import { useProfile } from '../professionals/hooks/useProfile';
 import { useAgendaViewStore } from './agendaViewStore';
 import { ContextMenu } from './ContextMenu';
 import { StatusBadge } from './statusBadge';
@@ -13,6 +16,7 @@ import { useAgenda } from './hooks/useAgenda';
 import { useCancelBooking } from './hooks/useCancelBooking';
 import { useCompleteBooking } from './hooks/useCompleteBooking';
 import { useRescheduleBooking } from './hooks/useRescheduleBooking';
+import { useCreateManualBooking } from './hooks/useCreateManualBooking';
 
 // The list view is the default and above-the-fold render. The calendar grid
 // (only shown after toggling to "Calendario") and the detail/reschedule
@@ -28,6 +32,9 @@ const AppointmentDrawer = lazy(() =>
 );
 const RescheduleModal = lazy(() =>
   import('./RescheduleModal').then((m) => ({ default: m.RescheduleModal })),
+);
+const ManualBookingModal = lazy(() =>
+  import('./ManualBookingModal').then((m) => ({ default: m.ManualBookingModal })),
 );
 
 type StatusFilter = 'all' | BookingStatus;
@@ -352,14 +359,40 @@ export function AgendaPage() {
   const setViewMode = useAgendaViewStore((state) => state.setViewMode);
   const [selectedForReschedule, setSelectedForReschedule] = useState<AgendaBooking | null>(null);
   const [selectedForDetail, setSelectedForDetail] = useState<AgendaBooking | null>(null);
+  const [showManualBookingModal, setShowManualBookingModal] = useState(false);
 
   const { data: bookings, isLoading, isFetching, refetch: refetchAgenda } = useAgenda(from, to);
+  const { data: profile } = useProfile();
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   // Deep link from a notification: ?booking=<id>&date=<yyyy-mm-dd>. Open that
   // booking's detail drawer regardless of the active view (list or calendar).
   const [searchParams, setSearchParams] = useSearchParams();
   const focusBookingId = searchParams.get(AGENDA_FOCUS_BOOKING_PARAM);
   const focusDate = searchParams.get(AGENDA_FOCUS_DATE_PARAM);
+
+  const bookingLimit = profile?.monthlyBookingLimit ?? null;
+  const bookingsThisMonth = profile?.bookingsThisMonth ?? 0;
+  const bookingUsagePct =
+    bookingLimit != null && bookingLimit > 0
+      ? Math.min(100, Math.round((bookingsThisMonth / bookingLimit) * 100))
+      : 0;
+  const bookingLimitReached =
+    bookingLimit != null && bookingsThisMonth >= bookingLimit;
+  const bookingLimitNear =
+    bookingLimit != null &&
+    !bookingLimitReached &&
+    bookingsThisMonth >= Math.ceil(bookingLimit * 0.8);
+  const bookingUsageFill = bookingLimitReached
+    ? 'var(--color-danger)'
+    : bookingLimitNear
+      ? '#F59E0B'
+      : 'var(--color-brand-primary)';
+  const bookingUsageLabelColor = bookingLimitReached
+    ? 'var(--color-danger)'
+    : bookingLimitNear
+      ? '#F59E0B'
+      : 'var(--color-text-secondary)';
 
   // Widen — never shrink — the range so the target day is fetched. Pad ±1 day
   // to absorb the UTC-vs-professional-timezone date skew in `date`.
@@ -425,6 +458,7 @@ export function AgendaPage() {
   const cancelBooking = useCancelBooking();
   const completeBooking = useCompleteBooking();
   const rescheduleBooking = useRescheduleBooking();
+  const createManualBooking = useCreateManualBooking();
 
   const now = new Date();
   const weekStart = startOfWeek(now, { weekStartsOn: 1 });
@@ -457,6 +491,32 @@ export function AgendaPage() {
   const handleComplete = (id: string) => {
     completeBooking.mutate(id, { onSuccess: () => setSelectedForDetail(null) });
   };
+
+  const openManualBooking = () => {
+    createManualBooking.reset();
+    setShowManualBookingModal(true);
+  };
+
+  const handleCreateManualBooking = (input: CreateManualBookingInput) => {
+    createManualBooking.mutate(input, {
+      onSuccess: () => setShowManualBookingModal(false),
+      onError: (error) => {
+        if (isApiError(error) && error.status === 403) {
+          setShowManualBookingModal(false);
+          setUpgradeOpen(true);
+        }
+      },
+    });
+  };
+
+  const manualBookingError = (() => {
+    const error = createManualBooking.error;
+    if (!error) return null;
+    if (isApiError(error) && error.status === 409) {
+      return 'Ya tienes una cita en ese horario. Elige otra hora.';
+    }
+    return getApiErrorMessage(error);
+  })();
 
   const openReschedule = (booking: AgendaBooking) => {
     setSelectedForDetail(null);
@@ -505,16 +565,39 @@ export function AgendaPage() {
 
   return (
     <div style={{ fontFamily: 'var(--font-body)' }}>
-      <div className="mb-6">
-        <h1
-          className="text-[24px] lg:text-[28px]"
-          style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}
+      <div className="mb-6 flex items-start justify-between gap-4">
+        <div>
+          <h1
+            className="text-[24px] lg:text-[28px]"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, color: 'var(--color-text-primary)', marginBottom: '4px' }}
+          >
+            Tu agenda
+          </h1>
+          <p className="text-[13px] lg:text-sm" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>
+            Consulta y gestiona tus próximas citas.
+          </p>
+        </div>
+        <button
+          onClick={openManualBooking}
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl shrink-0"
+          style={{
+            fontFamily: 'var(--font-body)',
+            fontSize: '14px',
+            fontWeight: 600,
+            color: '#fff',
+            backgroundColor: 'var(--color-brand-primary)',
+            border: 'none',
+            cursor: 'pointer',
+            transition: 'transform 0.15s',
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.02)'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
         >
-          Tu agenda
-        </h1>
-        <p className="text-[13px] lg:text-sm" style={{ fontFamily: 'var(--font-body)', color: 'var(--color-text-secondary)' }}>
-          Consulta y gestiona tus próximas citas.
-        </p>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+            <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+          </svg>
+          <span className="hidden sm:inline">Nueva cita</span>
+        </button>
       </div>
 
       {/* Mobile stat pills */}
@@ -599,6 +682,128 @@ export function AgendaPage() {
           }
         />
       </div>
+
+      {/* Booking limit bar — only when the plan has a monthly cap (FREE). */}
+      {bookingLimit != null && (
+        <div
+          className="mb-4 lg:mb-5"
+          style={{
+            padding: '14px 16px',
+            borderRadius: 12,
+            backgroundColor: 'var(--color-surface)',
+            border: '1px solid var(--color-border)',
+          }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <span
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '13px',
+                fontWeight: 600,
+                color: bookingUsageLabelColor,
+              }}
+            >
+              {bookingLimitReached ? 'Límite alcanzado' : 'Citas este mes'}
+            </span>
+            <span
+              style={{
+                fontFamily: 'var(--font-body)',
+                fontSize: '13px',
+                fontWeight: 700,
+                color: bookingLimitReached
+                  ? 'var(--color-danger)'
+                  : bookingLimitNear
+                    ? '#F59E0B'
+                    : 'var(--color-text-brand)',
+              }}
+            >
+              {bookingsThisMonth}/{bookingLimit}
+            </span>
+          </div>
+          <div
+            className="h-2 w-full rounded-full overflow-hidden"
+            style={{ backgroundColor: 'var(--color-border)' }}
+          >
+            <div
+              className="h-full rounded-full"
+              style={{
+                width: `${bookingUsagePct}%`,
+                backgroundColor: bookingUsageFill,
+                transition: 'width 0.25s',
+              }}
+            />
+          </div>
+          {bookingLimitReached ? (
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+              <p
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  color: 'var(--color-text-secondary)',
+                  margin: 0,
+                }}
+              >
+                Alcanzaste el límite de {bookingLimit} citas del plan gratis.
+              </p>
+              <button
+                type="button"
+                onClick={() => setUpgradeOpen(true)}
+                style={{
+                  padding: '6px 12px',
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: '#fff',
+                  backgroundColor: 'var(--color-brand-primary)',
+                  border: 'none',
+                  borderRadius: 8,
+                  cursor: 'pointer',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Mejorar plan
+              </button>
+            </div>
+          ) : bookingLimitNear ? (
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-3">
+              <p
+                style={{
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  color: '#F59E0B',
+                  margin: 0,
+                }}
+              >
+                Te quedan {bookingLimit - bookingsThisMonth} citas este mes.
+              </p>
+              <button
+                type="button"
+                onClick={() => setUpgradeOpen(true)}
+                style={{
+                  padding: 0,
+                  fontFamily: 'var(--font-body)',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  color: 'var(--color-text-brand)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                }}
+              >
+                Mejorar plan
+              </button>
+            </div>
+          ) : null}
+        </div>
+      )}
+
+      {upgradeOpen && profile && (
+        <UpgradePlanDialog
+          currentPlan={profile.plan}
+          currentInterval={profile.billingInterval}
+          onClose={() => setUpgradeOpen(false)}
+        />
+      )}
 
       {/* View toggle */}
       <div className="mb-4 lg:mb-5 flex">
@@ -910,6 +1115,18 @@ export function AgendaPage() {
             onClose={() => setSelectedForReschedule(null)}
             onConfirm={handleReschedule}
             isLoading={rescheduleBooking.isPending}
+            presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
+          />
+        </Suspense>
+      )}
+
+      {showManualBookingModal && (
+        <Suspense fallback={null}>
+          <ManualBookingModal
+            onClose={() => setShowManualBookingModal(false)}
+            onConfirm={handleCreateManualBooking}
+            isLoading={createManualBooking.isPending}
+            errorMessage={manualBookingError}
             presentation={viewMode === 'calendar' ? 'modal' : 'drawer'}
           />
         </Suspense>

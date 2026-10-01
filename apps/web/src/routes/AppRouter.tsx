@@ -24,6 +24,11 @@ const ForgotPasswordPage = lazy(() =>
     default: m.ForgotPasswordPage,
   })),
 );
+const ResetPasswordPage = lazy(() =>
+  import('../modules/auth/ResetPasswordPage').then((m) => ({
+    default: m.ResetPasswordPage,
+  })),
+);
 const GoogleCallbackPage = lazy(() =>
   import('../modules/auth/GoogleCallbackPage').then((m) => ({
     default: m.GoogleCallbackPage,
@@ -104,6 +109,16 @@ const BookingCancelPage = lazy(() =>
     default: m.BookingCancelPage,
   })),
 );
+const TermsPage = lazy(() =>
+  import('../modules/legal/TermsPage').then((m) => ({
+    default: m.TermsPage,
+  })),
+);
+const PrivacyPage = lazy(() =>
+  import('../modules/legal/PrivacyPage').then((m) => ({
+    default: m.PrivacyPage,
+  })),
+);
 
 function RouteFallback() {
   return (
@@ -127,6 +142,7 @@ export function AppRouter() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
           </Route>
 
           <Route path="/auth/callback" element={<GoogleCallbackPage />} />
@@ -163,6 +179,9 @@ export function AppRouter() {
               />
             </Route>
           </Route>
+
+          <Route path="/terminos" element={<TermsPage />} />
+          <Route path="/privacidad" element={<PrivacyPage />} />
 
           <Route path="/bookings/:token" element={<BookingCancelPage />} />
           <Route path="/:slug" element={<PublicBookingPage />} />

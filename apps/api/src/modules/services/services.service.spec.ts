@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { PrismaService } from '../../database/prisma.service';
+import { UsageAlertsService } from '../notifications/usage-alerts.service';
 import { ServicesService } from './services.service';
 
 const BASE_SERVICE = {
@@ -15,6 +16,8 @@ const BASE_SERVICE = {
   homeDurationMinutes: null,
   homePriceCents: null,
   sortOrder: 0,
+  planLocked: false,
+  planEnabledAt: new Date('2026-01-01T00:00:00.000Z'),
   deletedAt: null,
   createdAt: new Date('2026-01-01T00:00:00.000Z'),
   updatedAt: new Date('2026-01-02T00:00:00.000Z'),
@@ -34,6 +37,7 @@ describe('ServicesService', () => {
       findUniqueOrThrow: jest.Mock;
     };
   };
+  let usageAlerts: { checkServiceLimits: jest.Mock };
 
   beforeEach(async () => {
     prisma = {
@@ -49,10 +53,15 @@ describe('ServicesService', () => {
       },
     };
 
+    usageAlerts = {
+      checkServiceLimits: jest.fn().mockResolvedValue(undefined),
+    };
+
     const moduleRef = await Test.createTestingModule({
       providers: [
         ServicesService,
         { provide: PrismaService, useValue: prisma },
+        { provide: UsageAlertsService, useValue: usageAlerts },
       ],
     }).compile();
 
@@ -72,6 +81,8 @@ describe('ServicesService', () => {
         homeDurationMinutes: null,
         homePriceCents: null,
         sortOrder: 0,
+        planLocked: false,
+        planEnabledAt: '2026-01-01T00:00:00.000Z',
         createdAt: '2026-01-01T00:00:00.000Z',
         updatedAt: '2026-01-02T00:00:00.000Z',
       });
@@ -117,7 +128,13 @@ describe('ServicesService', () => {
         priceCents: 1500000,
         sortOrder: 2,
       });
+      expect(createArgs.data.planEnabledAt).toBeInstanceOf(Date);
       expect(result.sortOrder).toBe(2);
+      expect(usageAlerts.checkServiceLimits).toHaveBeenCalledWith(
+        'prof-1',
+        3,
+        'FREE',
+      );
     });
 
     it('rejects creating a service past the plan limit', async () => {
@@ -136,6 +153,51 @@ describe('ServicesService', () => {
         }),
       ).rejects.toThrow(ForbiddenException);
       expect(prisma.service.create).not.toHaveBeenCalled();
+    });
+
+    describe('with a full-access trial', () => {
+      const DAY = 86_400_000;
+      const input = {
+        name: 'Servicio 21',
+        durationMinutes: 30,
+        priceCents: 1000000,
+        isActive: true,
+        homeServiceEnabled: false,
+      };
+
+      it('ignores the FREE service limit while the trial is active', async () => {
+        prisma.professional.findUniqueOrThrow.mockResolvedValue({
+          plan: 'FREE',
+          trialStartedAt: new Date(Date.now() - DAY),
+          trialEndsAt: new Date(Date.now() + DAY),
+        });
+        prisma.service.count.mockResolvedValue(20);
+        prisma.service.create.mockImplementation(({ data }) =>
+          Promise.resolve({ ...BASE_SERVICE, ...data, id: 'service-21' }),
+        );
+
+        await expect(service.create('prof-1', input)).resolves.toBeDefined();
+        expect(usageAlerts.checkServiceLimits).toHaveBeenCalledWith(
+          'prof-1',
+          21,
+          'BUSINESS',
+        );
+      });
+
+      it('enforces the FREE limit again once the trial has expired, keeping existing services', async () => {
+        prisma.professional.findUniqueOrThrow.mockResolvedValue({
+          plan: 'FREE',
+          trialStartedAt: new Date(Date.now() - 31 * DAY),
+          trialEndsAt: new Date(Date.now() - DAY),
+        });
+        prisma.service.count.mockResolvedValue(20);
+
+        await expect(service.create('prof-1', input)).rejects.toThrow(
+          ForbiddenException,
+        );
+        expect(prisma.service.create).not.toHaveBeenCalled();
+        expect(prisma.service.update).not.toHaveBeenCalled();
+      });
     });
 
     it('allows unlimited services on the ADVANCED plan', async () => {
@@ -273,6 +335,75 @@ describe('ServicesService', () => {
         ForbiddenException,
       );
       expect(prisma.service.create).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('enableService', () => {
+    let tx: {
+      service: { findFirst: jest.Mock; count: jest.Mock; update: jest.Mock };
+      professional: { findUniqueOrThrow: jest.Mock };
+    };
+
+    beforeEach(() => {
+      tx = {
+        service: {
+          findFirst: jest.fn(),
+          count: jest.fn(),
+          update: jest
+            .fn()
+            .mockImplementation(
+              ({
+                where,
+                data,
+              }: {
+                where: { id: string };
+                data: Record<string, unknown>;
+              }) => Promise.resolve({ ...BASE_SERVICE, id: where.id, ...data }),
+            ),
+        },
+        professional: {
+          findUniqueOrThrow: jest.fn().mockResolvedValue({ plan: 'FREE' }),
+        },
+      };
+      (prisma as unknown as { $transaction: jest.Mock }).$transaction = jest
+        .fn()
+        .mockImplementation((fn: (client: typeof tx) => unknown) => fn(tx));
+    });
+
+    it('swaps out the oldest enabled service at the plan limit and returns both', async () => {
+      tx.service.findFirst
+        .mockResolvedValueOnce({
+          ...BASE_SERVICE,
+          id: 'svc-4',
+          planLocked: true,
+        })
+        .mockResolvedValueOnce({ ...BASE_SERVICE, id: 'svc-1' });
+      tx.service.count.mockResolvedValue(3);
+
+      const result = await service.enableService('prof-1', 'svc-4');
+
+      expect(tx.service.update).toHaveBeenCalledWith({
+        where: { id: 'svc-1' },
+        data: { planLocked: true },
+      });
+      expect(result.map((s) => [s.id, s.planLocked])).toEqual([
+        ['svc-4', false],
+        ['svc-1', true],
+      ]);
+    });
+
+    it('just enables when there is a free slot', async () => {
+      tx.service.findFirst.mockResolvedValueOnce({
+        ...BASE_SERVICE,
+        id: 'svc-4',
+        planLocked: true,
+      });
+      tx.service.count.mockResolvedValue(2);
+
+      const result = await service.enableService('prof-1', 'svc-4');
+
+      expect(tx.service.update).toHaveBeenCalledTimes(1);
+      expect(result).toHaveLength(1);
     });
   });
 });
