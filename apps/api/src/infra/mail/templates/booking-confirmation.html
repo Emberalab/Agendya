@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Tu cita está confirmada</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap"
+    rel="stylesheet" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=event_available,help" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-width: 100% !important;
+      font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+    }
+
+    .wrapper {
+      background-color: #f8fafc;
+      width: 100%;
+      table-layout: fixed;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    td {
+      padding: 0;
+      vertical-align: top;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 16px;
+      padding: 40px;
+    }
+
+    .logo-img {
+      max-width: 100px;
+      height: auto;
+      display: inline-block;
+      margin-bottom: 24px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background-color: rgba(238, 242, 255, 0.53);
+      padding: 6px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+    }
+
+    .badge-avatar {
+      width: 20px;
+      height: 20px;
+      background-color: rgba(79, 70, 229, 0.08);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 10px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .badge-text {
+      font-size: 11px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+
+    .separator {
+      border-bottom: 1px solid #e3e3ed;
+      margin: 24px 0;
+    }
+
+    .event-icon {
+      font-size: 80px;
+      color: #FFF;
+      background-color: #189647;
+      border-radius: 16px;
+    }
+
+    .success-box {
+      background-color: #f0fdf4;
+      border: 1px solid #22c55e;
+      border-radius: 16px;
+      padding: 20px;
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .success-box h1 {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #158039;
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    h1 {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin: 0;
+      line-height: 1.3;
+    }
+
+    h2 {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin: 0 0 4px;
+      line-height: 1.3;
+    }
+
+    p {
+      margin: 0 0 16px;
+      font-size: 14px;
+      color: #475569;
+      line-height: 1.6;
+    }
+
+    .description {
+      font-size: 14px;
+      color: #475569;
+      margin: 16px 0 24px;
+      line-height: 1.6;
+    }
+
+    .details-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 0;
+      margin: 24px 0;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: 13px;
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      color: #475569;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .detail-value {
+      color: #0f172a;
+      font-weight: 700;
+      text-align: right;
+      flex: 1;
+    }
+
+    .detail-value.brand {
+      color: #4f46e5;
+    }
+
+    .icon-container {
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .icon-img {
+      width: 56px;
+      height: 56px;
+      display: inline-block;
+    }
+
+    .button-wrapper {
+      text-align: center;
+      margin: 32px 0;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: white !important;
+      padding: 12px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+    }
+
+    .button:hover {
+      background-color: #3f34c9;
+    }
+
+    .alert-info {
+      background-color: #eff6ff;
+      border: 1px solid rgba(59, 130, 246, 0.2);
+      border-radius: 16px;
+      padding: 14px;
+      margin: 24px 0;
+      display: flex;
+      gap: 10px;
+    }
+
+    .contact-icon {
+      font-size: 18px;
+      color: #5a93f7;
+    }
+
+    .alert-info-content {
+      flex: 1;
+    }
+
+    .alert-title {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 13px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 4px;
+    }
+
+    .alert-text {
+      font-size: 12px;
+      color: #475569;
+      line-height: 1.5;
+      margin: 0;
+    }
+
+    .footer-section {
+      background-color: #faf5ff;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .footer-title {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin: 0 0 6px;
+    }
+
+    .footer-subtitle {
+      font-size: 12px;
+      color: #475569;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
+    .divider {
+      width: 120px;
+      height: 1px;
+      background-color: #e2e8f0;
+      margin: 20px auto;
+      display: block;
+      border: none;
+    }
+
+    .footer-links {
+      text-align: center;
+      margin: 20px 0;
+      line-height: 1.8;
+    }
+
+    .footer-links a {
+      font-size: 11px;
+      font-weight: 600;
+      color: #4f46e5;
+      text-decoration: underline;
+      margin: 0 12px;
+    }
+
+    .footer-copy {
+      font-size: 10px;
+      color: #111;
+      margin: 0;
+    }
+  </style>
+</head>
+
+<body style="margin:0;padding:24px;background:#f8fafc;">
+  <table class="wrapper" role="presentation">
+    <tr>
+      <td align="center">
+        <table class="container" role="presentation">
+          <!-- Padding top -->
+          <tr>
+            <td height="24"></td>
+          </tr>
+
+          <!-- Card container -->
+          <tr>
+            <td class="card">
+              <!-- Logo and badge row -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation"
+                style="margin-bottom: 32px;">
+                <tr>
+                  <td align="left" width="50%">
+                    <img
+                      src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzIiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAxMzIgMjgiIGZpbGw9Im5vbmUiPjxnPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMi40OTUzNCAxNS4yNzc3QzQuMTI3MTEgMTIuMTk4IDYuMDEwNDIgOC40OTQ4NiA3Ljc3ODEzIDUuNTg1OTFDOC45NTE0NyAzLjY1NDg3IDEwLjI4NiAyLjAyMTM1IDExLjYyOTQgMi4wMDA0M0MxMy44OCAxLjk2NTU5IDE0Ljc4MDUgNC4wNDcwOSAxNS43NTI2IDUuODQ0ODhDMTcuMjQyMSA4LjU5OTYxIDE4LjU0MiAxMS4yODg5IDIwLjA0IDE0LjE3MzdDMTcuNTU1NyAxMy4yODEzIDE2LjIzNDEgMTMuNDc5MSAxMy41NzU4IDE0LjM2NTFDMTIuNTU5MiAxMi4zMjU2IDExLjQwNzkgOS43NjIwNiA5LjUxNTcgMTMuNTk2Nkw3LjUyMzQ3IDE4LjI5MDFDNS4wMjU4NyAxOS40NDE0IDEuNjA4NjIgMTkuMjE1IDIuNDk1MzQgMTUuMjc3N1oiIGZpbGw9IiM0RjQ2RTUiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTIuNTUxMjQgMTUuMTMzMkMwLjk4MzI1MiAxNy43NDU1IDAuMTg3NTQgMTkuNzEzMiAwLjAyOTQ4MzYgMjEuMzYyNEMtMC4xNzg5ODggMjMuNTQwOCAwLjcxMjU3IDI1LjU5OTUgMi44Nzk4MiAyNS45NDg4QzYuNTQ5MjQgMjYuNTQwMSAxMi4zNjM0IDIxLjg1MTggMTQuODE1NCAyMC4yMTE1QzE4Ljg2OTQgMTcuNTAwMSAyMi40Mjk2IDE5Ljc2NjYgMjMuNjQ1NCAyNC41NTA4QzI1LjM5ODYgMTguMTcyMiAyMC40NjQyIDEyLjE5ODkgMTIuOTYxMyAxNS42Njk5QzExLjE2MzEgMTYuNTAyNCA5LjM2NDYxIDE3LjMzNTIgNy41NjYyOCAxOC4xNjc0QzQuODU2IDE5LjQyMTUgMS43MDQ1MSAxOC45MDA0IDIuNTUxMjQgMTUuMTMzMloiIGZpbGw9IiM5RTlCRDgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTIzLjYxNiAyNC40MjU1QzIzLjIxNTEgMjUuNzk3NSAyMS44Njk1IDI2LjExNTcgMjAuNzU4MSAyNS45NjYzQzE5LjI3NCAyNS43NjYzIDE3Ljk4MDYgMjQuMjE1NiAxNi43MjY4IDIzLjA3MjNDMTUuNTg4MiAyMi4wMzQyIDEzLjgxNDggMjEuNzQzNyAxMS44NTYgMjIuMTM3M0MxMi44MzI3IDIxLjQ2NjkgMTMuNzk1MiAyMC43NTcxIDE0Ljc3NzkgMjAuMTAyOUMxOC44MzU2IDE3LjQwMTUgMjIuMzk5MSAxOS42NTk2IDIzLjYxNiAyNC40MjU1WiIgZmlsbD0iIzRGNDZFNSIvPjwvZz48dGV4dCB4PSIzMiIgeT0iMjAiIGZvbnQtZmFtaWx5PSJPdXRmaXQsICdQbHVzIEpha2FydGEgU2FucycgLCBzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM0RjQ2RTUiPmFnZW5keWE8L3RleHQ+PC9zdmc+"
+                      alt="Agendya" class="logo-img" />
+                  </td>
+                  <td align="right" width="50%">
+                    <table border="0" cellspacing="0" cellpadding="0" role="presentation">
+                      <tr
+                        style="background-color: rgba(238, 242, 255, 0.53); border: 1px solid #e2e8f0; border-radius: 16px; padding: 8px 12px;">
+                        <td>
+                          <img src="{{businessLogo}}" alt="{{businessName}}"
+                            style="width: 28px; height: 28px; border-radius: 50%; margin-right: 8px; display: inline-block; vertical-align: middle;" />
+                        </td>
+                        <td
+                          style="font-size: 12px; font-weight: 600; color: #0f172a; vertical-align: middle; padding: 0 4px;">
+                          {{businessName}}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Separator line -->
+              <div class="separator"></div>
+
+              <!-- Icon placeholder -->
+              <div class="icon-container">
+                <span class="material-symbols-outlined event-icon">event_available</span>
+              </div>
+
+              <!-- Success box -->
+              <div class="success-box">
+                <h1 style="color: #158039;">Tu cita está confirmada</h1>
+              </div>
+
+              <!-- Description -->
+              <p class="description">Hola, tu reserva fue creada correctamente. A continuación puedes revisar todos los
+                detalles programados para tu servicio:</p>
+
+              <!-- Details section -->
+              <div class="details-box">
+                <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                  <tr>
+                    <td style="padding: 12px 16px; border-bottom: 1px solid #e2e8f0;">
+                      <div style="font-size: 15px; font-weight: 700; color: #4f46e5; margin-bottom: 16px;">Detalles de
+                        la cita</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 16px; border-bottom: 1px solid #e2e8f0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                        <tr>
+                          <td style="font-size: 13px; font-weight: 600; color: #475569;">Servicio</td>
+                          <td align="right" style="font-size: 13px; font-weight: 700; color: #0f172a;">{{serviceName}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 16px; border-bottom: 1px solid #e2e8f0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                        <tr>
+                          <td style="font-size: 13px; font-weight: 600; color: #475569;">Profesional</td>
+                          <td align="right" style="font-size: 13px; font-weight: 700; color: #4f46e5;">{{businessName}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 16px; border-bottom: 1px solid #e2e8f0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                        <tr>
+                          <td style="font-size: 13px; font-weight: 600; color: #475569;">Fecha</td>
+                          <td align="right" style="font-size: 13px; font-weight: 700; color: #0f172a;">{{dateTime}}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 16px; border-bottom: 1px solid #e2e8f0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                        <tr>
+                          <td style="font-size: 13px; font-weight: 600; color: #475569;">Duración</td>
+                          <td align="right" style="font-size: 13px; font-weight: 700; color: #0f172a;">{{duration}}
+                            minutos</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 16px; border-bottom: 1px solid #e2e8f0;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                        <tr>
+                          <td style="font-size: 13px; font-weight: 600; color: #475569;">Precio</td>
+                          <td align="right" style="font-size: 13px; font-weight: 700; color: #0f172a;">{{price}}</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding: 8px 16px;">
+                      <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation">
+                        <tr>
+                          <td style="font-size: 13px; font-weight: 600; color: #475569;">Modalidad</td>
+                          <td align="right" style="font-size: 13px; font-weight: 700; color: #0f172a;">{{serviceMode}}
+                          </td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+
+              <!-- CTA Button -->
+              <div class="button-wrapper">
+                <a href="{{bookingUrl}}" class="button">Reprogramar cita</a>
+              </div>
+
+              <!-- Alert info box -->
+              <div class="alert-info">
+                <div style="flex-shrink: 0;">
+                  <span class="material-symbols-outlined contact-icon">help</span>
+                </div>
+                <div class="alert-info-content">
+                  <p class="alert-title">Información importante</p>
+                  <p class="alert-text">Guarda este correo para consultar los detalles de tu cita. Si necesitas
+                    reprogramar o cancelar, por favor hazlo con al menos 24 horas de anticipación.</p>
+                </div>
+              </div>
+
+              <!-- Footer section -->
+              <div class="footer-section">
+                <p class="footer-title">Agendya — Tu tiempo, bajo control</p>
+                <p class="footer-subtitle">Sincroniza, automatiza y optimiza tus reuniones sin esfuerzo.</p>
+
+                <hr class="divider" />
+
+                <div class="footer-links">
+                  <a href="https://agendya.com/terms">Términos de servicio</a>
+                  <a href="https://agendya.com/privacy">Política de privacidad</a>
+                  <a href="https://agendya.com/support">Soporte y Contacto</a>
+                </div>
+
+                <p class="footer-copy">Este es un correo automático de Agendya.</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Padding bottom -->
+          <tr>
+            <td height="24"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>

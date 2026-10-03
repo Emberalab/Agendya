@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es" xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>¡Bienvenido a Agendya!</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap"
+    rel="stylesheet" />
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      min-width: 100% !important;
+      font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+    }
+
+    .wrapper {
+      background-color: #f8fafc;
+      width: 100%;
+      table-layout: fixed;
+      -webkit-text-size-adjust: 100%;
+      -ms-text-size-adjust: 100%;
+    }
+
+    .main {}
+
+    .container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .section {
+      width: 100%;
+    }
+
+    table {
+      border-collapse: collapse;
+      border-spacing: 0;
+    }
+
+    td {
+      padding: 0;
+      vertical-align: top;
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 16px;
+      padding: 40px;
+    }
+
+    .header-row {
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 24px;
+      margin-bottom: 24px;
+    }
+
+    h1 {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 24px;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 0 0 24px;
+      line-height: 1.3;
+      text-align: center;
+      padding: 20px;
+      border: 1px solid rgb(226, 232, 240);
+      border-radius: 16px;
+    }
+
+    .subtitle {
+      font-size: 14px;
+      color: #475569;
+      margin: 0 0 24px;
+      line-height: 1.6;
+    }
+
+    .section-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 16px;
+      padding: 20px;
+      margin: 24px 0;
+    }
+
+    .section-title {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #0f172a;
+      text-align: center;
+      margin: 0 0 16px;
+    }
+
+    .step-item {
+      margin-bottom: 16px;
+    }
+
+    .step-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .step-number {
+      display: inline-block;
+      width: 28px;
+      height: 28px;
+      line-height: 28px;
+      text-align: center;
+      background-color: #eef2ff;
+      border-radius: 50%;
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 14px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin-right: 12px;
+      vertical-align: middle;
+    }
+
+    .step-text {
+      display: inline-block;
+      font-size: 14px;
+      font-weight: 600;
+      color: #0f172a;
+      vertical-align: middle;
+    }
+
+    .button-wrapper {
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .button {
+      display: inline-block;
+      background-color: #4f46e5;
+      color: white !important;
+      padding: 12px 24px;
+      border-radius: 12px;
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 700;
+      font-family: 'Plus Jakarta Sans', Arial, sans-serif;
+    }
+
+    .button:hover {
+      background-color: #3f34c9;
+    }
+
+    .footer-row {
+      padding: 32px
+    }
+
+    .footer-section {
+      background-color: #faf5ff;
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      margin: 24px 0;
+    }
+
+    .footer-title {
+      font-family: 'Outfit', Arial, sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4f46e5;
+      margin: 0 0 6px;
+    }
+
+    .footer-subtitle {
+      font-size: 12px;
+      color: #475569;
+      margin: 0 0 20px;
+      line-height: 1.5;
+    }
+
+    .divider {
+      width: 120px;
+      height: 1px;
+      background-color: #e2e8f0;
+      margin: 20px auto;
+      display: block;
+      border: none;
+    }
+
+    .footer-links {
+      text-align: center;
+      margin: 20px 0;
+      line-height: 1.8;
+    }
+
+    .footer-links a {
+      font-size: 11px;
+      font-weight: 600;
+      color: #4f46e5;
+      text-decoration: underline;
+      margin: 0 12px;
+    }
+
+    .footer-copy {
+      font-size: 10px;
+      color: #111;
+      margin: 0;
+    }
+
+    .logo-img {
+      max-width: 100px;
+      height: auto;
+      display: inline-block;
+    }
+
+    .badge {
+      display: inline-block;
+      background-color: rgba(238, 242, 255, 0.53);
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #0f172a;
+    }
+  </style>
+</head>
+
+<body class="main">
+  <table class="wrapper" role="presentation">
+    <tr>
+      <td align="center">
+        <table class="container" role="presentation">
+          <!-- Padding top -->
+          <tr>
+            <td height="24"></td>
+          </tr>
+
+          <!-- Card container -->
+          <tr>
+            <td class="card">
+              <!-- Header with logo -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation"
+                style="margin-bottom: 32px;">
+                <tr>
+                  <td align="left" width="50%">
+                    <img
+                      src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMzIiIGhlaWdodD0iMjgiIHZpZXdCb3g9IjAgMCAxMzIgMjgiIGZpbGw9Im5vbmUiPjxnPjxwYXRoIGZpbGwtcnVsZT0iZXZlbm9kZCIgY2xpcC1ydWxlPSJldmVub2RkIiBkPSJNMi40OTUzNCAxNS4yNzc3QzQuMTI3MTEgMTIuMTk4IDYuMDEwNDIgOC40OTQ4NiA3Ljc3ODEzIDUuNTg1OTFDOC45NTE0NyAzLjY1NDg3IDEwLjI4NiAyLjAyMTM1IDExLjYyOTQgMi4wMDA0M0MxMy44OCAxLjk2NTU5IDE0Ljc4MDUgNC4wNDcwOSAxNS43NTI2IDUuODQ0ODhDMTcuMjQyMSA4LjU5OTYxIDE4LjU0MiAxMS4yODg5IDIwLjA0IDE0LjE3MzdDMTcuNTU1NyAxMy4yODEzIDE2LjIzNDEgMTMuNDc5MSAxMy41NzU4IDE0LjM2NTFDMTIuNTU5MiAxMi4zMjU2IDExLjQwNzkgOS43NjIwNiA5LjUxNTcgMTMuNTk2Nkw3LjUyMzQ3IDE4LjI5MDFDNS4wMjU4NyAxOS40NDE0IDEuNjA4NjIgMTkuMjE1IDIuNDk1MzQgMTUuMjc3N1oiIGZpbGw9IiM0RjQ2RTUiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTIuNTUxMjQgMTUuMTMzMkMwLjk4MzI1MiAxNy43NDU1IDAuMTg3NTQgMTkuNzEzMiAwLjAyOTQ4MzYgMjEuMzYyNEMtMC4xNzg5ODggMjMuNTQwOCAwLjcxMjU3IDI1LjU5OTUgMi44Nzk4MiAyNS45NDg4QzYuNTQ5MjQgMjYuNTQwMSAxMi4zNjM0IDIxLjg1MTggMTQuODE1NCAyMC4yMTE1QzE4Ljg2OTQgMTcuNTAwMSAyMi40Mjk2IDE5Ljc2NjYgMjMuNjQ1NCAyNC41NTA4QzI1LjM5ODYgMTguMTcyMiAyMC40NjQyIDEyLjE5ODkgMTIuOTYxMyAxNS42Njk5QzExLjE2MzEgMTYuNTAyNCA5LjM2NDYxIDE3LjMzNTIgNy41NjYyOCAxOC4xNjc0QzQuODU2IDE5LjQyMTUgMS43MDQ1MSAxOC45MDA0IDIuNTUxMjQgMTUuMTMzMloiIGZpbGw9IiM5RTlCRDgiLz48cGF0aCBmaWxsLXJ1bGU9ImV2ZW5vZGQiIGNsaXAtcnVsZT0iZXZlbm9kZCIgZD0iTTIzLjYxNiAyNC40MjU1QzIzLjIxNTEgMjUuNzk3NSAyMS44Njk1IDI2LjExNTcgMjAuNzU4MSAyNS45NjYzQzE5LjI3NCAyNS43NjYzIDE3Ljk4MDYgMjQuMjE1NiAxNi43MjY4IDIzLjA3MjNDMTUuNTg4MiAyMi4wMzQyIDEzLjgxNDggMjEuNzQzNyAxMS44NTYgMjIuMTM3M0MxMi44MzI3IDIxLjQ2NjkgMTMuNzk1MiAyMC43NTcxIDE0Ljc3NzkgMjAuMTAyOUMxOC44MzU2IDE3LjQwMTUgMjIuMzk5MSAxOS42NTk2IDIzLjYxNiAyNC40MjU1WiIgZmlsbD0iIzRGNDZFNSIvPjwvZz48dGV4dCB4PSIzMiIgeT0iMjAiIGZvbnQtZmFtaWx5PSJPdXRmaXQsICdQbHVzIEpha2FydGEgU2FucycgLCBzeXN0ZW0tdWksIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMjAiIGZvbnQtd2VpZ2h0PSI3MDAiIGZpbGw9IiM0RjQ2RTUiPmFnZW5keWE8L3RleHQ+PC9zdmc+"
+                      alt="Agendya" class="logo-img" />
+                  </td>
+                  <td align="right" width="50%">
+                    <table border="0" cellspacing="0" cellpadding="0" role="presentation"
+                      style="background-color: rgba(238, 242, 255, 0.53); border: 1px solid #e2e8f0; border-radius: 12px; padding: 8px 12px;">
+                      <tr>
+                        <td><img src="{{businessLogo}}" alt="{{businessName}}"
+                            style="width: 28px; height: 28px; border-radius: 50%; margin-right: 8px; display: inline-block; vertical-align: middle;" />
+                        </td>
+                        <td
+                          style="font-size: 12px; font-weight: 600; color: #0f172a; vertical-align: middle; padding: 0 4px;">
+                          {{businessName}}</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Separator line -->
+              <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation"
+                style="margin-bottom: 32px;">
+                <tr>
+                  <td style="border-bottom: 1px solid #e2e8f0; height: 1px;"></td>
+                </tr>
+              </table>
+
+              <!-- Main heading -->
+              <h1>¡Tu cuenta está lista para despegar!</h1>
+
+              <!-- Subtitle -->
+              <p class="subtitle">Bienvenido a Agendya. Desde ahora puedes empezar a configurar tus servicios, horarios
+                y perfil para recibir reservas de forma automatizada y sin fricciones.</p>
+
+              <!-- Steps section -->
+              <div class="section-box">
+                <p class="section-title">Sigue estos pasos para comenzar:</p>
+
+                <div class="step-item">
+                  <span class="step-number">1</span>
+                  <span class="step-text">Crea tus servicios.</span>
+                </div>
+                <div class="step-item">
+                  <span class="step-number">2</span>
+                  <span class="step-text">Configura tus horarios.</span>
+                </div>
+                <div class="step-item">
+                  <span class="step-number">3</span>
+                  <span class="step-text">Personaliza tu perfil.</span>
+                </div>
+                <div class="step-item">
+                  <span class="step-number">4</span>
+                  <span class="step-text">Comparte tu enlace.</span>
+                </div>
+              </div>
+
+              <!-- CTA Button -->
+              <div class="button-wrapper">
+                <a href="{{dashboardUrl}}" class="button">Configurar mi cuenta</a>
+              </div>
+
+              <p class="subtitle" style="text-align: center; margin-bottom: 0;">Nos alegra acompañarte a organizar mejor
+                tu tiempo.</p>
+
+
+              <!-- Footer section -->
+              <div class="footer-section">
+                <p class="footer-title">Agendya — Tu tiempo, bajo control</p>
+                <p class="footer-subtitle">Sincroniza, automatiza y optimiza tus reuniones sin esfuerzo.</p>
+
+                <hr class="divider" />
+
+                <div class="footer-links">
+                  <a href="https://agendya.com/terms">Términos de servicio</a>
+                  <a href="https://agendya.com/privacy">Política de privacidad</a>
+                  <a href="https://agendya.com/support">Soporte y Contacto</a>
+                </div>
+
+                <p class="footer-copy">Este es un correo automático de Agendya.</p>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Padding bottom -->
+          <tr>
+            <td height="24"></td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+
+</html>
